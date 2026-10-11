@@ -344,7 +344,9 @@ function carregarMenus() {
   console.log(aliases.size + " aliases registrados\n")
 }
 
-// ⚠️ Expõe pro !atualizar conseguir recarregar
+// ============================================================
+// ⚠️ ESSA LINHA É OBRIGATÓRIA PRO !REINICIAR E !ATUALIZAR
+// ============================================================
 global.__carregarMenus = carregarMenus
 
 function getComando(n) {
