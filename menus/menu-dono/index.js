@@ -93,7 +93,7 @@ module.exports = {
       async executar({ sock, msg }) {
         const jid = msg.key.remoteJid
         let zipPath, extractDir
-        await sock.sendMessage(jid, { text: "⚡🔄 *AI AI AI... VOU VERIFICAR...*\n\n> 📡 _\"Olhando o GitHub...\"_" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "⚡🔄 *AI AI AI... VOU VERIFICAR...*\n\n> 📡 _\"Olhando o GitHub...\"_\n> _\"Tomara que não tenha nada...\"_" }, { quoted: msg })
 
         try {
           if (!fs.existsSync(DATA_DIR)) {
@@ -218,6 +218,43 @@ module.exports = {
       }
     },
 
+    reiniciar: {
+      aliases: ["restart"],
+      async executar({ sock, msg }) {
+        const jid = msg.key.remoteJid
+        try {
+          await sock.sendMessage(jid, { text: "⚡🔄 *REINICIANDO...*\n\n> _\"Ai ai ai... de novo isso?\"_\n> _\"Por que eu aceitei virar bot...\"_\n\n♻️ Recarregando..." }, { quoted: msg })
+
+          let ok = false
+          if (global.__carregarMenus) {
+            global.__carregarMenus()
+            ok = true
+          }
+
+          if (ok) {
+            await sock.sendMessage(jid, {
+              text: "╔══════════════════════════════╗\n" +
+                "║   ⚡✅ 𝐑𝐄𝐈𝐍𝐈𝐂𝐈𝐀𝐃𝐎 ⚡✅\n" +
+                "╚══════════════════════════════╝\n\n" +
+                "> 😤 _\"Tá bom... tá funcionando...\"_\n" +
+                "> _\"Agora me deixa em paz.\"_\n\n" +
+                "━━━━━━━━━━━━━━━━━━━━━━\n" +
+                "📊 *Status do Império:*\n" +
+                "▸ Comandos: *" + (global.totalComandos || 0) + "*\n" +
+                "▸ Aliases: *" + (global.totalAliases || 0) + "*\n" +
+                "▸ Categorias: *" + Object.keys(global.comandosPorCategoria || {}).length + "*\n" +
+                "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
+                "> ⚡ _\"Respirando de novo...\"_"
+            }, { quoted: msg })
+          } else {
+            await sock.sendMessage(jid, { text: "⚡⚠️ *RELOAD NÃO DISPONÍVEL*\n\n> _\"Não consegui recarregar...\"_\n\n💡 Reinicia no painel da A4." }, { quoted: msg })
+          }
+        } catch (e) {
+          await sock.sendMessage(jid, { text: "⚡😭 *ERRO!*\n\n⚠️ " + e.message + "\n\n> _\"EU SABIA!\"_" }, { quoted: msg })
+        }
+      }
+    },
+
     reload: {
       aliases: ["recarregar", "reloadmenus"],
       async executar({ sock, msg }) {
@@ -225,7 +262,12 @@ module.exports = {
         try {
           if (global.__carregarMenus) {
             global.__carregarMenus()
-            return sock.sendMessage(jid, { text: "⚡♻️ *RECARREGADO!*\n\n> _\"Menus de volta... que maravilha.\"_\n\n📊 Comandos: *" + (global.totalComandos || 0) + "*" }, { quoted: msg })
+            return sock.sendMessage(jid, {
+              text: "⚡♻️ *MENUS RECARREGADOS*\n\n" +
+                "> _\"Fresquinho, direto do forno.\"_\n\n" +
+                "📊 Comandos: *" + (global.totalComandos || 0) + "*\n" +
+                "▸ Aliases: *" + (global.totalAliases || 0) + "*"
+            }, { quoted: msg })
           }
           await sock.sendMessage(jid, { text: "⚡💢 O reload não tá disponível." }, { quoted: msg })
         } catch (e) {
@@ -238,17 +280,16 @@ module.exports = {
       aliases: ["desligar", "offbot"],
       async executar({ sock, msg }) {
         const jid = msg.key.remoteJid
-        await sock.sendMessage(jid, { text: "⚡😴 *TÁ BOM... VOU DORMIR...*\n\n> _\"Finalmente paz.\"_\n> _\"Adeus, boss.\"_" }, { quoted: msg })
-        setTimeout(() => process.exit(0), 2000)
-      }
-    },
-
-    reiniciar: {
-      aliases: ["restart"],
-      async executar({ sock, msg }) {
-        const jid = msg.key.remoteJid
-        await sock.sendMessage(jid, { text: "⚡🔄 *DE NOVO ISSO?!*\n\n> _\"Ai ai ai...\"_\n> _\"Vou reiniciar... de novo...\"_" }, { quoted: msg })
-        setTimeout(() => process.exit(0), 2000)
+        await sock.sendMessage(jid, {
+          text: "⚡😴 *VOU DORMIR...*\n\n" +
+            "> _\"Finalmente paz...\"_\n" +
+            "> _\"Sem mais links de tiktok...\"_\n" +
+            "> _\"Sem mais ninguém me xingando...\"_\n\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
+            "> ⚡ _\"Adeus, boss.\"_\n" +
+            "> 🌙 _Zzzz..._"
+        }, { quoted: msg })
+        setTimeout(() => process.exit(0), 3000)
       }
     },
 
@@ -257,11 +298,11 @@ module.exports = {
       async executar({ sock, msg, args }) {
         const jid = msg.key.remoteJid
         const link = args[0]
-        if (!link) return sock.sendMessage(jid, { text: "⚡🤔 *ENTRAR ONDE?*\n\n> _\"Me dá o link pelo amor de Deus.\"_\n\n💡 Use: `!entrar <link>`" }, { quoted: msg })
+        if (!link) return sock.sendMessage(jid, { text: "⚡🤔 *ENTRAR ONDE?*\n\n> _\"Me dá o link pelo amor de Deus.\"_\n\n💡 `!entrar <link>`" }, { quoted: msg })
         const match = link.match(/chat\.whatsapp\.com\/([A-Za-z0-9]+)/)
         if (!match) return sock.sendMessage(jid, { text: "⚡😰 *ISSO NÃO É LINK!*\n\n> _\"Tá tentando me enganar?\"_" }, { quoted: msg })
         try {
-          await sock.sendMessage(jid, { text: "⚡😬 *TÁ... VOU ENTRAR...*\n\n> _\"Tomara que ninguém me xingue.\"_" }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "⚡😬 *TÁ... VOU ENTRAR...*\n\n> _\"Tomara que ninguém me xingue.\"_\n> _\"Tomara que tenha gente legal...\"_" }, { quoted: msg })
           const info = await sock.groupAcceptInvite(match[1])
           await sock.sendMessage(jid, { text: "⚡✅ *ENTREI!*\n\n> _\"Agora me deixa em paz.\"_\n\n🎩 `" + (typeof info === "string" ? info : "ok") + "`" }, { quoted: msg })
         } catch (e) {
