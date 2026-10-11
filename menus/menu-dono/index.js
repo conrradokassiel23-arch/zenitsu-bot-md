@@ -17,7 +17,6 @@ function dbLer(a, p = {}) {
   if (!fs.existsSync(f)) { fs.writeFileSync(f, JSON.stringify(p, null, 2)); return p }
   try { return JSON.parse(fs.readFileSync(f, "utf8")) } catch { return p }
 }
-
 function dbSalvar(a, d) {
   fs.writeFileSync(path.join(DATA_DIR, a), JSON.stringify(d, null, 2))
 }
@@ -44,6 +43,7 @@ module.exports = {
           "▸ " + p + "entrar <link>\n" +
           "▸ " + p + "botoff\n" +
           "▸ " + p + "reiniciar\n" +
+          "▸ " + p + "reload\n" +
           "▸ " + p + "setfoto (reply img/vídeo)\n" +
           "▸ " + p + "atualizar\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
@@ -166,20 +166,25 @@ module.exports = {
           copiarRecursivo(raiz, BOT_DIR)
 
           const commitPath = path.join(DATA_DIR, "ultimo_commit.json")
-          const commitObj = {
+          fs.writeFileSync(commitPath, JSON.stringify({
             hash: commitHash,
             msg: commitMsg,
             data: commitData,
             atualizadoEm: Date.now()
-          }
-          fs.writeFileSync(commitPath, JSON.stringify(commitObj, null, 2))
+          }, null, 2))
           console.log("💾 Commit salvo em:", commitPath)
 
           try { fs.unlinkSync(zipPath) } catch (_) {}
           try { fs.rmSync(extractDir, { recursive: true, force: true }) } catch (_) {}
 
+          // Recarrega os menus sem matar o processo
+          try {
+            if (global.__carregarMenus) global.__carregarMenus()
+            console.log("♻️ Menus recarregados após atualização")
+          } catch (e) { console.log("Aviso reload:", e.message) }
+
           await sock.sendMessage(jid, {
-            text: "⚡✅ PRONTO, BOSS\n\n😩 Tá... tá feito...\n\n📌 Commit: " + commitHash.slice(0, 7) + "\n📝 " + commitMsg + "\n\n🔒 Guardei: auth/ data/ config.js\n\n⚠️ REINICIA O BOT no painel!"
+            text: "⚡✅ PRONTO, BOSS\n\n😩 Tá... tá feito...\n\n📌 Commit: " + commitHash.slice(0, 7) + "\n📝 " + commitMsg + "\n\n♻️ Menus recarregados!\n⚠️ Se mudou o index.js principal, reinicia no painel."
           }, { quoted: msg })
 
         } catch (e) {
@@ -189,6 +194,19 @@ module.exports = {
           await sock.sendMessage(jid, {
             text: "⚡😭 DEU RUIM!\n\n⚠️ " + e.message + "\n\nEU SABIA! EU SABIA QUE IA DAR ERRADO!"
           }, { quoted: msg })
+        }
+      }
+    },
+
+    reload: {
+      aliases: ["recarregar"],
+      async executar({ sock, msg }) {
+        const jid = msg.key.remoteJid
+        try {
+          if (global.__carregarMenus) global.__carregarMenus()
+          await sock.sendMessage(jid, { text: "⚡♻️ PRONTO...\n\nMenus recarregados.\nPode parar de me encher." }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: "⚡😭 ERRO!\n\n" + e.message }, { quoted: msg })
         }
       }
     },
@@ -235,20 +253,20 @@ module.exports = {
         const jid = msg.key.remoteJid
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         const quoted = ctx.quotedMessage
-        const temImg = msg.message && msg.message.imageMessage || quoted && quoted.imageMessage
-        const temVid = msg.message && msg.message.videoMessage || quoted && quoted.videoMessage
+        const temImg = (msg.message && msg.message.imageMessage) || (quoted && quoted.imageMessage)
+        const temVid = (msg.message && msg.message.videoMessage) || (quoted && quoted.videoMessage)
         if (!temImg && !temVid) return sock.sendMessage(jid, { text: "⚡📸 CADÊ A FOTO?\n\nManda ou responde uma imagem/vídeo." }, { quoted: msg })
         try {
           const cfg = db.config()
           if (temImg) {
-            const alvoMsg = msg.message && msg.message.imageMessage ? msg : Object.assign({}, msg, { message: { imageMessage: quoted.imageMessage } })
+            const alvoMsg = (msg.message && msg.message.imageMessage) ? msg : Object.assign({}, msg, { message: { imageMessage: quoted.imageMessage } })
             const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
             cfg.fotoMenu = buffer.toString("base64")
             cfg.tipoMenu = "foto"
             db.salvarConfig(cfg)
             return sock.sendMessage(jid, { image: buffer, caption: "⚡✅ GUARDEI...\n\nNão me pede mais nada." }, { quoted: msg })
           }
-          const vidMsg = msg.message && msg.message.videoMessage ? msg : Object.assign({}, msg, { message: { videoMessage: quoted.videoMessage } })
+          const vidMsg = (msg.message && msg.message.videoMessage) ? msg : Object.assign({}, msg, { message: { videoMessage: quoted.videoMessage } })
           const vidBuffer = await utils.downloadMediaMessage(vidMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
           const ff = require("@ffmpeg-installer/ffmpeg").path
           const tmp = os.tmpdir()
@@ -276,7 +294,7 @@ module.exports = {
         const alvo = utils.getAlvo(msg)
         if (!alvo) return sock.sendMessage(jid, { text: "⚡💎 QUEM?\n\nMarca alguém!\n\n💡 !addvip @user <tempo>" }, { quoted: msg })
         const tempo = (args.find(a => /^(inf|\d+[dhm])$/i.test(a)) || "").toLowerCase()
-        if (!tempo) return sock.sendMessage(jid, { text: "⚡💎 QUANTO TEMPO?\n\nFala o tempo, por favor.\n\n1d, 7d, 30d, inf" }, { quoted: msg })
+        if (!tempo) return sock.sendMessage(jid, { text: "⚡💎 QUANTO TEMPO?\n\n1d, 7d, 30d, inf" }, { quoted: msg })
         let expira = "inf"
         if (tempo !== "inf") {
           const v = parseInt(tempo)
@@ -410,7 +428,7 @@ module.exports = {
         const opcao = (args[0] || "").toLowerCase()
         const a = db.aluguel()
         if (!["on", "off"].includes(opcao)) {
-          return sock.sendMessage(jid, { text: "⚡💰 ALUGUEL\n\n📊 Status: " + (a.ativo ? "ON ✅" : "OFF ❌") + "\n\nFala se quer on ou off." }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "⚡💰 ALUGUEL\n\n📊 Status: " + (a.ativo ? "ON ✅" : "OFF ❌") }, { quoted: msg })
         }
         a.ativo = opcao === "on"
         db.salvarAluguel(a)
@@ -424,7 +442,7 @@ module.exports = {
       async executar({ sock, msg, args, db, utils }) {
         const jid = msg.key.remoteJid
         const tempoStr = args.join(" ").trim().toLowerCase()
-        if (!tempoStr) return sock.sendMessage(jid, { text: "⚡💰 QUANTO TEMPO?\n\nFala o tempo! 1dia, 30min, 1mes..." }, { quoted: msg })
+        if (!tempoStr) return sock.sendMessage(jid, { text: "⚡💰 QUANTO TEMPO?\n\n1dia, 30min, 1mes..." }, { quoted: msg })
         const partes = tempoStr.split(/\s+/)
         let totalMs = 0
         for (const p of partes) {
@@ -486,7 +504,7 @@ module.exports = {
           db.salvarAluguel(a)
           return sock.sendMessage(jid, { text: "⚡✅ TIREI...\n\nLiberado geral." }, { quoted: msg })
         }
-        await sock.sendMessage(jid, { text: "⚡💡 Use: !delaluguel <nome>\nOu em grupo: !delaluguel" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "⚡💡 Use: !delaluguel <nome>" }, { quoted: msg })
       }
     },
 
@@ -568,4 +586,4 @@ module.exports = {
     }
 
   }
-               }
+}
