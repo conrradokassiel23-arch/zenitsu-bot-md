@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@itsliaaa/baileys": "^0.3.18-final",
+    "node-webpmux": "^3.2.1",
+    "simple-audio-downloader": "^1.2.4"
+  }
+}
