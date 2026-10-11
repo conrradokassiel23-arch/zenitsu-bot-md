@@ -35,49 +35,50 @@ module.exports = {
         const jid = msg.key.remoteJid
         const p = prefixoAtivo
         const cfg = db.config()
-        const texto = "⚡👑 COMANDO DO BOSS 👑⚡\n\n" +
-          "AI AI AI... tá bom, tá bom...\n" +
-          "O que o boss quer agora?\n\n" +
+        const texto = "⚡👑 *COMANDO DO BOSS* 👑⚡\n\n" +
+          "> _\"AI AI AI... tá bom, tá bom...\"_\n" +
+          "> _\"O que o boss quer agora?\"_\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "⚡👁️ COISAS SÉRIAS\n" +
-          "▸ " + p + "entrar <link>\n" +
-          "▸ " + p + "botoff\n" +
-          "▸ " + p + "reiniciar\n" +
-          "▸ " + p + "reload\n" +
-          "▸ " + p + "setfoto (reply img/vídeo)\n" +
-          "▸ " + p + "atualizar\n\n" +
+          "⚡👁️ *COISAS SÉRIAS*\n" +
+          "▸ `" + p + "entrar` <link>\n" +
+          "▸ `" + p + "botoff`\n" +
+          "▸ `" + p + "reiniciar`\n" +
+          "▸ `" + p + "reload`\n" +
+          "▸ `" + p + "setfoto` (reply img/vídeo)\n" +
+          "▸ `" + p + "atualizar`\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "⚡💎 VIP DO CHEFE\n" +
-          "▸ " + p + "addvip @user <tempo>\n" +
-          "▸ " + p + "delvip @user\n" +
-          "▸ " + p + "listavip\n\n" +
+          "⚡💎 *VIP DO CHEFE*\n" +
+          "▸ `" + p + "addvip` @user <tempo>\n" +
+          "▸ `" + p + "delvip` @user\n" +
+          "▸ `" + p + "listavip`\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "⚡👑 MARECHAIS\n" +
-          "▸ " + p + "addsubdono @user\n" +
-          "▸ " + p + "delsubdono @user\n" +
-          "▸ " + p + "listasubdono\n\n" +
+          "⚡👑 *MARECHAIS*\n" +
+          "▸ `" + p + "addsubdono` @user\n" +
+          "▸ `" + p + "delsubdono` @user\n" +
+          "▸ `" + p + "listasubdono`\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "⚡💰 ALUGUEL\n" +
-          "▸ " + p + "aluguel on/off\n" +
-          "▸ " + p + "addaluguel <tempo>\n" +
-          "▸ " + p + "listaaluguel\n" +
-          "▸ " + p + "delaluguel <nome>\n\n" +
+          "⚡💰 *ALUGUEL*\n" +
+          "▸ `" + p + "aluguel` on/off\n" +
+          "▸ `" + p + "addaluguel` <tempo>\n" +
+          "▸ `" + p + "listaaluguel`\n" +
+          "▸ `" + p + "delaluguel` <nome>\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "⚡⚙️ AJUSTES\n" +
-          "▸ " + p + "prefixoglobal <s>\n" +
-          "▸ " + p + "slow on/off\n\n" +
+          "⚡⚙️ *AJUSTES*\n" +
+          "▸ `" + p + "prefixoglobal` <s>\n" +
+          "▸ `" + p + "slow` on/off\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "⚡🚫 PUNIÇÃO\n" +
-          "▸ " + p + "banirgp\n" +
-          "▸ " + p + "desbanirgp\n" +
-          "▸ " + p + "listabangp\n\n" +
+          "⚡🚫 *PUNIÇÃO*\n" +
+          "▸ `" + p + "banirgp`\n" +
+          "▸ `" + p + "desbanirgp`\n" +
+          "▸ `" + p + "listabangp`\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "⚡💥 APOCALIPSE\n" +
-          "▸ " + p + "nuke\n" +
-          "▸ " + p + "limpargp\n\n" +
+          "⚡💥 *APOCALIPSE*\n" +
+          "▸ `" + p + "nuke`\n" +
+          "▸ `" + p + "limpargp`\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
-          "⚡ EU NÃO QUERO FAZER ISSO!\n" +
-          "...mas tá bom né, sou seu empregado."
+          "> ⚡ _\"EU NÃO QUERO FAZER ISSO!\"_\n" +
+          "> _\"...mas tá bom né, sou seu empregado.\"_"
+
         if (cfg.fotoMenu) {
           const buf = Buffer.from(cfg.fotoMenu, "base64")
           if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "zenitsu.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
@@ -89,10 +90,10 @@ module.exports = {
 
     atualizar: {
       aliases: ["update", "git"],
-      async executar({ sock, msg, db }) {
+      async executar({ sock, msg }) {
         const jid = msg.key.remoteJid
         let zipPath, extractDir
-        await sock.sendMessage(jid, { text: "⚡🔄 AI AI AI... VOU VERIFICAR...\n\n📡 Olhando o GitHub..." }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "⚡🔄 *AI AI AI... VOU VERIFICAR...*\n\n> 📡 _\"Olhando o GitHub...\"_" }, { quoted: msg })
 
         try {
           if (!fs.existsSync(DATA_DIR)) {
@@ -112,12 +113,19 @@ module.exports = {
 
           if (commitSalvo.hash === commitHash) {
             return sock.sendMessage(jid, {
-              text: "⚡✅ TARDE DEMAIS\n\n😴 Já tá atualizado, boss...\n\n📌 Commit: " + commitHash.slice(0, 7) + "\n📝 " + commitMsg + "\n📅 " + (commitData ? new Date(commitData).toLocaleString("pt-BR") : "?")
+              text: "⚡✅ *TARDE DEMAIS...*\n\n> 😴 _\"Já tá atualizado, boss...\"_\n\n" +
+                "📌 Commit: `" + commitHash.slice(0, 7) + "`\n" +
+                "📝 _" + commitMsg + "_\n" +
+                "📅 " + (commitData ? new Date(commitData).toLocaleString("pt-BR") : "?") + "\n\n" +
+                "> ⚡ _\"Não me faz trabalhar à toa.\"_"
             }, { quoted: msg })
           }
 
           await sock.sendMessage(jid, {
-            text: "⚡😰 TEM COISA NOVA!\n\nNão... não quero...\n\n📌 Commit: " + commitHash.slice(0, 7) + "\n📝 " + commitMsg + "\n\n📥 Baixando..."
+            text: "⚡😰 *TEM COISA NOVA!*\n\n> _\"Não... não quero...\"_\n\n" +
+              "📌 Commit: `" + commitHash.slice(0, 7) + "`\n" +
+              "📝 _" + commitMsg + "_\n\n" +
+              "📥 _Baixando... aguenta aí!_"
           }, { quoted: msg })
 
           const tmp = os.tmpdir()
@@ -177,14 +185,26 @@ module.exports = {
           try { fs.unlinkSync(zipPath) } catch (_) {}
           try { fs.rmSync(extractDir, { recursive: true, force: true }) } catch (_) {}
 
-          // Recarrega os menus sem matar o processo
+          // ♻️ RECARREGA OS MENUS SEM MATAR O PROCESSO
+          let reloadOk = false
           try {
-            if (global.__carregarMenus) global.__carregarMenus()
-            console.log("♻️ Menus recarregados após atualização")
+            if (global.__carregarMenus) {
+              global.__carregarMenus()
+              reloadOk = true
+              console.log("♻️ Menus recarregados com sucesso!")
+            }
           } catch (e) { console.log("Aviso reload:", e.message) }
 
           await sock.sendMessage(jid, {
-            text: "⚡✅ PRONTO, BOSS\n\n😩 Tá... tá feito...\n\n📌 Commit: " + commitHash.slice(0, 7) + "\n📝 " + commitMsg + "\n\n♻️ Menus recarregados!\n⚠️ Se mudou o index.js principal, reinicia no painel."
+            text: "⚡✅ *PRONTO, BOSS!*\n\n> 😩 _\"Tá... tá feito...\"_\n\n" +
+              "📌 Commit: `" + commitHash.slice(0, 7) + "`\n" +
+              "📝 _" + commitMsg + "_\n\n" +
+              "🔒 *Preservado:*\n" +
+              "▸ `auth/` (sessão do WhatsApp)\n" +
+              "▸ `data/` (dados do bot)\n" +
+              "▸ `config.js`\n\n" +
+              "━━━━━━━━━━━━━━━━━━━━━━\n" +
+              (reloadOk ? "♻️ _Menus recarregados na hora!_\n\n> _\"Não precisa reiniciar... que preguiça.\"_" : "⚠️ _Precisa reiniciar no painel._")
           }, { quoted: msg })
 
         } catch (e) {
@@ -192,21 +212,24 @@ module.exports = {
           try { if (zipPath) fs.unlinkSync(zipPath) } catch (_) {}
           try { if (extractDir) fs.rmSync(extractDir, { recursive: true, force: true }) } catch (_) {}
           await sock.sendMessage(jid, {
-            text: "⚡😭 DEU RUIM!\n\n⚠️ " + e.message + "\n\nEU SABIA! EU SABIA QUE IA DAR ERRADO!"
+            text: "⚡😭 *DEU RUIM!*\n\n⚠️ `" + e.message + "`\n\n> _\"EU SABIA! EU SABIA QUE IA DAR ERRADO!\"_"
           }, { quoted: msg })
         }
       }
     },
 
     reload: {
-      aliases: ["recarregar"],
+      aliases: ["recarregar", "reloadmenus"],
       async executar({ sock, msg }) {
         const jid = msg.key.remoteJid
         try {
-          if (global.__carregarMenus) global.__carregarMenus()
-          await sock.sendMessage(jid, { text: "⚡♻️ PRONTO...\n\nMenus recarregados.\nPode parar de me encher." }, { quoted: msg })
+          if (global.__carregarMenus) {
+            global.__carregarMenus()
+            return sock.sendMessage(jid, { text: "⚡♻️ *RECARREGADO!*\n\n> _\"Menus de volta... que maravilha.\"_\n\n📊 Comandos: *" + (global.totalComandos || 0) + "*" }, { quoted: msg })
+          }
+          await sock.sendMessage(jid, { text: "⚡💢 O reload não tá disponível." }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: "⚡😭 ERRO!\n\n" + e.message }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "⚡😭 *ERRO!*\n\n⚠️ " + e.message }, { quoted: msg })
         }
       }
     },
@@ -215,7 +238,7 @@ module.exports = {
       aliases: ["desligar", "offbot"],
       async executar({ sock, msg }) {
         const jid = msg.key.remoteJid
-        await sock.sendMessage(jid, { text: "⚡😴 TÁ BOM... VOU DORMIR...\n\nFinalmente paz.\nAdeus, boss." }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "⚡😴 *TÁ BOM... VOU DORMIR...*\n\n> _\"Finalmente paz.\"_\n> _\"Adeus, boss.\"_" }, { quoted: msg })
         setTimeout(() => process.exit(0), 2000)
       }
     },
@@ -224,7 +247,7 @@ module.exports = {
       aliases: ["restart"],
       async executar({ sock, msg }) {
         const jid = msg.key.remoteJid
-        await sock.sendMessage(jid, { text: "⚡🔄 DE NOVO ISSO?!\n\nAi ai ai...\nVou reiniciar... de novo..." }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "⚡🔄 *DE NOVO ISSO?!*\n\n> _\"Ai ai ai...\"_\n> _\"Vou reiniciar... de novo...\"_" }, { quoted: msg })
         setTimeout(() => process.exit(0), 2000)
       }
     },
@@ -234,15 +257,15 @@ module.exports = {
       async executar({ sock, msg, args }) {
         const jid = msg.key.remoteJid
         const link = args[0]
-        if (!link) return sock.sendMessage(jid, { text: "⚡🤔 ENTRAR ONDE?\n\nMe dá o link pelo amor de Deus.\n\n💡 Use: !entrar <link>" }, { quoted: msg })
+        if (!link) return sock.sendMessage(jid, { text: "⚡🤔 *ENTRAR ONDE?*\n\n> _\"Me dá o link pelo amor de Deus.\"_\n\n💡 Use: `!entrar <link>`" }, { quoted: msg })
         const match = link.match(/chat\.whatsapp\.com\/([A-Za-z0-9]+)/)
-        if (!match) return sock.sendMessage(jid, { text: "⚡😰 ISSO NÃO É LINK!\n\nTá tentando me enganar?" }, { quoted: msg })
+        if (!match) return sock.sendMessage(jid, { text: "⚡😰 *ISSO NÃO É LINK!*\n\n> _\"Tá tentando me enganar?\"_" }, { quoted: msg })
         try {
-          await sock.sendMessage(jid, { text: "⚡😬 TÁ... VOU ENTRAR...\n\nTomara que ninguém me xingue." }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "⚡😬 *TÁ... VOU ENTRAR...*\n\n> _\"Tomara que ninguém me xingue.\"_" }, { quoted: msg })
           const info = await sock.groupAcceptInvite(match[1])
-          await sock.sendMessage(jid, { text: "⚡✅ ENTREI!\n\nAgora me deixa em paz.\n\n🎩 " + (typeof info === "string" ? info : "ok") }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "⚡✅ *ENTREI!*\n\n> _\"Agora me deixa em paz.\"_\n\n🎩 `" + (typeof info === "string" ? info : "ok") + "`" }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: "⚡😭 NÃO CONSEGUI!\n\nEU SABIA!\n\n" + e.message }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "⚡😭 *NÃO CONSEGUI!*\n\n> _\"EU SABIA!\"_\n\n⚠️ " + e.message }, { quoted: msg })
         }
       }
     },
@@ -255,7 +278,7 @@ module.exports = {
         const quoted = ctx.quotedMessage
         const temImg = (msg.message && msg.message.imageMessage) || (quoted && quoted.imageMessage)
         const temVid = (msg.message && msg.message.videoMessage) || (quoted && quoted.videoMessage)
-        if (!temImg && !temVid) return sock.sendMessage(jid, { text: "⚡📸 CADÊ A FOTO?\n\nManda ou responde uma imagem/vídeo." }, { quoted: msg })
+        if (!temImg && !temVid) return sock.sendMessage(jid, { text: "⚡📸 *CADÊ A FOTO?*\n\n> _\"Manda ou responde uma imagem/vídeo.\"_\n\n💡 `!setfoto` (reply)" }, { quoted: msg })
         try {
           const cfg = db.config()
           if (temImg) {
@@ -264,7 +287,7 @@ module.exports = {
             cfg.fotoMenu = buffer.toString("base64")
             cfg.tipoMenu = "foto"
             db.salvarConfig(cfg)
-            return sock.sendMessage(jid, { image: buffer, caption: "⚡✅ GUARDEI...\n\nNão me pede mais nada." }, { quoted: msg })
+            return sock.sendMessage(jid, { image: buffer, caption: "⚡✅ *GUARDEI...*\n\n> _\"Não me pede mais nada.\"_\n\n🖼️ Foto do menu salva!" }, { quoted: msg })
           }
           const vidMsg = (msg.message && msg.message.videoMessage) ? msg : Object.assign({}, msg, { message: { videoMessage: quoted.videoMessage } })
           const vidBuffer = await utils.downloadMediaMessage(vidMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
@@ -280,9 +303,9 @@ module.exports = {
           db.salvarConfig(cfg)
           try { fs.unlinkSync(tIn) } catch (_) {}
           try { fs.unlinkSync(tOut) } catch (_) {}
-          await sock.sendMessage(jid, { video: outBuffer, mimetype: "video/mp4", fileName: "zenitsu.mp4", gifPlayback: true, caption: "⚡✅ VÍDEO SALVO...\n\nAff." }, { quoted: msg })
+          await sock.sendMessage(jid, { video: outBuffer, mimetype: "video/mp4", fileName: "zenitsu.mp4", gifPlayback: true, caption: "⚡✅ *VÍDEO SALVO...*\n\n> _\"Aff.\"_\n\n🎬 Vídeo do menu salvo!" }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: "⚡😭 ERRO!\n\nEU SABIA!\n\n" + e.message }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "⚡😭 *ERRO!*\n\n> _\"EU SABIA!\"_\n\n⚠️ " + e.message }, { quoted: msg })
         }
       }
     },
@@ -292,9 +315,9 @@ module.exports = {
       async executar({ sock, msg, args, db, utils }) {
         const jid = msg.key.remoteJid
         const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: "⚡💎 QUEM?\n\nMarca alguém!\n\n💡 !addvip @user <tempo>" }, { quoted: msg })
+        if (!alvo) return sock.sendMessage(jid, { text: "⚡💎 *QUEM?*\n\n> _\"Marca alguém, por favor!\"_\n\n💡 `!addvip @user <tempo>`" }, { quoted: msg })
         const tempo = (args.find(a => /^(inf|\d+[dhm])$/i.test(a)) || "").toLowerCase()
-        if (!tempo) return sock.sendMessage(jid, { text: "⚡💎 QUANTO TEMPO?\n\n1d, 7d, 30d, inf" }, { quoted: msg })
+        if (!tempo) return sock.sendMessage(jid, { text: "⚡💎 *QUANTO TEMPO?*\n\n> _\"Fala o tempo!\"_\n\n▸ `1d` - 1 dia\n▸ `7d` - 7 dias\n▸ `30d` - 30 dias\n▸ `inf` - eterno" }, { quoted: msg })
         let expira = "inf"
         if (tempo !== "inf") {
           const v = parseInt(tempo)
@@ -310,7 +333,7 @@ module.exports = {
         v.vips[alvo] = { expira, desde: Date.now() }
         db.salvarVips(v)
         const num = utils.soNumero(alvo)
-        await sock.sendMessage(jid, { text: "⚡💎 TÁ FEITO...\n\n👤 @" + num + "\n💎 " + (tempo === "inf" ? "ETERNO ♾️" : tempo.toUpperCase()) + "\n\nAproveita.", mentions: [alvo] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "⚡💎 *TÁ FEITO...*\n\n> _\"Pronto, mais um nobre.\"_\n\n👤 @" + num + "\n💎 *" + (tempo === "inf" ? "ETERNO ♾️" : tempo.toUpperCase()) + "*", mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -319,12 +342,12 @@ module.exports = {
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid
         const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: "⚡💎 Use !delvip @user" }, { quoted: msg })
+        if (!alvo) return sock.sendMessage(jid, { text: "⚡💎 Use `!delvip @user`" }, { quoted: msg })
         const v = db.vips()
-        if (!v.vips || !v.vips[alvo]) return sock.sendMessage(jid, { text: "⚡❌ @" + utils.soNumero(alvo) + " NÃO É VIP!\n\nEu não errei.", mentions: [alvo] }, { quoted: msg })
+        if (!v.vips || !v.vips[alvo]) return sock.sendMessage(jid, { text: "⚡❌ *NÃO É VIP!*\n\n> _\"Eu não errei.\"_\n\n👤 @" + utils.soNumero(alvo), mentions: [alvo] }, { quoted: msg })
         delete v.vips[alvo]
         db.salvarVips(v)
-        await sock.sendMessage(jid, { text: "⚡⚔️ TIREI...\n\n👤 @" + utils.soNumero(alvo) + "\n\nEle que se vire.", mentions: [alvo] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "⚡⚔️ *TIREI...*\n\n> _\"Ele que se vire.\"_\n\n👤 @" + utils.soNumero(alvo), mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -334,13 +357,13 @@ module.exports = {
         const jid = msg.key.remoteJid
         const v = db.vips()
         const vips = Object.entries(v.vips || {})
-        if (!vips.length) return sock.sendMessage(jid, { text: "⚡💎 NINGUÉM...\n\nTá vazio aqui." }, { quoted: msg })
-        let txt = "⚡💎 LISTA VIP:\n\n"
+        if (!vips.length) return sock.sendMessage(jid, { text: "⚡💎 *NINGUÉM...*\n\n> _\"Tá vazio aqui.\"_\n\n_\"Nem tenho o que mostrar.\"_" }, { quoted: msg })
+        let txt = "⚡💎 *LISTA VIP:*\n\n"
         const mentions = []
         vips.forEach(([jidVip, info], i) => {
           const num = utils.soNumero(jidVip)
           const expira = info.expira === "inf" ? "♾️ Eterno" : new Date(info.expira).toLocaleString("pt-BR")
-          txt += "👑 " + (i + 1) + ". @" + num + "\n💎 " + expira + "\n\n"
+          txt += "▸ " + (i + 1) + ". @" + num + "\n   💎 " + expira + "\n\n"
           mentions.push(jidVip)
         })
         await sock.sendMessage(jid, { text: txt, mentions }, { quoted: msg })
@@ -352,14 +375,14 @@ module.exports = {
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid
         const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: "⚡👑 Use !addsubdono @user" }, { quoted: msg })
+        if (!alvo) return sock.sendMessage(jid, { text: "⚡👑 Use `!addsubdono @user`" }, { quoted: msg })
         const cfg = db.config()
         cfg.subdonos = cfg.subdonos || []
         const num = utils.soNumero(alvo)
-        if (cfg.subdonos.some(s => utils.soNumero(s) === num)) return sock.sendMessage(jid, { text: "⚡ @" + num + " JÁ É MARECHAL!\n\nPresta atenção!", mentions: [alvo] }, { quoted: msg })
+        if (cfg.subdonos.some(s => utils.soNumero(s) === num)) return sock.sendMessage(jid, { text: "⚡ *JÁ É MARECHAL!*\n\n> _\"Presta atenção!\"_\n\n👤 @" + num, mentions: [alvo] }, { quoted: msg })
         cfg.subdonos.push(alvo)
         db.salvarConfig(cfg)
-        await sock.sendMessage(jid, { text: "⚡👑 NOVO MARECHAL...\n\n👤 @" + num + "\n\nAgora vira gente.", mentions: [alvo] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "⚡👑 *NOVO MARECHAL...*\n\n> _\"Agora vira gente.\"_\n\n👤 @" + num, mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -368,12 +391,12 @@ module.exports = {
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid
         const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: "⚡👑 Use !delsubdono @user" }, { quoted: msg })
+        if (!alvo) return sock.sendMessage(jid, { text: "⚡👑 Use `!delsubdono @user`" }, { quoted: msg })
         const cfg = db.config()
         const num = utils.soNumero(alvo)
         cfg.subdonos = (cfg.subdonos || []).filter(s => utils.soNumero(s) !== num)
         db.salvarConfig(cfg)
-        await sock.sendMessage(jid, { text: "⚡⚔️ REBAIXEI...\n\n👤 @" + num + "\n\nVolta pro seu lugar.", mentions: [alvo] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "⚡⚔️ *REBAIXEI...*\n\n> _\"Volta pro seu lugar.\"_\n\n👤 @" + num, mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -383,11 +406,11 @@ module.exports = {
         const jid = msg.key.remoteJid
         const cfg = db.config()
         const subs = cfg.subdonos || []
-        if (!subs.length) return sock.sendMessage(jid, { text: "⚡👑 NINGUÉM...\n\nTô sozinho nessa." }, { quoted: msg })
-        let txt = "⚡👑 MARECHAIS:\n\n"
+        if (!subs.length) return sock.sendMessage(jid, { text: "⚡👑 *NINGUÉM...*\n\n> _\"Tô sozinho nessa.\"_\n\n_\"Que solidão...\"_" }, { quoted: msg })
+        let txt = "⚡👑 *MARECHAIS:*\n\n"
         const mentions = []
         subs.forEach((jidS, i) => {
-          txt += "🎩 " + (i + 1) + ". @" + utils.soNumero(jidS) + "\n"
+          txt += "▸ " + (i + 1) + ". @" + utils.soNumero(jidS) + "\n"
           mentions.push(jidS)
         })
         await sock.sendMessage(jid, { text: txt, mentions }, { quoted: msg })
@@ -399,11 +422,11 @@ module.exports = {
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid
         const p = args[0]
-        if (!p || p.length > 3) return sock.sendMessage(jid, { text: "⚡⚙️ TÁ ERRADO!\n\nFala um prefixo curto!\n\n💡 !prefixoglobal <prefixo> (máx 3)" }, { quoted: msg })
+        if (!p || p.length > 3) return sock.sendMessage(jid, { text: "⚡⚙️ *TÁ ERRADO!*\n\n> _\"Fala um prefixo curto!\"_\n\n💡 `!prefixoglobal <prefixo>` (máx 3)" }, { quoted: msg })
         const cfg = db.config()
         cfg.prefixoGlobal = p
         db.salvarConfig(cfg)
-        await sock.sendMessage(jid, { text: "⚡⚙️ PRONTO...\n\nMudei pra " + p + ". Agora para de encher." }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "⚡⚙️ *PRONTO...*\n\n> _\"Mudei pra " + p + ".\"_\n> _\"Agora para de encher.\"_\n\n⚙️ Novo prefixo: `" + p + "`" }, { quoted: msg })
       }
     },
 
@@ -412,12 +435,12 @@ module.exports = {
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid
         const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: "⚡⚙️ Use !slow on/off" }, { quoted: msg })
+        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: "⚡⚙️ Use `!slow on/off`" }, { quoted: msg })
         const cfg = db.config()
         cfg.slow = opcao === "on"
         db.salvarConfig(cfg)
-        if (opcao === "on") await sock.sendMessage(jid, { text: "⚡😴 DEVAGAR...\n\nTipo eu correndo." }, { quoted: msg })
-        else await sock.sendMessage(jid, { text: "⚡⚡ RÁPIDO!\n\nTipo trovão. ZAP!" }, { quoted: msg })
+        if (opcao === "on") await sock.sendMessage(jid, { text: "⚡😴 *DEVAGAR...*\n\n> _\"Tipo eu correndo.\"_\n\n⚙️ Modo lento: *ON*" }, { quoted: msg })
+        else await sock.sendMessage(jid, { text: "⚡⚡ *RÁPIDO!*\n\n> _\"Tipo trovão. ZAP!\"_\n\n⚙️ Modo lento: *OFF*" }, { quoted: msg })
       }
     },
 
@@ -428,11 +451,14 @@ module.exports = {
         const opcao = (args[0] || "").toLowerCase()
         const a = db.aluguel()
         if (!["on", "off"].includes(opcao)) {
-          return sock.sendMessage(jid, { text: "⚡💰 ALUGUEL\n\n📊 Status: " + (a.ativo ? "ON ✅" : "OFF ❌") }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "⚡💰 *ALUGUEL*\n\n📊 Status: *" + (a.ativo ? "ON ✅" : "OFF ❌") + "*\n\n> _\"Fala se quer on ou off.\"_\n\n💡 `!aluguel on/off`" }, { quoted: msg })
         }
         a.ativo = opcao === "on"
         db.salvarAluguel(a)
-        await sock.sendMessage(jid, { text: opcao === "on" ? "⚡💰 ALUGUEL LIGADO...\n\nAgora ninguém entra de graça." : "⚡💰 LIBEREI GERAL\n\nSe der problema, não é minha culpa." }, { quoted: msg })
+        await sock.sendMessage(jid, { text: opcao === "on"
+          ? "⚡💰 *ALUGUEL LIGADO...*\n\n> _\"Agora ninguém entra de graça.\"_"
+          : "⚡💰 *LIBEREI GERAL*\n\n> _\"Se der problema, não é minha culpa.\"_"
+        }, { quoted: msg })
       }
     },
 
@@ -442,7 +468,7 @@ module.exports = {
       async executar({ sock, msg, args, db, utils }) {
         const jid = msg.key.remoteJid
         const tempoStr = args.join(" ").trim().toLowerCase()
-        if (!tempoStr) return sock.sendMessage(jid, { text: "⚡💰 QUANTO TEMPO?\n\n1dia, 30min, 1mes..." }, { quoted: msg })
+        if (!tempoStr) return sock.sendMessage(jid, { text: "⚡💰 *QUANTO TEMPO?*\n\n> _\"Fala o tempo!\"_\n\n▸ 1dia, 30min, 1mes..." }, { quoted: msg })
         const partes = tempoStr.split(/\s+/)
         let totalMs = 0
         for (const p of partes) {
@@ -459,7 +485,7 @@ module.exports = {
           else if (u === "ano") ms = v * 365 * 24 * 60 * 60 * 1000
           totalMs += ms
         }
-        if (totalMs <= 0) return sock.sendMessage(jid, { text: "⚡😤 FORMATO ERRADO!\n\nAprende a escrever!" }, { quoted: msg })
+        if (totalMs <= 0) return sock.sendMessage(jid, { text: "⚡😤 *FORMATO ERRADO!*\n\n> _\"Aprende a escrever!\"_" }, { quoted: msg })
         const a = db.aluguel()
         a.grupos = a.grupos || {}
         const agora = Date.now()
@@ -467,7 +493,7 @@ module.exports = {
         a.grupos[jid] = atual + totalMs
         if (!a.ativo) a.ativo = true
         db.salvarAluguel(a)
-        await sock.sendMessage(jid, { text: "⚡💰 FEITO...\n\n⏰ Expira em: " + utils.formatarTempo(a.grupos[jid] - agora) + "\n\nPaga em dia agora." }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "⚡💰 *FEITO...*\n\n> _\"Paga em dia agora.\"_\n\n⏰ Expira em: *" + utils.formatarTempo(a.grupos[jid] - agora) + "*" }, { quoted: msg })
       }
     },
 
@@ -478,14 +504,14 @@ module.exports = {
         const a = db.aluguel()
         const agora = Date.now()
         const entradas = Object.entries(a.grupos || {}).filter(e => e[1] > agora)
-        if (!entradas.length) return sock.sendMessage(jid, { text: "⚡💰 NADA ALUGADO!\n\nNem tem o que mostrar." }, { quoted: msg })
-        let txt = "⚡💰 TERRITÓRIOS ALUGADOS:\n\n"
+        if (!entradas.length) return sock.sendMessage(jid, { text: "⚡💰 *NADA ALUGADO!*\n\n> _\"Nem tem o que mostrar.\"_\n\n_\"Que tédio...\"_" }, { quoted: msg })
+        let txt = "⚡💰 *TERRITÓRIOS ALUGADOS:*\n\n"
         for (const [jidG, exp] of entradas) {
           try {
             const meta = await sock.groupMetadata(jidG)
-            txt += "🏰 " + (meta.subject || "?") + "\n⏰ " + utils.formatarTempo(exp - agora) + "\n\n"
+            txt += "🏰 *" + (meta.subject || "?") + "*\n⏰ " + utils.formatarTempo(exp - agora) + "\n\n"
           } catch (_) {
-            txt += "🏰 " + jidG + "\n⏰ " + utils.formatarTempo(exp - agora) + "\n\n"
+            txt += "🏰 `" + jidG + "`\n⏰ " + utils.formatarTempo(exp - agora) + "\n\n"
           }
         }
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
@@ -499,12 +525,12 @@ module.exports = {
         const a = db.aluguel()
         a.grupos = a.grupos || {}
         if (!args.length && jid.endsWith("@g.us")) {
-          if (!a.grupos[jid]) return sock.sendMessage(jid, { text: "⚡❌ ESSE GRUPO NÃO TEM ALUGUEL!\n\nPresta atenção!" }, { quoted: msg })
+          if (!a.grupos[jid]) return sock.sendMessage(jid, { text: "⚡❌ *ESSE GRUPO NÃO TEM ALUGUEL!*\n\n> _\"Presta atenção!\"_" }, { quoted: msg })
           delete a.grupos[jid]
           db.salvarAluguel(a)
-          return sock.sendMessage(jid, { text: "⚡✅ TIREI...\n\nLiberado geral." }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "⚡✅ *TIREI...*\n\n> _\"Liberado geral.\"_\n\n_\"Aproveitem.\"_" }, { quoted: msg })
         }
-        await sock.sendMessage(jid, { text: "⚡💡 Use: !delaluguel <nome>" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "⚡💡 Use: `!delaluguel <nome>`\nOu em grupo: `!delaluguel`" }, { quoted: msg })
       }
     },
 
@@ -516,7 +542,7 @@ module.exports = {
         b.grupos = b.grupos || {}
         b.grupos[jid] = true
         db.salvarBangp(b)
-        await sock.sendMessage(jid, { text: "⚡🚫 BANIDO!\n\nNem quero ver vocês.\nTchau." }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "⚡🚫 *BANIDO!*\n\n> _\"Nem quero ver vocês.\"_\n> _\"Tchau.\"_" }, { quoted: msg })
       }
     },
 
@@ -528,9 +554,9 @@ module.exports = {
         if (b.grupos && b.grupos[jid]) {
           delete b.grupos[jid]
           db.salvarBangp(b)
-          return sock.sendMessage(jid, { text: "⚡✅ LIBEREI...\n\nMas se me xingar, volto." }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "⚡✅ *LIBEREI...*\n\n> _\"Mas se me xingar, volto.\"_\n\n_\"Aproveita.\"_" }, { quoted: msg })
         }
-        await sock.sendMessage(jid, { text: "⚡❌ NÃO TÁ BANIDO!\n\nVocê não presta atenção nas coisas." }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "⚡❌ *NÃO TÁ BANIDO!*\n\n> _\"Você não presta atenção nas coisas.\"_" }, { quoted: msg })
       }
     },
 
@@ -540,9 +566,9 @@ module.exports = {
         const jid = msg.key.remoteJid
         const b = db.bangp()
         const grupos = Object.keys(b.grupos || {})
-        if (!grupos.length) return sock.sendMessage(jid, { text: "⚡🚫 NADA BANIDO...\n\nPor enquanto." }, { quoted: msg })
-        let txt = "⚡🚫 BANIDOS:\n\n"
-        grupos.forEach((g, i) => { txt += "⚔️ " + (i + 1) + ". " + g + "\n" })
+        if (!grupos.length) return sock.sendMessage(jid, { text: "⚡🚫 *NADA BANIDO...*\n\n> _\"Por enquanto.\"_\n\n_\"Mas fica de olho...\"_" }, { quoted: msg })
+        let txt = "⚡🚫 *BANIDOS:*\n\n"
+        grupos.forEach((g, i) => { txt += "▸ " + (i + 1) + ". `" + g + "`\n" })
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
@@ -552,8 +578,8 @@ module.exports = {
       async executar({ sock, msg, groupMetadata, utils }) {
         const jid = msg.key.remoteJid
         if (!jid.endsWith("@g.us")) return
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "⚡💥 EU PRECISO SER ADMIN!\n\nNão posso fazer mágica." }, { quoted: msg })
-        await sock.sendMessage(jid, { text: "⚡💥 AI AI AI... VOU EXPLODIR...\n\nNão olha pra trás." }, { quoted: msg })
+        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "⚡💥 *EU PRECISO SER ADMIN!*\n\n> _\"Não posso fazer mágica.\"_" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "⚡💥 *AI AI AI... VOU EXPLODIR...*\n\n> _\"Não olha pra trás.\"_\n\n_\"É melhor você sair...\"_" }, { quoted: msg })
         const meta = await sock.groupMetadata(jid)
         const botNum = utils.soNumero(sock.user && sock.user.id)
         const alvos = meta.participants.filter(p => utils.soNumero(p.id) !== botNum).map(p => p.id)
@@ -569,8 +595,8 @@ module.exports = {
       async executar({ sock, msg, groupMetadata, utils }) {
         const jid = msg.key.remoteJid
         if (!jid.endsWith("@g.us")) return
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "⚡🧹 EU PRECISO SER ADMIN!\n\nSério..." }, { quoted: msg })
-        await sock.sendMessage(jid, { text: "⚡🧹 VOU LIMPAR...\n\nOs chats vão sumir." }, { quoted: msg })
+        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "⚡🧹 *EU PRECISO SER ADMIN!*\n\n> _\"Sério...\"_" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "⚡🧹 *VOU LIMPAR...*\n\n> _\"Os chats vão sumir.\"_\n\n_\"Não é pessoal.\"_" }, { quoted: msg })
         const meta = await sock.groupMetadata(jid)
         const botNum = utils.soNumero(sock.user && sock.user.id)
         const alvos = meta.participants.filter(p => {
