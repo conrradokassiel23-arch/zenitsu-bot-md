@@ -41,17 +41,9 @@ function bootstrap() {
     }
   }
 
-  const arquivoCidade = path.join(MENUS_DIR, "menu-cidade", "index.js")
-  if (!fs.existsSync(arquivoCidade)) {
-    try {
-      const template = `module.exports = { menu:"menu-cidade", grupoOnly:false, adminOnly:false, donoOnly:false, commands:{ menucidade:{ aliases:["cidade","menuc"], async executar({sock,msg}){ await sock.sendMessage(msg.key.remoteJid,{text:"🏙️ Ainda não instalado!"},{quoted:msg}) } } } }\n`
-      fs.writeFileSync(arquivoCidade, template, "utf8")
-    } catch (e) { console.log("❌ " + e.message) }
-  }
-
   const arquivoCidadeJson = path.join(DATA_DIR, "cidade.json")
   if (!fs.existsSync(arquivoCidadeJson)) {
-    try { fs.writeFileSync(arquivoCidadeJson, JSON.stringify({ usuarios:{}, casas:{}, predios:{} }, null, 2)) } catch (e) {}
+    try { fs.writeFileSync(arquivoCidadeJson, JSON.stringify({ usuarios: {}, casas: {}, predios: {} }, null, 2)) } catch (e) {}
   }
 }
 bootstrap()
@@ -111,7 +103,9 @@ const db = {
 // 🛠️ HELPERS
 // ============================================================
 function getAlvo(msg) {
-  const ctx = msg.message?.extendedTextMessage?.contextInfo || msg.message?.imageMessage?.contextInfo || msg.message?.videoMessage?.contextInfo || {}
+  const ctx = (msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo) ||
+              (msg.message && msg.message.imageMessage && msg.message.imageMessage.contextInfo) ||
+              (msg.message && msg.message.videoMessage && msg.message.videoMessage.contextInfo) || {}
   const mentions = ctx.mentionedJid || []
   if (mentions.length) return mentions[0]
   if (ctx.participant) return ctx.participant
@@ -125,14 +119,17 @@ function soNumero(jid) {
 }
 
 function getTexto(msg) {
-  return (msg.message?.conversation || msg.message?.extendedTextMessage?.text || msg.message?.imageMessage?.caption || msg.message?.videoMessage?.caption || "")
+  return (msg.message && msg.message.conversation) ||
+         (msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.text) ||
+         (msg.message && msg.message.imageMessage && msg.message.imageMessage.caption) ||
+         (msg.message && msg.message.videoMessage && msg.message.videoMessage.caption) || ""
 }
 
 function getTextoBotao(msg) {
   try {
-    if (msg.message?.buttonsResponseMessage) return msg.message.buttonsResponseMessage.selectedButtonId || ""
-    if (msg.message?.templateButtonReplyMessage) return msg.message.templateButtonReplyMessage.selectedId || ""
-    if (msg.message?.listResponseMessage) return msg.message.listResponseMessage.singleSelectReply?.selectedRowId || ""
+    if (msg.message && msg.message.buttonsResponseMessage) return msg.message.buttonsResponseMessage.selectedButtonId || ""
+    if (msg.message && msg.message.templateButtonReplyMessage) return msg.message.templateButtonReplyMessage.selectedId || ""
+    if (msg.message && msg.message.listResponseMessage) return msg.message.listResponseMessage.singleSelectReply && msg.message.listResponseMessage.singleSelectReply.selectedRowId || ""
   } catch (_) {}
   return ""
 }
@@ -144,9 +141,10 @@ function naListaNegra(jidGrupo, jidOuNum) {
 }
 
 function aluguelAtivo() { return db.aluguel().ativo === true }
+
 function grupoTemAluguel(jid) {
   const a = db.aluguel()
-  const exp = a.grupos?.[jid]
+  const exp = a.grupos && a.grupos[jid]
   return exp && Date.now() < exp
 }
 
@@ -169,7 +167,10 @@ function adicionarAviso(grupoJid, userJid, tipo) {
 
 function limparAvisos(grupoJid, userJid, tipo) {
   const avisos = db.avisos()
-  if (avisos[grupoJid]?.[userJid]?.[tipo]) { avisos[grupoJid][userJid][tipo] = 0; db.salvarAvisos(avisos) }
+  if (avisos[grupoJid] && avisos[grupoJid][userJid] && avisos[grupoJid][userJid][tipo]) {
+    avisos[grupoJid][userJid][tipo] = 0
+    db.salvarAvisos(avisos)
+  }
 }
 
 function ehSubAdmin(jidGrupo, jidUser) {
@@ -180,12 +181,12 @@ function ehSubAdmin(jidGrupo, jidUser) {
 
 function botEhAdmin(meta, sock) {
   if (!meta) return false
-  const botIds = [sock.user?.id, sock.user?.lid, sock.user?.jid].filter(Boolean).map(soNumero)
+  const botIds = [sock.user && sock.user.id, sock.user && sock.user.lid, sock.user && sock.user.jid].filter(Boolean).map(soNumero)
   const botPart = meta.participants.find(p => {
     const ids = [p.id, p.lid, p.phoneNumber].filter(Boolean).map(soNumero)
     return ids.some(id => botIds.includes(id))
   })
-  return botPart?.admin === "admin" || botPart?.admin === "superadmin"
+  return botPart && (botPart.admin === "admin" || botPart.admin === "superadmin")
 }
 
 function dataBrasil() {
@@ -215,11 +216,11 @@ async function notificarX9(sock, groupJid, tipo, autor, alvo) {
 // ============================================================
 async function processarAutoFig(sock, msg, remetente, isGrupo) {
   if (!isGrupo) return false
-  const conf = db.autocfg().grupos?.[remetente] || {}
+  const conf = (db.autocfg().grupos && db.autocfg().grupos[remetente]) || {}
   if (!conf.autofig) return false
 
-  const temImg = msg.message?.imageMessage
-  const temVid = msg.message?.videoMessage
+  const temImg = msg.message && msg.message.imageMessage
+  const temVid = msg.message && msg.message.videoMessage
   if (!temImg && !temVid) return false
 
   try {
@@ -239,7 +240,8 @@ async function processarAutoFig(sock, msg, remetente, isGrupo) {
       fs.writeFileSync(tIn, buf)
       execSync(`"${ff}" -y -i "${tIn}" -vcodec libwebp -filter:v "fps=15,scale=512:512:force_original_aspect_ratio=decrease" -lossless 0 -compression_level 6 -q:v 50 -loop 0 -preset default -an -vsync 0 -s 512:512 "${tOut}"`, { stdio: "ignore" })
       wp = fs.readFileSync(tOut)
-      try { fs.unlinkSync(tIn); fs.unlinkSync(tOut) } catch (_) {}
+      try { fs.unlinkSync(tIn) } catch (_) {}
+      try { fs.unlinkSync(tOut) } catch (_) {}
     }
 
     await sock.sendMessage(remetente, { sticker: wp }, { quoted: msg })
@@ -249,7 +251,7 @@ async function processarAutoFig(sock, msg, remetente, isGrupo) {
 
 async function processarAutoTtk(sock, msg, remetente, isGrupo) {
   if (!isGrupo) return false
-  const conf = db.autocfg().grupos?.[remetente] || {}
+  const conf = (db.autocfg().grupos && db.autocfg().grupos[remetente]) || {}
   if (!conf.autottk) return false
 
   const texto = getTexto(msg)
@@ -283,6 +285,10 @@ const aliases = new Map()
 global.rendasAutomaticas = global.rendasAutomaticas || []
 
 function carregarMenus() {
+  comandos.clear()
+  aliases.clear()
+  global.rendasAutomaticas = []
+
   if (!fs.existsSync(MENUS_DIR)) return
   const pastas = fs.readdirSync(MENUS_DIR)
   for (const pasta of pastas) {
@@ -301,18 +307,18 @@ function carregarMenus() {
       }
 
       const menuCfg = {
-        grupoOnly: mod.grupoOnly ?? false,
-        adminOnly: mod.adminOnly ?? false,
-        donoOnly: mod.donoOnly ?? false
+        grupoOnly: mod.grupoOnly || false,
+        adminOnly: mod.adminOnly || false,
+        donoOnly: mod.donoOnly || false
       }
       for (const [nome, cmd] of Object.entries(mod.commands)) {
         const pacote = {
           nome,
           aliases: cmd.aliases || [],
           categoria: mod.menu || pasta,
-          grupoOnly: cmd.grupoOnly ?? menuCfg.grupoOnly,
-          adminOnly: cmd.adminOnly ?? menuCfg.adminOnly,
-          donoOnly: cmd.donoOnly ?? menuCfg.donoOnly,
+          grupoOnly: cmd.grupoOnly !== undefined ? cmd.grupoOnly : menuCfg.grupoOnly,
+          adminOnly: cmd.adminOnly !== undefined ? cmd.adminOnly : menuCfg.adminOnly,
+          donoOnly: cmd.donoOnly !== undefined ? cmd.donoOnly : menuCfg.donoOnly,
           executar: cmd.executar
         }
         comandos.set(nome, pacote)
@@ -337,6 +343,9 @@ function carregarMenus() {
   console.log("\n⚡ Zenitsu carregou " + comandos.size + " comandos...")
   console.log(aliases.size + " aliases registrados\n")
 }
+
+// ⚠️ Expõe pro !atualizar conseguir recarregar
+global.__carregarMenus = carregarMenus
 
 function getComando(n) {
   if (comandos.has(n)) return comandos.get(n)
@@ -380,7 +389,7 @@ function envolverSendMessage(sock) {
   const original = sock.sendMessage.bind(sock)
   sock.sendMessage = async (jid, content, options = {}) => {
     try {
-      const temBotoes = content?.buttons || content?.sections || content?.templateButtons || content?.buttonText || content?.interactiveButtons || content?.listMessage
+      const temBotoes = content && (content.buttons || content.sections || content.templateButtons || content.buttonText || content.interactiveButtons || content.listMessage)
       if (temBotoes) return original(jid, content, options)
       if (options.edit) return original(jid, content, options)
 
@@ -438,15 +447,12 @@ async function iniciar() {
         console.log("Exemplo: 5511999999999\n")
 
         const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-
         rl.question("Numero: ", async (numeroDigitado) => {
           rl.close()
           const numero = String(numeroDigitado).replace(/\D/g, "")
           if (!numero || numero.length < 10) { console.log("\nNumero invalido! Reinicie o bot."); process.exit(1) }
-
           NUMERO_PAREAMENTO = numero
           console.log("\nNumero salvo: " + numero + "\nGerando codigo de pareamento...\n")
-
           try {
             const code = await sock.requestPairingCode(numero)
             console.log("╔═══════════════════════════════╗")
@@ -463,7 +469,7 @@ async function iniciar() {
 
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
     if (connection === "close") {
-      const motivo = new Boom(lastDisconnect?.error)?.output?.statusCode
+      const motivo = new Boom(lastDisconnect && lastDisconnect.error) && new Boom(lastDisconnect.error).output && new Boom(lastDisconnect.error).output.statusCode
       if (motivo === DisconnectReason.loggedOut) process.exit(1)
       else setTimeout(() => iniciar(), 3000)
     } else if (connection === "open") {
@@ -483,22 +489,27 @@ async function iniciar() {
     let sender = senderRaw
 
     if (senderRaw && senderRaw.endsWith("@lid")) {
-      if (msg.key?.participantPn) sender = msg.key.participantPn
-      else if (msg.key?.participantAlt) sender = msg.key.participantAlt
+      if (msg.key && msg.key.participantPn) sender = msg.key.participantPn
+      else if (msg.key && msg.key.participantAlt) sender = msg.key.participantAlt
       else if (isGrupo) {
         try {
           const meta = await sock.groupMetadata(remetente).catch(() => null)
           if (meta) {
             const p = meta.participants.find(x => x.lid === senderRaw || x.id === senderRaw || (x.lid && soNumero(x.lid) === soNumero(senderRaw)))
-            if (p?.phoneNumber) sender = p.phoneNumber
-            else if (p?.id && !p.id.endsWith("@lid")) sender = p.id
+            if (p && p.phoneNumber) sender = p.phoneNumber
+            else if (p && p.id && !p.id.endsWith("@lid")) sender = p.id
           }
         } catch (_) {}
       }
     }
 
     const numerosDono = (Array.isArray(config.dono) ? config.dono : [config.dono]).map(soNumero)
-    const senderCandidatos = [sender, senderRaw, msg.key?.participant, msg.key?.participantPn, msg.key?.participantLid, msg.key?.remoteJid, msg.participant, sock.user?.id, sock.user?.lid].filter(Boolean)
+    const senderCandidatos = [
+      sender, senderRaw,
+      msg.key && msg.key.participant, msg.key && msg.key.participantPn,
+      msg.key && msg.key.participantLid, msg.key && msg.key.remoteJid, msg.participant,
+      sock.user && sock.user.id, sock.user && sock.user.lid
+    ].filter(Boolean)
     const senderNums = senderCandidatos.map(soNumero).filter(Boolean)
     const isDono = msg.key.fromMe === true || senderNums.some(n => numerosDono.includes(n))
 
@@ -508,13 +519,13 @@ async function iniciar() {
 
     if (isGrupo && !isDono && !isSubDono) {
       const b = db.bangp()
-      if (b.grupos?.[remetente]) return
+      if (b.grupos && b.grupos[remetente]) return
     }
 
     // 🎨 AUTOFIX / AUTOTTK (antes dos comandos)
     if (isGrupo && !msg.key.fromMe) {
       try {
-        const confAuto = db.autocfg().grupos?.[remetente] || {}
+        const confAuto = (db.autocfg().grupos && db.autocfg().grupos[remetente]) || {}
         if (confAuto.autottk) {
           const feito = await processarAutoTtk(sock, msg, remetente, isGrupo)
           if (feito) return
@@ -553,7 +564,7 @@ async function iniciar() {
     if (isGrupo && aluguelAtivo() && !isDono && !isSubDono && !grupoTemAluguel(remetente)) return
 
     if (isGrupo && !msg.key.fromMe) {
-      const cands = [sender, msg.key?.participantPn, msg.key?.participantLid].filter(Boolean)
+      const cands = [sender, msg.key && msg.key.participantPn, msg.key && msg.key.participantLid].filter(Boolean)
       if (cands.some(j => naListaNegra(remetente, j))) {
         try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
         try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
@@ -566,14 +577,14 @@ async function iniciar() {
       const conf = grupos[remetente] || {}
       const meta = await sock.groupMetadata(remetente).catch(() => null)
 
-      const isAdm = meta?.participants.find(p => p.id === sender || soNumero(p.id) === soNumero(sender) || soNumero(p.lid) === soNumero(sender))?.admin
-      const ehAdmin = isAdm === "admin" || isAdm === "superadmin"
+      const isAdm = meta && meta.participants.find(p => p.id === sender || soNumero(p.id) === soNumero(sender) || soNumero(p.lid) === soNumero(sender))
+      const ehAdmin = isAdm && (isAdm.admin === "admin" || isAdm.admin === "superadmin")
       const ehSub = ehSubAdmin(remetente, sender)
       const podeBurlar = ehAdmin || isDono || isSubDono || ehSub
 
       const mutados = db.mutados()
       const mutadosG = mutados[remetente] || {}
-      const candsM = [sender, msg.key?.participantPn, msg.key?.participantLid].filter(Boolean)
+      const candsM = [sender, msg.key && msg.key.participantPn, msg.key && msg.key.participantLid].filter(Boolean)
       let jidMutado = null
       for (const c of candsM) {
         for (const j of Object.keys(mutadosG)) {
@@ -611,7 +622,7 @@ async function iniciar() {
 
       const afks = db.afk()
       const afkGrupo = afks[remetente] || {}
-      const candsAutor = [sender, msg.key?.participantPn, msg.key?.participantLid].filter(Boolean)
+      const candsAutor = [sender, msg.key && msg.key.participantPn, msg.key && msg.key.participantLid].filter(Boolean)
       let jidAfk = null
       for (const c of candsAutor) {
         for (const j of Object.keys(afkGrupo)) {
@@ -632,7 +643,7 @@ async function iniciar() {
         })
       }
 
-      const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
+      const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
       const mencionados = ctx.mentionedJid || []
       for (const m of mencionados) {
         for (const [j, info] of Object.entries(afkGrupo)) {
@@ -703,10 +714,10 @@ async function iniciar() {
       }
 
       const antimap = [
-        { cond: conf.antiaudio && msg.message?.audioMessage, tipo: "audio", nome: "Audio" },
-        { cond: conf.antivideo && msg.message?.videoMessage, tipo: "video", nome: "Video" },
-        { cond: conf.antifoto && msg.message?.imageMessage, tipo: "foto", nome: "Foto" },
-        { cond: conf.antifig && msg.message?.stickerMessage, tipo: "fig", nome: "Figurinha" }
+        { cond: conf.antiaudio && msg.message && msg.message.audioMessage, tipo: "audio", nome: "Audio" },
+        { cond: conf.antivideo && msg.message && msg.message.videoMessage, tipo: "video", nome: "Video" },
+        { cond: conf.antifoto && msg.message && msg.message.imageMessage, tipo: "foto", nome: "Foto" },
+        { cond: conf.antifig && msg.message && msg.message.stickerMessage, tipo: "fig", nome: "Figurinha" }
       ]
       for (const a of antimap) {
         if (a.cond && !podeBurlar) {
@@ -730,7 +741,7 @@ async function iniciar() {
       const parceriasAll = db.parcerias()
       for (const jid of Object.keys(parceriasAll)) {
         const p = parceriasAll[jid]
-        if (p?.parceiros) for (const jidP of Object.keys(p.parceiros)) p.parceiros[jidP].usados = 0
+        if (p && p.parceiros) for (const jidP of Object.keys(p.parceiros)) p.parceiros[jidP].usados = 0
       }
       db.salvarParcerias(parceriasAll)
       cfgAll.ultimoReset = hoje
@@ -787,15 +798,15 @@ async function iniciar() {
     try {
       const cidData = dbLer("cidade.json", { usuarios: {} })
       const numSender = soNumero(sender)
-      const userCidade = cidData.usuarios?.[numSender]
-      if (userCidade?.preso && userCidade.preso > Date.now()) {
+      const userCidade = cidData.usuarios && cidData.usuarios[numSender]
+      if (userCidade && userCidade.preso && userCidade.preso > Date.now()) {
         const tempoRestante = formatarTempo(userCidade.preso - Date.now())
         if (cmdName.toLowerCase() !== "prefixo") {
-          await sock.sendMessage(remetente, { text: "⚡🚔 *VOCÊ ESTÁ PRESO!*\n\n⏰ Tempo: *" + tempoRestante + "*" }, { quoted: msg })
+          await sock.sendMessage(remetente, { text: "⚡🚔 VOCÊ ESTÁ PRESO!\n\n⏰ Tempo: " + tempoRestante }, { quoted: msg })
           return
         }
       }
-      if (userCidade?.preso && userCidade.preso <= Date.now()) {
+      if (userCidade && userCidade.preso && userCidade.preso <= Date.now()) {
         cidData.usuarios[numSender].preso = null
         dbSalvar("cidade.json", cidData)
       }
@@ -806,7 +817,7 @@ async function iniciar() {
     if (isGrupo) {
       groupMetadata = await sock.groupMetadata(remetente)
       const p = groupMetadata.participants.find(x => x.id === sender || soNumero(x.id) === soNumero(sender) || soNumero(x.lid) === soNumero(sender))
-      isAdmin = p?.admin === "admin" || p?.admin === "superadmin"
+      isAdmin = p && (p.admin === "admin" || p.admin === "superadmin")
     }
 
     const ehSub = isGrupo && ehSubAdmin(remetente, sender)
@@ -814,7 +825,9 @@ async function iniciar() {
     const ehComandoSub = permitidoSub.includes(cmd.nome) || (cmd.aliases || []).some(a => permitidoSub.includes(a))
     const podeAdmin = isAdmin || isDono || isSubDono || (ehSub && ehComandoSub)
 
-    if (cfgGlobal.slow && !isDono && !isSubDono) await new Promise(r => setTimeout(r, 2500))
+    if (cfgGlobal.slow && !isDono && !isSubDono) {
+      await new Promise(r => setTimeout(r, 2500))
+    }
 
     if (cmd.categoria === "menu-rpg" && isGrupo) {
       const excecoes = ["rpg", "menurpg", "prefixo"]
@@ -823,9 +836,15 @@ async function iniciar() {
       }
     }
 
-    if (cmd.donoOnly && !isDono && !isSubDono) return sock.sendMessage(remetente, { text: "⚡ Esse comando e so do imperador!" }, { quoted: msg })
-    if (cmd.adminOnly && !podeAdmin && !isSubDono) return sock.sendMessage(remetente, { text: "⚡ Esse comando e de general!" }, { quoted: msg })
-    if (cmd.grupoOnly && !isGrupo) return sock.sendMessage(remetente, { text: "⚡ So em grupo!" }, { quoted: msg })
+    if (cmd.donoOnly && !isDono && !isSubDono) {
+      return sock.sendMessage(remetente, { text: "⚡ Esse comando e so do imperador!" }, { quoted: msg })
+    }
+    if (cmd.adminOnly && !podeAdmin && !isSubDono) {
+      return sock.sendMessage(remetente, { text: "⚡ Esse comando e de general!" }, { quoted: msg })
+    }
+    if (cmd.grupoOnly && !isGrupo) {
+      return sock.sendMessage(remetente, { text: "⚡ So em grupo!" }, { quoted: msg })
+    }
 
     try {
       await cmd.executar({
@@ -844,7 +863,9 @@ async function iniciar() {
     } catch (e) {
       console.log("ERRO em " + cmd.nome + ":")
       console.log(e)
-      try { await sock.sendMessage(remetente, { text: "⚡ ERRO no comando " + cmd.nome + "\n\n" + e.message }, { quoted: msg }) } catch (_) {}
+      try {
+        await sock.sendMessage(remetente, { text: "⚡ ERRO no comando " + cmd.nome + "\n\n" + e.message }, { quoted: msg })
+      } catch (_) {}
     }
   })
 
@@ -931,7 +952,7 @@ function checarAgendamentos() {
     }
     if (vipAlterou) db.salvarVips(v)
 
-    if (global.rendasAutomaticas?.length) {
+    if (global.rendasAutomaticas && global.rendasAutomaticas.length) {
       for (const fn of global.rendasAutomaticas) {
         try { await fn(sockGlobal, db) } catch (e) { console.log("Erro renda auto:", e.message) }
       }
@@ -953,14 +974,14 @@ function checarAgendamentos() {
 
         for (const [num, user] of Object.entries(cidData.usuarios || {})) {
           let rendaTotal = 0
-          if (user.casa && cidData.casas?.[user.casa]) {
+          if (user.casa && cidData.casas && cidData.casas[user.casa]) {
             const casa = cidData.casas[user.casa]
             const sujeira = user.sujeiraCasa || 0
             rendaTotal += casa.renda - Math.floor(casa.renda * (sujeira / 100))
             cidData.usuarios[num].sujeiraCasa = Math.min(100, (user.sujeiraCasa || 0) + 10)
             alterouCidade = true
           }
-          if (user.predio && cidData.predios?.[user.predio]) {
+          if (user.predio && cidData.predios && cidData.predios[user.predio]) {
             const predio = cidData.predios[user.predio]
             const sujeira = user.sujeiraPredio || 0
             rendaTotal += predio.renda - Math.floor(predio.renda * (sujeira / 100))
@@ -988,7 +1009,7 @@ function checarAgendamentos() {
       if (conf.abrirHora === horaAtual && conf.ultimoAbrir !== dataHoje) {
         try {
           await sockGlobal.groupSettingUpdate(jid, "not_announcement")
-          const legenda = conf.legendaAbrir?.trim() || "Territorio aberto!"
+          const legenda = (conf.legendaAbrir && conf.legendaAbrir.trim()) || "Territorio aberto!"
           if (conf.fotoAbrir) await sockGlobal.sendMessage(jid, { image: Buffer.from(conf.fotoAbrir, "base64"), caption: legenda })
           else await sockGlobal.sendMessage(jid, { text: legenda })
           conf.ultimoAbrir = dataHoje; alterou = true
@@ -997,7 +1018,7 @@ function checarAgendamentos() {
       if (conf.fecharHora === horaAtual && conf.ultimoFechar !== dataHoje) {
         try {
           await sockGlobal.groupSettingUpdate(jid, "announcement")
-          const legenda = conf.legendaFechar?.trim() || "Territorio fechado!"
+          const legenda = (conf.legendaFechar && conf.legendaFechar.trim()) || "Territorio fechado!"
           if (conf.fotoFechar) await sockGlobal.sendMessage(jid, { image: Buffer.from(conf.fotoFechar, "base64"), caption: legenda })
           else await sockGlobal.sendMessage(jid, { text: legenda })
           conf.ultimoFechar = dataHoje; alterou = true
@@ -1024,7 +1045,7 @@ function iniciarConsole() {
       const sub = (args[0] || "").toLowerCase()
       if (sub === "ver") {
         const c1 = db.canal()
-        console.log(c1?.jid ? "\n" + c1.nome + " | " + c1.link + "\n" : "\nNenhum canal.\n")
+        console.log(c1 && c1.jid ? "\n" + c1.nome + " | " + c1.link + "\n" : "\nNenhum canal.\n")
         rl.prompt(); return
       }
       if (sub === "0" || sub === "off") {
@@ -1041,9 +1062,6 @@ function iniciarConsole() {
       return
     }
     if (c === "reload") {
-      comandos.clear()
-      aliases.clear()
-      global.rendasAutomaticas = []
       carregarMenus()
       console.log("Menus recarregados!\n")
       rl.prompt(); return
@@ -1057,9 +1075,9 @@ async function salvarCanalPeloLink(link) {
   if (!codigo || !sockGlobal) return
   try {
     const meta = await sockGlobal.newsletterMetadata("invite", codigo)
-    const jidReal = meta?.jid || meta?.id
+    const jidReal = meta && (meta.jid || meta.id)
     if (!jidReal) throw new Error("Canal nao encontrado")
-    db.salvarCanal({ jid: jidReal, nome: meta?.name || "Canal", link: "https://whatsapp.com/channel/" + codigo })
+    db.salvarCanal({ jid: jidReal, nome: meta.name || "Canal", link: "https://whatsapp.com/channel/" + codigo })
     recarregarCanal()
     console.log("\nCanal salvo!\n")
   } catch (e) { console.log(e.message + "\n") }
