@@ -1,1110 +1,1074 @@
 /* ============================================================
-   ⚔️ MENU ADM - NAPOLEÃO BONAPARTE
+   ⚡ ZENITSU BOT MD - DEMON SLAYER
    ============================================================ */
 
-module.exports = {
-  menu: "menu-adm",
-  grupoOnly: false,
-  adminOnly: false,
-  donoOnly: false,
+const {
+  default: makeWASocket,
+  useMultiFileAuthState,
+  DisconnectReason,
+  fetchLatestBaileysVersion,
+  downloadMediaMessage
+} = require("@itsliaaa/baileys")
+const { Boom } = require("@hapi/boom")
+const P = require("pino")
+const fs = require("fs")
+const path = require("path")
+const readline = require("readline")
 
-  commands: {
+const config = require("./config")
 
-    // ============ MENU ============
-    menu: {
-      aliases: ["menus", "ajuda", "help", "menuadm"],
-      async executar({ sock, msg, prefixoAtivo, db, sender, config }) {
-        const jid = msg.key.remoteJid
-        const p = prefixoAtivo || "!"
-        const cfg = db.config() || {}
+const DATA_DIR = path.join(__dirname, "data")
+const MENUS_DIR = path.join(__dirname, "menus")
 
-        const numUser = String(sender || "").split("@")[0].split(":")[0].replace(/\D/g, "")
-        const pushName = msg.pushName || "Soldado"
-        const agora = new Date()
-        const hora = agora.toLocaleTimeString("pt-BR")
-        const h = agora.getHours()
-        let saudacao = "Boa noite"
-        if (h >= 5 && h < 12) saudacao = "Bom dia"
-        else if (h >= 12 && h < 18) saudacao = "Boa tarde"
+// ============================================================
+// 📁 BOOTSTRAP
+// ============================================================
+function bootstrap() {
+  const pastas = [
+    DATA_DIR,
+    MENUS_DIR,
+    path.join(MENUS_DIR, "menu-adm"),
+    path.join(MENUS_DIR, "menu-dono"),
+    path.join(MENUS_DIR, "menu-vip"),
+    path.join(MENUS_DIR, "menu-rpg"),
+    path.join(MENUS_DIR, "menu-fazenda"),
+    path.join(MENUS_DIR, "menu-fnaf"),
+    path.join(MENUS_DIR, "menu-cidade")
+  ]
+  for (const pasta of pastas) {
+    if (!fs.existsSync(pasta)) {
+      try { fs.mkdirSync(pasta, { recursive: true }); console.log("📁 Pasta criada: " + pasta) } catch (e) { console.log("❌ " + e.message) }
+    }
+  }
 
-        let premium = "Não"
-        const vips = (db.vips() || {}).vips || {}
-        for (const [jidVip, info] of Object.entries(vips)) {
-          const n = String(jidVip).split("@")[0].split(":")[0].replace(/\D/g, "")
-          if (n === numUser) {
-            if (info.expira === "inf" || info.expira > Date.now()) { premium = "Sim 💎"; break }
-          }
+  const arquivoCidade = path.join(MENUS_DIR, "menu-cidade", "index.js")
+  if (!fs.existsSync(arquivoCidade)) {
+    try {
+      const template = `module.exports = { menu:"menu-cidade", grupoOnly:false, adminOnly:false, donoOnly:false, commands:{ menucidade:{ aliases:["cidade","menuc"], async executar({sock,msg}){ await sock.sendMessage(msg.key.remoteJid,{text:"🏙️ Ainda não instalado!"},{quoted:msg}) } } } }\n`
+      fs.writeFileSync(arquivoCidade, template, "utf8")
+    } catch (e) { console.log("❌ " + e.message) }
+  }
+
+  const arquivoCidadeJson = path.join(DATA_DIR, "cidade.json")
+  if (!fs.existsSync(arquivoCidadeJson)) {
+    try { fs.writeFileSync(arquivoCidadeJson, JSON.stringify({ usuarios:{}, casas:{}, predios:{} }, null, 2)) } catch (e) {}
+  }
+}
+bootstrap()
+
+// ============================================================
+// 💾 DB
+// ============================================================
+function dbLer(arquivo, padrao = {}) {
+  const p = path.join(DATA_DIR, arquivo)
+  if (!fs.existsSync(p)) {
+    fs.writeFileSync(p, JSON.stringify(padrao, null, 2))
+    return padrao
+  }
+  try { return JSON.parse(fs.readFileSync(p, "utf8")) } catch { return padrao }
+}
+
+function dbSalvar(arquivo, dados) {
+  fs.writeFileSync(path.join(DATA_DIR, arquivo), JSON.stringify(dados, null, 2))
+}
+
+const db = {
+  grupos: () => dbLer("grupos.json", {}),
+  salvarGrupos: (d) => dbSalvar("grupos.json", d),
+  advs: () => dbLer("advs.json", {}),
+  salvarAdvs: (d) => dbSalvar("advs.json", d),
+  config: () => dbLer("config.json", { fotoMenu: null, prefixoGlobal: null, slow: false, subdonos: [] }),
+  salvarConfig: (d) => dbSalvar("config.json", d),
+  canal: () => dbLer("canal.json", { jid: null, nome: null, link: null }),
+  salvarCanal: (d) => dbSalvar("canal.json", d),
+  listanegra: () => dbLer("listanegra.json", {}),
+  salvarListanegra: (d) => dbSalvar("listanegra.json", d),
+  aluguel: () => dbLer("aluguel.json", { ativo: false, grupos: {} }),
+  salvarAluguel: (d) => dbSalvar("aluguel.json", d),
+  parcerias: () => dbLer("parcerias.json", {}),
+  salvarParcerias: (d) => dbSalvar("parcerias.json", d),
+  avisos: () => dbLer("avisos.json", {}),
+  salvarAvisos: (d) => dbSalvar("avisos.json", d),
+  afk: () => dbLer("afk.json", {}),
+  salvarAfk: (d) => dbSalvar("afk.json", d),
+  mutados: () => dbLer("mutados.json", {}),
+  salvarMutados: (d) => dbSalvar("mutados.json", d),
+  palavroes: () => dbLer("palavroes.json", {}),
+  salvarPalavroes: (d) => dbSalvar("palavroes.json", d),
+  subadmins: () => dbLer("subadmins.json", {}),
+  salvarSubadmins: (d) => dbSalvar("subadmins.json", d),
+  vips: () => dbLer("vips.json", { vips: {} }),
+  salvarVips: (d) => dbSalvar("vips.json", d),
+  bangp: () => dbLer("bangp.json", { grupos: {} }),
+  salvarBangp: (d) => dbSalvar("bangp.json", d),
+  rpg: () => dbLer("rpg.json", { usuarios: {} }),
+  salvarRpg: (d) => dbSalvar("rpg.json", d),
+  autocfg: () => dbLer("autocfg.json", { grupos: {} }),
+  salvarAutocfg: (d) => dbSalvar("autocfg.json", d)
+}
+
+// ============================================================
+// 🛠️ HELPERS
+// ============================================================
+function getAlvo(msg) {
+  const ctx = msg.message?.extendedTextMessage?.contextInfo || msg.message?.imageMessage?.contextInfo || msg.message?.videoMessage?.contextInfo || {}
+  const mentions = ctx.mentionedJid || []
+  if (mentions.length) return mentions[0]
+  if (ctx.participant) return ctx.participant
+  return null
+}
+
+function soNumero(jid) {
+  if (!jid) return ""
+  if (typeof jid === "object") jid = jid.phoneNumber || jid.id || ""
+  return String(jid).split("@")[0].split(":")[0].replace(/\D/g, "")
+}
+
+function getTexto(msg) {
+  return (msg.message?.conversation || msg.message?.extendedTextMessage?.text || msg.message?.imageMessage?.caption || msg.message?.videoMessage?.caption || "")
+}
+
+function getTextoBotao(msg) {
+  try {
+    if (msg.message?.buttonsResponseMessage) return msg.message.buttonsResponseMessage.selectedButtonId || ""
+    if (msg.message?.templateButtonReplyMessage) return msg.message.templateButtonReplyMessage.selectedId || ""
+    if (msg.message?.listResponseMessage) return msg.message.listResponseMessage.singleSelectReply?.selectedRowId || ""
+  } catch (_) {}
+  return ""
+}
+
+function naListaNegra(jidGrupo, jidOuNum) {
+  const num = soNumero(jidOuNum)
+  if (!num) return false
+  return (db.listanegra()[jidGrupo] || []).includes(num)
+}
+
+function aluguelAtivo() { return db.aluguel().ativo === true }
+function grupoTemAluguel(jid) {
+  const a = db.aluguel()
+  const exp = a.grupos?.[jid]
+  return exp && Date.now() < exp
+}
+
+function formatarTempo(ms) {
+  const s = Math.floor(ms / 1000), m = Math.floor(s / 60), h = Math.floor(m / 60), d = Math.floor(h / 24)
+  if (d > 0) return d + "d " + (h % 24) + "h"
+  if (h > 0) return h + "h " + (m % 60) + "min"
+  if (m > 0) return m + "min " + (s % 60) + "s"
+  return s + "s"
+}
+
+function adicionarAviso(grupoJid, userJid, tipo) {
+  const avisos = db.avisos()
+  avisos[grupoJid] = avisos[grupoJid] || {}
+  avisos[grupoJid][userJid] = avisos[grupoJid][userJid] || {}
+  avisos[grupoJid][userJid][tipo] = (avisos[grupoJid][userJid][tipo] || 0) + 1
+  db.salvarAvisos(avisos)
+  return avisos[grupoJid][userJid][tipo]
+}
+
+function limparAvisos(grupoJid, userJid, tipo) {
+  const avisos = db.avisos()
+  if (avisos[grupoJid]?.[userJid]?.[tipo]) { avisos[grupoJid][userJid][tipo] = 0; db.salvarAvisos(avisos) }
+}
+
+function ehSubAdmin(jidGrupo, jidUser) {
+  const subs = db.subadmins()[jidGrupo] || []
+  const num = soNumero(jidUser)
+  return subs.some(s => soNumero(s) === num)
+}
+
+function botEhAdmin(meta, sock) {
+  if (!meta) return false
+  const botIds = [sock.user?.id, sock.user?.lid, sock.user?.jid].filter(Boolean).map(soNumero)
+  const botPart = meta.participants.find(p => {
+    const ids = [p.id, p.lid, p.phoneNumber].filter(Boolean).map(soNumero)
+    return ids.some(id => botIds.includes(id))
+  })
+  return botPart?.admin === "admin" || botPart?.admin === "superadmin"
+}
+
+function dataBrasil() {
+  return new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).split("/").reverse().join("-")
+}
+
+async function notificarX9(sock, groupJid, tipo, autor, alvo) {
+  try {
+    const conf = db.grupos()[groupJid] || {}
+    if (!conf.x9) return
+    const meta = await sock.groupMetadata(groupJid)
+    const autorNum = soNumero(autor)
+    const alvoNum = alvo ? soNumero(alvo) : null
+    const nomeGrupo = meta.subject || "Grupo"
+    const hora = new Date().toLocaleString("pt-BR")
+    let texto = ""
+    if (tipo === "PROMOTE") texto = "⚡ X9 - @" + autorNum + " promoveu @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
+    else if (tipo === "DEMOTE") texto = "⚡ X9 - @" + autorNum + " rebaixou @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
+    else if (tipo === "REMOVE") texto = "⚡ X9 - @" + autorNum + " removeu @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
+    else return
+    await sock.sendMessage(groupJid, { text: texto, mentions: [autor, alvo].filter(Boolean) })
+  } catch (e) { console.log("X9 erro:", e.message) }
+}
+
+// ============================================================
+// 🎨 AUTOFIX + AUTOTTK
+// ============================================================
+async function processarAutoFig(sock, msg, remetente, isGrupo) {
+  if (!isGrupo) return false
+  const conf = db.autocfg().grupos?.[remetente] || {}
+  if (!conf.autofig) return false
+
+  const temImg = msg.message?.imageMessage
+  const temVid = msg.message?.videoMessage
+  if (!temImg && !temVid) return false
+
+  try {
+    const sharp = require("sharp")
+    const ff = require("@ffmpeg-installer/ffmpeg").path
+    const os = require("os")
+    const { execSync } = require("child_process")
+
+    const buf = await downloadMediaMessage(msg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
+
+    let wp
+    if (temImg) {
+      wp = await sharp(buf).resize(512, 512, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).webp({ quality: 90 }).toBuffer()
+    } else {
+      const tIn = path.join(os.tmpdir(), "af_" + Date.now() + ".mp4")
+      const tOut = path.join(os.tmpdir(), "af_" + Date.now() + ".webp")
+      fs.writeFileSync(tIn, buf)
+      execSync(`"${ff}" -y -i "${tIn}" -vcodec libwebp -filter:v "fps=15,scale=512:512:force_original_aspect_ratio=decrease" -lossless 0 -compression_level 6 -q:v 50 -loop 0 -preset default -an -vsync 0 -s 512:512 "${tOut}"`, { stdio: "ignore" })
+      wp = fs.readFileSync(tOut)
+      try { fs.unlinkSync(tIn); fs.unlinkSync(tOut) } catch (_) {}
+    }
+
+    await sock.sendMessage(remetente, { sticker: wp }, { quoted: msg })
+    return true
+  } catch (e) { console.log("Erro autofig:", e.message); return false }
+}
+
+async function processarAutoTtk(sock, msg, remetente, isGrupo) {
+  if (!isGrupo) return false
+  const conf = db.autocfg().grupos?.[remetente] || {}
+  if (!conf.autottk) return false
+
+  const texto = getTexto(msg)
+  if (!texto) return false
+  const match = texto.match(/https?:\/\/(www\.|vm\.|vt\.)?tiktok\.com\/[^\s]+/i)
+  if (!match) return false
+
+  try {
+    const r = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(match[0])}&hd=1`)
+    const d = await r.json()
+    if (d.code !== 0 || !d.data || !d.data.play) return false
+
+    const vid = await fetch(d.data.play)
+    const buffer = Buffer.from(await vid.arrayBuffer())
+
+    if (buffer.length > 16 * 1024 * 1024) {
+      await sock.sendMessage(remetente, { text: "⚡💢 Vídeo muito grande (max 16MB)" }, { quoted: msg })
+      return true
+    }
+
+    await sock.sendMessage(remetente, { video: buffer, mimetype: "video/mp4", fileName: "tiktok.mp4" }, { quoted: msg })
+    return true
+  } catch (e) { console.log("Erro autottk:", e.message); return false }
+}
+
+// ============================================================
+// 📦 CARREGADOR DE MENUS
+// ============================================================
+const comandos = new Map()
+const aliases = new Map()
+global.rendasAutomaticas = global.rendasAutomaticas || []
+
+function carregarMenus() {
+  if (!fs.existsSync(MENUS_DIR)) return
+  const pastas = fs.readdirSync(MENUS_DIR)
+  for (const pasta of pastas) {
+    const caminhoPasta = path.join(MENUS_DIR, pasta)
+    if (!fs.statSync(caminhoPasta).isDirectory()) continue
+    const arquivo = path.join(caminhoPasta, "index.js")
+    if (!fs.existsSync(arquivo)) continue
+    try {
+      delete require.cache[require.resolve(arquivo)]
+      const mod = require(arquivo)
+      if (!mod.commands) continue
+
+      if (typeof mod.rendaAutomatica === "function") {
+        global.rendasAutomaticas.push(mod.rendaAutomatica)
+        console.log("[" + pasta + "] renda automatica registrada!")
+      }
+
+      const menuCfg = {
+        grupoOnly: mod.grupoOnly ?? false,
+        adminOnly: mod.adminOnly ?? false,
+        donoOnly: mod.donoOnly ?? false
+      }
+      for (const [nome, cmd] of Object.entries(mod.commands)) {
+        const pacote = {
+          nome,
+          aliases: cmd.aliases || [],
+          categoria: mod.menu || pasta,
+          grupoOnly: cmd.grupoOnly ?? menuCfg.grupoOnly,
+          adminOnly: cmd.adminOnly ?? menuCfg.adminOnly,
+          donoOnly: cmd.donoOnly ?? menuCfg.donoOnly,
+          executar: cmd.executar
         }
+        comandos.set(nome, pacote)
+        for (const a of pacote.aliases) aliases.set(a, nome)
+        console.log("[" + pasta + "] " + nome + " ~ carregado!")
+      }
+    } catch (e) {
+      console.log("Erro ao carregar " + pasta + ":", e.message)
+      console.log(e.stack)
+    }
+  }
 
-        const donoArr = Array.isArray(config?.dono) ? config.dono : [config?.dono || "Chefe"]
-        const nomeDono = String(donoArr[0] || "Chefe").split("@")[0].split(":")[0].replace(/\D/g, "") || "Chefe"
-        const nomeBot = config?.nomeBot || "Napoleão Bonaparte - MD"
-        const mentions = sender ? [sender] : []
+  const categorias = {}
+  for (const [nome, cmd] of comandos.entries()) {
+    const cat = cmd.categoria || "outros"
+    categorias[cat] = (categorias[cat] || 0) + 1
+  }
+  global.totalComandos = comandos.size
+  global.totalAliases = aliases.size
+  global.comandosPorCategoria = categorias
 
-        const texto =
-"🎩 Saudações, @" + numUser + " " + saudacao + " 🦅\n\n" +
-"╭═════════════════════╮\n" +
-"│ ⚔️ Número: " + numUser + "\n" +
-"│ 🎩 Bot: " + nomeBot + "\n" +
-"│ 👑 Imperador: " + nomeDono + "\n" +
-"│ 🦅 Soldado: " + pushName + "\n" +
-"│ 💎 Nobreza: " + premium + "\n" +
-"│ 🏰 Hora: " + hora + "\n" +
-"╰═════════════════════╯\n\n" +
-"┌─ [ 🎩 " + nomeBot + " ] ─┐\n" +
-"│\n" +
-"│  _\"Um exército marcha com disciplina.\"_\n" +
-"│\n" +
-"└──────────────────────┘"
+  console.log("\n⚡ Zenitsu carregou " + comandos.size + " comandos...")
+  console.log(aliases.size + " aliases registrados\n")
+}
 
-        const secoes = [{
-          title: "⚔️ NAPOLEÃO BONAPARTE",
-          rows: [
-            { title: "⚔️ Menu Admin",     rowId: p + "menuadmin",   description: "Comandos de administração" },
-            { title: "👑 Menu Imperador",  rowId: p + "menudono",    description: "Comandos exclusivos do dono" },
-            { title: "💎 Menu Nobreza",    rowId: p + "menuvip",     description: "Comandos VIP" },
-            { title: "🎩 Menu RPG",        rowId: p + "menurpg",     description: "Economia, pets, pokémon" },
-            { title: "🏰 Menu Fazenda",    rowId: p + "menufazenda", description: "Animais, plantações" },
-            { title: "🌙 Menu FNAF",       rowId: p + "menufnaf",    description: "Five Nights at Freddy's" }
-          ]
-        }]
+function getComando(n) {
+  if (comandos.has(n)) return comandos.get(n)
+  if (aliases.has(n)) return comandos.get(aliases.get(n))
+  return null
+}
 
-        // 📸 MENSAGEM 1
-        if (cfg.fotoMenu) {
-          const buf = Buffer.from(cfg.fotoMenu, "base64")
+function similaridade(a, b) {
+  a = String(a).toLowerCase(); b = String(b).toLowerCase()
+  const m = a.length, n = b.length
+  if (m === 0 || n === 0) return 0
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0))
+  for (let i = 0; i <= m; i++) dp[i][0] = i
+  for (let j = 0; j <= n; j++) dp[0][j] = j
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++) {
+      const c = a[i - 1] === b[j - 1] ? 0 : 1
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + c)
+    }
+  return Math.round((1 - dp[m][n] / Math.max(m, n)) * 100)
+}
+
+function comandosParecidos(d, limite = 3) {
+  const r = []
+  for (const [nome, cmd] of comandos.entries()) {
+    let melhor = { comando: nome, porcentagem: similaridade(d, nome) }
+    for (const a of cmd.aliases) {
+      const p = similaridade(d, a)
+      if (p > melhor.porcentagem) melhor = { comando: nome, porcentagem: p }
+    }
+    if (melhor.porcentagem > 0) r.push(melhor)
+  }
+  r.sort((a, b) => b.porcentagem - a.porcentagem)
+  return r.slice(0, limite).filter(x => x.porcentagem >= 40)
+}
+
+let canalCache = null
+function recarregarCanal() { canalCache = db.canal() }
+
+function envolverSendMessage(sock) {
+  const original = sock.sendMessage.bind(sock)
+  sock.sendMessage = async (jid, content, options = {}) => {
+    try {
+      const temBotoes = content?.buttons || content?.sections || content?.templateButtons || content?.buttonText || content?.interactiveButtons || content?.listMessage
+      if (temBotoes) return original(jid, content, options)
+      if (options.edit) return original(jid, content, options)
+
+      if (!canalCache) recarregarCanal()
+      const c = canalCache
+      if (c && c.jid && c.jid !== "0@newsletter") {
+        content.contextInfo = content.contextInfo || {}
+        content.contextInfo.forwardedNewsletterMessageInfo = {
+          newsletterJid: c.jid,
+          newsletterName: c.nome || "Canal",
+          serverMessageId: 0
+        }
+        content.contextInfo.forwardingScore = 1
+        content.contextInfo.isForwarded = true
+      }
+    } catch (_) {}
+    return original(jid, content, options)
+  }
+}
+
+// ============================================================
+// 🚀 START
+// ============================================================
+let NUMERO_PAREAMENTO = null
+let sockGlobal = null
+
+async function iniciar() {
+  const { state, saveCreds } = await useMultiFileAuthState("auth")
+  const { version } = await fetchLatestBaileysVersion()
+
+  const sock = makeWASocket({
+    version,
+    logger: P({ level: "silent" }),
+    auth: state,
+    printQRInTerminal: false,
+    browser: ["Ubuntu", "Chrome", "20.0.04"],
+    connectTimeoutMs: 60000,
+    defaultQueryTimeoutMs: 0,
+    keepAliveIntervalMs: 30000,
+    syncFullHistory: false
+  })
+
+  sockGlobal = sock
+  recarregarCanal()
+  envolverSendMessage(sock)
+  sock.ev.on("creds.update", saveCreds)
+
+  if (!state.creds.registered) {
+    setTimeout(async () => {
+      try {
+        console.log("\n═══════════════════════════════")
+        console.log("   ⚡ ZENITSU BOT - MD")
+        console.log("═══════════════════════════════\n")
+        console.log("Digite o NUMERO do bot (com DDI, so digitos):")
+        console.log("Exemplo: 5511999999999\n")
+
+        const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+
+        rl.question("Numero: ", async (numeroDigitado) => {
+          rl.close()
+          const numero = String(numeroDigitado).replace(/\D/g, "")
+          if (!numero || numero.length < 10) { console.log("\nNumero invalido! Reinicie o bot."); process.exit(1) }
+
+          NUMERO_PAREAMENTO = numero
+          console.log("\nNumero salvo: " + numero + "\nGerando codigo de pareamento...\n")
+
           try {
-            if (cfg.tipoMenu === "video") {
-              await sock.sendMessage(jid, {
-                video: buf,
-                mimetype: "video/mp4",
-                fileName: "napoleao-menu.mp4",
-                gifPlayback: true,
-                caption: texto,
-                mentions: mentions
-              }, { quoted: msg })
-            } else {
-              await sock.sendMessage(jid, {
-                image: buf,
-                caption: texto,
-                mentions: mentions
-              }, { quoted: msg })
-            }
-          } catch (e) {
-            console.log("⚠️ [menu] erro midia:", e.message)
-            await sock.sendMessage(jid, { text: texto, mentions: mentions }, { quoted: msg })
-          }
-        } else {
-          await sock.sendMessage(jid, { text: texto, mentions: mentions }, { quoted: msg })
-        }
-
-        // 📋 MENSAGEM 2: LISTA
-        try {
-          await sock.sendMessage(jid, {
-            text: "🎩 *Escolha um menu abaixo:*",
-            footer: "🦅 " + nomeBot,
-            title: "⚔️ MENUS DO IMPÉRIO",
-            buttonText: "☰ ABRIR MENUS",
-            sections: secoes
-          })
-        } catch (e) {
-          console.log("❌ [menu] lista falhou:", e.message)
-          await sock.sendMessage(jid, {
-            text: "⚔️ *Menus:*\n▸ " + p + "menuadmin\n▸ " + p + "menudono\n▸ " + p + "menuvip\n▸ " + p + "menurpg\n▸ " + p + "menufazenda\n▸ " + p + "menufnaf"
-          }, { quoted: msg })
-        }
-      }
-    },
-
-    // ============ TOTAL CMD ============
-    totalcmd: {
-      aliases: ["totalcomandos", "quantoscmd", "cmdcount"],
-      async executar({ sock, msg }) {
-        const jid = msg.key.remoteJid
-
-        const total = global.totalComandos || 0
-        const totalAliases = global.totalAliases || 0
-        const porCategoria = global.comandosPorCategoria || {}
-
-        let listaCat = ""
-        for (const [cat, qtd] of Object.entries(porCategoria)) {
-          listaCat += "▸ " + cat + ": *" + qtd + "*\n"
-        }
-
-        const texto =
-"╔══════════════════════════════╗\n" +
-"║   🎩 𝐓𝐎𝐓𝐀𝐋 𝐃𝐄 𝐂𝐎𝐌𝐀𝐍𝐃𝐎𝐒\n" +
-"╚══════════════════════════════╝\n\n" +
-"📊 *Estatísticas do Império:*\n\n" +
-"▸ ⚔️ Comandos: *" + total + "*\n" +
-"▸ 🔗 Aliases: *" + totalAliases + "*\n" +
-"▸ 📈 Total geral: *" + (total + totalAliases) + "*\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"📂 *POR CATEGORIA:*\n" +
-(listaCat || "_nenhuma_") + "\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"🦅 _\"Um exército bem organizado.\"_\n" +
-"🎩 _\"Finge que não viu...\"_"
-
-        await sock.sendMessage(jid, { text: texto }, { quoted: msg })
-      }
-    },
-
-    // ============ MENUADMIN ============
-    menuadmin: {
-      aliases: ["menu-adm", "menua", "adm", "comandosadm"],
-      async executar({ sock, msg, prefixoAtivo, db }) {
-        const jid = msg.key.remoteJid
-        const p = prefixoAtivo || "!"
-        const cfg = db.config() || {}
-
-        const texto =
-"╔══════════════════════════════╗\n" +
-"║   ⚔️  𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐆𝐄𝐍𝐄𝐑𝐀𝐋  ⚔️\n" +
-"╚══════════════════════════════╝\n\n" +
-"🎩 *Napoleão apresenta:*\n" +
-"🦅 *as ordens do general!*\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"🗡️ *PREFIXO*\n" +
-"▸ " + p + "multiprefixo on/off\n" +
-"▸ " + p + "setprefixo <novo>\n" +
-"▸ " + p + "prefixo\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"⚠️ *ADVERTÊNCIAS*\n" +
-"▸ " + p + "adv @user motivo\n" +
-"▸ " + p + "deladv @user\n" +
-"▸ " + p + "listaadv\n" +
-"▸ " + p + "veradv @user\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"👥 *SOLDADOS*\n" +
-"▸ " + p + "promover @user\n" +
-"▸ " + p + "rebaixar @user\n" +
-"▸ " + p + "ban @user\n" +
-"▸ " + p + "mute @user\n" +
-"▸ " + p + "desmute @user\n" +
-"▸ " + p + "p (reply)\n" +
-"▸ " + p + "totag <texto>\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"🏰 *TERRITÓRIO*\n" +
-"▸ " + p + "abrir / " + p + "fechar\n" +
-"▸ " + p + "link\n" +
-"▸ " + p + "soadm on/off\n" +
-"▸ " + p + "namegp <nome>\n" +
-"▸ " + p + "descricao <texto>\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"👑 *SUB-GENERAIS*\n" +
-"▸ " + p + "subadm @user\n" +
-"▸ " + p + "delsubadm @user\n" +
-"▸ " + p + "listasubadm\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"🛡️ *PROTEÇÕES*\n" +
-"▸ " + p + "antilink on/off\n" +
-"▸ " + p + "antiaudio on/off\n" +
-"▸ " + p + "antivideo on/off\n" +
-"▸ " + p + "antifoto on/off\n" +
-"▸ " + p + "antifig on/off\n" +
-"▸ " + p + "palavrao on/off\n" +
-"▸ " + p + "addpalavra <palavra>\n" +
-"▸ " + p + "rmpalavra <palavra>\n" +
-"▸ " + p + "listapalavra\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"🕵️ *ESPIONAGEM*\n" +
-"▸ " + p + "x9 on/off\n" +
-"▸ " + p + "modoparceria on/off\n" +
-"▸ " + p + "addparceria @user <qtd>\n" +
-"▸ " + p + "rmparceria @user\n" +
-"▸ " + p + "parcerias\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"🚫 *LISTA NEGRA*\n" +
-"▸ " + p + "listanegra <número>\n" +
-"▸ " + p + "blacklist\n" +
-"▸ " + p + "dellista <número>\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"👋 *CHEGADA / PARTIDA*\n" +
-"▸ " + p + "bemvindo on/off\n" +
-"▸ " + p + "textobv <texto>\n" +
-"▸ " + p + "fundoBV (reply)\n" +
-"▸ " + p + "legendasaiu <texto>\n" +
-"▸ " + p + "fundoSaiu (reply)\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"⏰ *AGENDAMENTO*\n" +
-"▸ " + p + "abrirgp hh:mm\n" +
-"▸ " + p + "fechargp hh:mm\n" +
-"▸ " + p + "fotoabrir (reply)\n" +
-"▸ " + p + "fotofechar (reply)\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"🎁 *SORTEIO*\n" +
-"▸ " + p + "sorteio <prêmio> <tempo>\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"📊 *ESTATÍSTICAS*\n" +
-"▸ " + p + "totalcmd\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
-"🦅 _\"A disciplina é a mãe da vitória.\"_\n" +
-"🎩 Prefixo atual: *" + p + "*"
-
-        if (cfg.fotoMenu) {
-          const buf = Buffer.from(cfg.fotoMenu, "base64")
-          if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "napoleao.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
-          return sock.sendMessage(jid, { image: buf, caption: texto }, { quoted: msg })
-        }
-        await sock.sendMessage(jid, { text: texto }, { quoted: msg })
-      }
-    },
-
-    // ============ MENU FNAF ============
-    menufnaf: {
-      aliases: ["fnafmenu", "menuf"],
-      async executar({ sock, msg, prefixoAtivo, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid
-        const p = prefixoAtivo || "!"
-        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-
-        let ehVip = isDono || isSubDono
-        if (!ehVip) {
-          const vips = (db.vips() || {}).vips || {}
-          for (const j of sJ) {
-            const num = String(j).split("@")[0].split(":")[0].replace(/\D/g, "")
-            for (const [jidVip, info] of Object.entries(vips)) {
-              if (String(jidVip).split("@")[0].split(":")[0].replace(/\D/g, "") === num) {
-                if (info.expira === "inf" || info.expira > Date.now()) { ehVip = true; break }
-              }
-            }
-            if (ehVip) break
-          }
-        }
-        if (!ehVip) return sock.sendMessage(jid, { text: "🎩💢 Só nobres podem acessar o FNAF!" }, { quoted: msg })
-
-        const cfg = db.config() || {}
-
-        const texto =
-"╔══════════════════════════════╗\n" +
-"║   🌙 𝐅𝐍𝐀𝐅 𝐈𝐌𝐏𝐄𝐑𝐈𝐀𝐋 🎩\n" +
-"╚══════════════════════════════╝\n\n" +
-"🎩 *Napoleão apresenta:*\n" +
-"🦅 *as noites mais sombrias!*\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"📋 *JOGOS*\n" +
-"▸ " + p + "listarfnaf\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"🎮 *LOBBY*\n" +
-"▸ " + p + "abrirfnaf 1/2/3/4/5\n" +
-"▸ " + p + "entrarfnaf\n" +
-"▸ " + p + "sairfnaf\n" +
-"▸ " + p + "iniciarfnaf\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"⚔️ *EM JOGO*\n" +
-"▸ " + p + "fecharporta 1/2\n" +
-"▸ " + p + "portaluz 1/2\n" +
-"▸ " + p + "statusfnaf\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"🚫 *ADMIN*\n" +
-"▸ " + p + "cancelarfnaf\n\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-"🐻 *ANIMATRÔNICOS*\n" +
-"▸ FNAF 1: Freddy, Bonnie, Chica, Foxy, Golden\n" +
-"▸ FNAF 2: Toys, BB, Mangle, Puppet, Withereds\n" +
-"▸ FNAF 3: Springtrap, Phantom Freddy\n" +
-"▸ FNAF 4: Nightmares\n" +
-"▸ FNAF 5: Baby, Ballora, Funtimes, Ennard\n" +
-"━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
-"🦅 _\"Resistam até às 6h!\"_\n" +
-"🎩 _\"Uma noite longa nos espera.\"_"
-
-        if (cfg.fotoMenu) {
-          const buf = Buffer.from(cfg.fotoMenu, "base64")
-          if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "napoleao.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
-          return sock.sendMessage(jid, { image: buf, caption: texto }, { quoted: msg })
-        }
-        await sock.sendMessage(jid, { text: texto }, { quoted: msg })
-      }
-    },
-
-    // ============ PREFIXO ============
-    prefixo: {
-      aliases: ["prefix", "prefixoatual", "qualprefixo"],
-      async executar({ sock, msg, prefixoAtivo, db }) {
-        const jid = msg.key.remoteJid
-        const cfg = db.config()
-        const padrao = cfg.prefixoGlobal || "!"
-        const grupoConf = db.grupos()[jid] || {}
-        let texto = "╭━━━〔 🗡️ 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 🗡️ 〕━━━╮\n┃\n┃ 🦅 *O general informa:*\n┃\n┃ ⚔️ Prefixo padrão: *" + padrao + "*\n┃ 🎩 Prefixo ativo: *" + prefixoAtivo + "*\n┃\n"
-        if (grupoConf.multiprefixo) {
-          texto += "┃ 🏰 Multiprefixo: *ON*\n┃    Prefixo do grupo: *" + (grupoConf.prefixo || padrao) + "*\n"
-        } else {
-          texto += "┃ 🏰 Multiprefixo: *OFF*\n"
-        }
-        texto += "┃\n┃ 🦅 Aceitos: *!* e */*\n┃\n┃ 🎩 _\"Ordens claras, vitórias certas.\"_\n┃\n╰━━━━━━━━━━━━━━━━━━━━╯"
-        await sock.sendMessage(jid, { text: texto }, { quoted: msg })
-      }
-    },
-
-    // ============ PING ============
-    ping: {
-      aliases: ["pong", "latencia"],
-      async executar({ sock, msg, sender, utils }) {
-        const jid = msg.key.remoteJid
-        const t1 = Date.now()
-        const sent = await sock.sendMessage(jid, {
-          text: "╭━━━〔 ⚔️ 𝐌𝐄𝐃𝐈𝐍𝐃𝐎 ⚔️ 〕━━━╮\n┃ 🦅 Napoleão tá medindo...\n┃ [░░░░░░░░░░] 0%\n╰━━━━━━━━━━━━━━━━━━━━╯"
-        }, { quoted: msg })
-        const etapas = [
-          { espera: 400, pct: 15, msg: "Montando cavalaria..." },
-          { espera: 500, pct: 30, msg: "Medindo artilharia..." },
-          { espera: 400, pct: 50, msg: "Verificando divisões..." },
-          { espera: 500, pct: 70, msg: "Calculando tropas..." },
-          { espera: 400, pct: 90, msg: "Finalizando batalha..." }
-        ]
-        for (const et of etapas) {
-          await new Promise(r => setTimeout(r, et.espera))
-          const cheios = Math.floor(et.pct / 10)
-          const barra = "🟫".repeat(cheios) + "⬛".repeat(10 - cheios)
-          try {
-            await sock.sendMessage(jid, { text: "╭━━━〔 ⚔️ 𝐌𝐄𝐃𝐈𝐍𝐃𝐎 ⚔️ 〕━━━╮\n┃ 🦅 " + et.msg + "\n┃ [" + barra + "] " + et.pct + "%\n╰━━━━━━━━━━━━━━━━━━━━╯", edit: sent.key })
-          } catch (_) {}
-        }
-        const t2 = Date.now()
-        let pingReal = 0
-        try { await sock.groupMetadata(jid); pingReal = Date.now() - t2 } catch (_) { pingReal = Date.now() - t2 }
-        const pingTotal = Date.now() - t1
-        let qual = "🟢 Excelente", msgQual = "🦅 Napoleão tá imbatível!", emoji = "🟢"
-        if (pingReal > 200) { qual = "🟡 Aceitável"; msgQual = "🎩 Cavalaria um pouco lenta~"; emoji = "🟡" }
-        if (pingReal > 500) { qual = "🔴 Ruim"; msgQual = "💢 Tropas dispersas!"; emoji = "🔴" }
-        if (pingReal > 1000) { qual = "💀 Péssimo"; msgQual = "💢 Reorganiza o exército!"; emoji = "💀" }
-        const agora = new Date()
-        const hora = String(agora.getHours()).padStart(2, "0") + ":" + String(agora.getMinutes()).padStart(2, "0") + ":" + String(agora.getSeconds()).padStart(2, "0")
-        await sock.sendMessage(jid, {
-          text: "╭━━━〔 ⚔️ 𝐏𝐈𝐍𝐆 𝐍𝐀𝐏𝐎𝐋𝐄𝐀̃𝐎 ⚔️ 〕━━━╮\n┃ 🦅 *Latência do império*\n┃\n┃ " + emoji + " Ping: *" + pingReal + "ms*\n┃ ⏱️ Processamento: *" + pingTotal + "ms*\n┃ 📡 Qualidade: *" + qual + "*\n┃ 🕐 Hora: *" + hora + "*\n┃\n┃ 👤 @" + utils.soNumero(sender) + "\n┃\n┃ " + msgQual + "\n┃\n╰━━━━━━━━━━━━━━━━━━━━━━╯",
-          mentions: [sender], edit: sent.key
+            const code = await sock.requestPairingCode(numero)
+            console.log("╔═══════════════════════════════╗")
+            console.log("║   CODIGO DE PAREAMENTO        ║")
+            console.log("╠═══════════════════════════════╣")
+            console.log("║   " + code + "                       ║")
+            console.log("╚═══════════════════════════════╝\n")
+            console.log("WhatsApp > Aparelhos conectados > Conectar > Conectar com numero\n")
+          } catch (e) { console.log("Erro ao gerar codigo:", e.message) }
         })
-      }
-    },
+      } catch (e) { console.log("Erro:", e.message) }
+    }, 5000)
+  }
 
-    // ============ P (APAGAR) ============
-    p: {
-      aliases: ["apagar", "delmsg"],
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, groupMetadata, utils }) {
-        const jid = msg.key.remoteJid
-        const ctx = msg.message?.extendedTextMessage?.contextInfo
-        if (!ctx?.stanzaId) return sock.sendMessage(jid, { text: "╭━━━〔 🗡️ 𝐀𝐏𝐀𝐆𝐀𝐑 🗡️ 〕━━━╮\n┃ 🦅 Responda uma mensagem com *!p*\n╰━━━━━━━━━━━━━━━━━━━━╯" }, { quoted: msg })
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "╭━━━〔 🗡️ 𝐀𝐏𝐀𝐆𝐀𝐑 🗡️ 〕━━━╮\n┃ 🦅 Napoleão precisa ser *admin*!\n╰━━━━━━━━━━━━━━━━━━━━╯" }, { quoted: msg })
+  sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
+    if (connection === "close") {
+      const motivo = new Boom(lastDisconnect?.error)?.output?.statusCode
+      if (motivo === DisconnectReason.loggedOut) process.exit(1)
+      else setTimeout(() => iniciar(), 3000)
+    } else if (connection === "open") {
+      console.log("\n⚡ CONECTADO! Zenitsu online\n")
+    }
+  })
+
+  sock.ev.on("messages.upsert", async ({ messages, type }) => {
+    if (type !== "notify") return
+    const msg = messages[0]
+    if (!msg.message) return
+
+    const remetente = msg.key.remoteJid
+    const isGrupo = remetente.endsWith("@g.us")
+
+    let senderRaw = isGrupo ? msg.key.participant : remetente
+    let sender = senderRaw
+
+    if (senderRaw && senderRaw.endsWith("@lid")) {
+      if (msg.key?.participantPn) sender = msg.key.participantPn
+      else if (msg.key?.participantAlt) sender = msg.key.participantAlt
+      else if (isGrupo) {
         try {
-          await sock.sendMessage(jid, { delete: { remoteJid: jid, fromMe: false, id: ctx.stanzaId, participant: ctx.participant || ctx.mentionedJid?.[0] } })
-          await sock.sendMessage(jid, { text: "╭━━━〔 🗡️ 𝐀𝐏𝐀𝐆𝐀𝐃𝐎 🗡️ 〕━━━╮\n┃ 🦅 *Napoleão apagou!*\n┃ 🎩 _\"O inimigo nem viu.\"_\n╰━━━━━━━━━━━━━━━━━━━━╯" }, { quoted: msg })
-        } catch (e) { await sock.sendMessage(jid, { text: "╭━━━〔 🗡️ 𝐄𝐑𝐑𝐎 🗡️ 〕━━━╮\n┃ 💢 " + e.message + "\n╰━━━━━━━━━━━━━━━━━━━━╯" }, { quoted: msg }) }
-      }
-    },
-
-    // ============ ABRIR ============
-    abrir: {
-      aliases: ["opennow"],
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, groupMetadata, utils }) {
-        const jid = msg.key.remoteJid
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "🦅 Napoleão precisa ser *admin*!" }, { quoted: msg })
-        try {
-          await sock.groupSettingUpdate(jid, "not_announcement")
-          await sock.sendMessage(jid, { text: "╭━━━〔 🏰 𝐀𝐁𝐄𝐑𝐓𝐎 🏰 〕━━━╮\n┃ 🦅 *Território aberto!*\n┃ 🎩 Todos podem falar~\n╰━━━━━━━━━━━━━━━━━━━━╯" }, { quoted: msg })
-        } catch (e) { await sock.sendMessage(jid, { text: "💢 " + e.message }, { quoted: msg }) }
-      }
-    },
-
-    // ============ FECHAR ============
-    fechar: {
-      aliases: ["closenow"],
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, groupMetadata, utils }) {
-        const jid = msg.key.remoteJid
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "🦅 Napoleão precisa ser *admin*!" }, { quoted: msg })
-        try {
-          await sock.groupSettingUpdate(jid, "announcement")
-          await sock.sendMessage(jid, { text: "╭━━━〔 🏰 𝐅𝐄𝐂𝐇𝐀𝐃𝐎 🏰 〕━━━╮\n┃ 🦅 *Território fechado!*\n┃ 🎩 Só oficiais falam~\n╰━━━━━━━━━━━━━━━━━━━━╯" }, { quoted: msg })
-        } catch (e) { await sock.sendMessage(jid, { text: "💢 " + e.message }, { quoted: msg }) }
-      }
-    },
-
-    // ============ NAMEGP ============
-    namegp: {
-      aliases: ["setnomegp", "nomegrupo"],
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, groupMetadata, utils }) {
-        const jid = msg.key.remoteJid
-        const nome = args.join(" ").trim()
-        if (!nome) return sock.sendMessage(jid, { text: "📜 Use: *!namegp <novo nome>*" }, { quoted: msg })
-        if (nome.length > 25) return sock.sendMessage(jid, { text: "💢 Máximo 25 caracteres!" }, { quoted: msg })
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "🦅 Napoleão precisa ser *admin*!" }, { quoted: msg })
-        try {
-          await sock.groupUpdateSubject(jid, nome)
-          await sock.sendMessage(jid, { text: "╭━━━〔 📜 𝐍𝐎𝐌𝐄 𝐀𝐋𝐓𝐄𝐑𝐀𝐃𝐎 📜 〕━━━╮\n┃ 🏰 Novo nome: *" + nome + "*\n┃ 🦅 Napoleão renomeou o território!\n╰━━━━━━━━━━━━━━━━━━━━╯" }, { quoted: msg })
-        } catch (e) { await sock.sendMessage(jid, { text: "💢 " + e.message }, { quoted: msg }) }
-      }
-    },
-
-    // ============ DESCRICAO ============
-    descricao: {
-      aliases: ["setdescricao", "descgp"],
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, groupMetadata, utils }) {
-        const jid = msg.key.remoteJid
-        const desc = args.join(" ").trim()
-        if (!desc) return sock.sendMessage(jid, { text: "📜 Use: *!descricao <texto>*" }, { quoted: msg })
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "🦅 Napoleão precisa ser *admin*!" }, { quoted: msg })
-        try {
-          await sock.groupUpdateDescription(jid, desc)
-          await sock.sendMessage(jid, { text: "╭━━━〔 📜 𝐃𝐄𝐒𝐂𝐑𝐈𝐂̧𝐀̃𝐎 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐃𝐀 📜 〕━━━╮\n┃ 🏰 " + desc + "\n┃ 🦅 _\"A história será escrita.\"_\n╰━━━━━━━━━━━━━━━━━━━━╯" }, { quoted: msg })
-        } catch (e) { await sock.sendMessage(jid, { text: "💢 " + e.message }, { quoted: msg }) }
-      }
-    },
-
-    // ============ LINK ============
-    link: {
-      aliases: ["linkgp"],
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, groupMetadata, utils }) {
-        const jid = msg.key.remoteJid
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "🦅 Napoleão precisa ser *admin*!" }, { quoted: msg })
-        try {
-          const code = await sock.groupInviteCode(jid)
-          await sock.sendMessage(jid, { text: "🔗 https://chat.whatsapp.com/" + code }, { quoted: msg })
-        } catch (e) { await sock.sendMessage(jid, { text: "💢 " + e.message }, { quoted: msg }) }
-      }
-    },
-
-    // ============ MUTE ============
-    mute: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid
-        const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: "🦅 Marque um soldado~" }, { quoted: msg })
-        const mutados = db.mutados()
-        mutados[jid] = mutados[jid] || {}
-        mutados[jid][alvo] = Date.now() + 5 * 60 * 1000
-        db.salvarMutados(mutados)
-        await sock.sendMessage(jid, { text: "🔇 @" + utils.soNumero(alvo) + " silenciado *5 min*\n🦅 _\"Silêncio, soldado.\"_", mentions: [alvo] }, { quoted: msg })
-      }
-    },
-
-    // ============ DESMUTE ============
-    desmute: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid
-        const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: "🦅 Marque um soldado~" }, { quoted: msg })
-        const mutados = db.mutados()
-        if (mutados[jid]?.[alvo]) { delete mutados[jid][alvo]; db.salvarMutados(mutados) }
-        await sock.sendMessage(jid, { text: "🔊 @" + utils.soNumero(alvo) + " liberado!\n🎩 _\"Fale, soldado.\"_", mentions: [alvo] }, { quoted: msg })
-      }
-    },
-
-    // ============ PALAVRAO ============
-    palavrao: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid
-        const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: "🤬 Use: *!palavrao on/off*" }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].palavrao = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: "⚔️ Palavrão: *" + opcao.toUpperCase() + "*\n🦅 _\"Respeito é disciplina.\"_" }, { quoted: msg })
-      }
-    },
-
-    addpalavra: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid
-        const palavra = args.join(" ").trim().toLowerCase()
-        if (!palavra) return sock.sendMessage(jid, { text: "📝 *!addpalavra <palavra>*" }, { quoted: msg })
-        const p = db.palavroes(); p[jid] = p[jid] || []
-        if (p[jid].includes(palavra)) return sock.sendMessage(jid, { text: "🦅 Já tá na lista!" }, { quoted: msg })
-        p[jid].push(palavra); db.salvarPalavroes(p)
-        await sock.sendMessage(jid, { text: "📝 `" + palavra + "` adicionada!\n⚔️ _\"Ordem registrada.\"_" }, { quoted: msg })
-      }
-    },
-
-    rmpalavra: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid
-        const palavra = args.join(" ").trim().toLowerCase()
-        if (!palavra) return sock.sendMessage(jid, { text: "🗑️ *!rmpalavra <palavra>*" }, { quoted: msg })
-        const p = db.palavroes(); const arr = p[jid] || []
-        const idx = arr.indexOf(palavra)
-        if (idx === -1) return sock.sendMessage(jid, { text: "🦅 Não tá na lista!" }, { quoted: msg })
-        arr.splice(idx, 1); p[jid] = arr; db.salvarPalavroes(p)
-        await sock.sendMessage(jid, { text: "✅ `" + palavra + "` removida!" }, { quoted: msg })
-      }
-    },
-
-    listapalavra: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, db }) {
-        const jid = msg.key.remoteJid
-        const lista = db.palavroes()[jid] || []
-        if (!lista.length) return sock.sendMessage(jid, { text: "📝 Nenhuma palavra proibida~" }, { quoted: msg })
-        let t = "🤬 *PALAVRAS PROIBIDAS*\n\n"
-        lista.forEach((p, i) => { t += (i + 1) + ". `" + p + "`\n" })
-        await sock.sendMessage(jid, { text: t }, { quoted: msg })
-      }
-    },
-
-    // ============ ANTILINK ============
-    antilink: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid
-        const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: "🔗 Use: *!antilink on/off*" }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].antilink = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: "⚔️ Antilink: *" + opcao.toUpperCase() + "*\n🦅 _\"Sem divulgação!\"_" }, { quoted: msg })
-      }
-    },
-
-    antiaudio: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid
-        const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: "🎵 Use: *!antiaudio on/off*" }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].antiaudio = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: "🎵 Antiaudio: *" + opcao.toUpperCase() + "*" }, { quoted: msg })
-      }
-    },
-
-    antivideo: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid
-        const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: "🎬 Use: *!antivideo on/off*" }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].antivideo = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: "🎬 Antivideo: *" + opcao.toUpperCase() + "*" }, { quoted: msg })
-      }
-    },
-
-    antifoto: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid
-        const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: "🖼️ Use: *!antifoto on/off*" }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].antifoto = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: "🖼️ Antifoto: *" + opcao.toUpperCase() + "*" }, { quoted: msg })
-      }
-    },
-
-    antifig: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid
-        const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: "🎨 Use: *!antifig on/off*" }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].antifig = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: "🎨 Antifig: *" + opcao.toUpperCase() + "*" }, { quoted: msg })
-      }
-    },
-
-    // ============ PROMOVER ============
-    promover: {
-      aliases: ["promote", "daradm"],
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, groupMetadata, utils }) {
-        const jid = msg.key.remoteJid
-        const alvoRaw = utils.getAlvo(msg)
-        if (!alvoRaw) return sock.sendMessage(jid, { text: "🦅 Marque um soldado~" }, { quoted: msg })
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "🦅 Preciso ser *admin*!" }, { quoted: msg })
-        const n = utils.soNumero(alvoRaw)
-        const part = groupMetadata.participants.find(p => [p.id, p.lid, p.phoneNumber].filter(Boolean).map(utils.soNumero).includes(n))
-        if (!part) return sock.sendMessage(jid, { text: "🦅 Não achei o soldado~" }, { quoted: msg })
-        try {
-          await sock.groupParticipantsUpdate(jid, [part.id], "promote")
-          await sock.sendMessage(jid, { text: "🎩 @" + n + " promovido a *General*!\n🦅 _\"Patente merecida.\"_", mentions: [part.id] }, { quoted: msg })
-        } catch (e) { await sock.sendMessage(jid, { text: "💢 " + e.message }, { quoted: msg }) }
-      }
-    },
-
-    rebaixar: {
-      aliases: ["demote", "tiraradm"],
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, groupMetadata, utils }) {
-        const jid = msg.key.remoteJid
-        const alvoRaw = utils.getAlvo(msg)
-        if (!alvoRaw) return sock.sendMessage(jid, { text: "🦅 Marque um soldado~" }, { quoted: msg })
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "🦅 Preciso ser *admin*!" }, { quoted: msg })
-        const n = utils.soNumero(alvoRaw)
-        const part = groupMetadata.participants.find(p => [p.id, p.lid, p.phoneNumber].filter(Boolean).map(utils.soNumero).includes(n))
-        if (!part) return sock.sendMessage(jid, { text: "🦅 Não achei~" }, { quoted: msg })
-        try {
-          await sock.groupParticipantsUpdate(jid, [part.id], "demote")
-          await sock.sendMessage(jid, { text: "⚔️ @" + n + " rebaixado a *soldado*!\n🦅 _\"Volte à tropa.\"_", mentions: [part.id] }, { quoted: msg })
-        } catch (e) { await sock.sendMessage(jid, { text: "💢 " + e.message }, { quoted: msg }) }
-      }
-    },
-
-    ban: {
-      aliases: ["kick", "remover"],
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, groupMetadata, utils }) {
-        const jid = msg.key.remoteJid
-        const alvoRaw = utils.getAlvo(msg)
-        if (!alvoRaw) return sock.sendMessage(jid, { text: "🦅 Marque um soldado~" }, { quoted: msg })
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "🦅 Preciso ser *admin*!" }, { quoted: msg })
-        const n = utils.soNumero(alvoRaw)
-        const part = groupMetadata.participants.find(p => [p.id, p.lid, p.phoneNumber].filter(Boolean).map(utils.soNumero).includes(n))
-        if (!part) return sock.sendMessage(jid, { text: "🦅 Não achei~" }, { quoted: msg })
-        try {
-          await sock.groupParticipantsUpdate(jid, [part.id], "remove")
-          await sock.sendMessage(jid, { text: "🚫 @" + n + " expulso!\n🦅 _\"Traição se paga.\"_", mentions: [part.id] }, { quoted: msg })
-        } catch (e) { await sock.sendMessage(jid, { text: "💢 " + e.message }, { quoted: msg }) }
-      }
-    },
-
-    // ============ ADV ============
-    veradv: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid
-        const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: "🦅 Marque um soldado~" }, { quoted: msg })
-        const total = db.advs()[jid]?.[alvo] || 0
-        await sock.sendMessage(jid, { text: "📊 @" + utils.soNumero(alvo) + " — *" + total + "/3* advertências", mentions: [alvo] }, { quoted: msg })
-      }
-    },
-
-    adv: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db, utils }) {
-        const jid = msg.key.remoteJid
-        const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: "🦅 Use: *!adv @user <motivo>*" }, { quoted: msg })
-        const motivo = args.filter(a => !a.includes("@")).join(" ") || "Sem motivo"
-        const advs = db.advs()
-        advs[jid] = advs[jid] || {}
-        advs[jid][alvo] = (advs[jid][alvo] || 0) + 1
-        const total = advs[jid][alvo]
-        const n = utils.soNumero(alvo)
-        if (total >= 3) {
-          delete advs[jid][alvo]; db.salvarAdvs(advs)
-          await sock.sendMessage(jid, { text: "⚔️ @" + n + " atingiu *3/3*!\n🦅 _\"A corte decidiu.\"_", mentions: [alvo] }, { quoted: msg })
-          try { await sock.groupParticipantsUpdate(jid, [alvo], "remove") } catch (_) {}
-          return
-        }
-        db.salvarAdvs(advs)
-        await sock.sendMessage(jid, { text: "⚠️ @" + n + " — *" + total + "/3*\n📄 " + motivo, mentions: [alvo] }, { quoted: msg })
-      }
-    },
-
-    deladv: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid
-        const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: "🦅 Marque~" }, { quoted: msg })
-        const advs = db.advs()
-        const atual = advs[jid]?.[alvo] || 0
-        if (atual <= 0) return sock.sendMessage(jid, { text: "✅ Ficha limpa!" }, { quoted: msg })
-        advs[jid][alvo] = atual - 1
-        if (advs[jid][alvo] === 0) delete advs[jid][alvo]
-        db.salvarAdvs(advs)
-        await sock.sendMessage(jid, { text: "🎩 @" + utils.soNumero(alvo) + " — *" + (advs[jid]?.[alvo] || 0) + "/3*", mentions: [alvo] }, { quoted: msg })
-      }
-    },
-
-    listaadv: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid
-        const entradas = Object.entries(db.advs()[jid] || {})
-        if (!entradas.length) return sock.sendMessage(jid, { text: "📋 Nenhuma advertência~" }, { quoted: msg })
-        entradas.sort((a, b) => b[1] - a[1])
-        let t = "📋 *FICHAS SUJAS*\n\n"
-        entradas.forEach(([j, q], i) => { t += (i + 1) + ". @" + utils.soNumero(j) + " — *" + q + "/3*\n" })
-        await sock.sendMessage(jid, { text: t, mentions: entradas.map(([j]) => j) }, { quoted: msg })
-      }
-    },
-
-    // ============ TOTAG ============
-    totag: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, groupMetadata }) {
-        const jid = msg.key.remoteJid
-        let texto = args.join(" ").trim()
-        if (!texto) {
-          const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
-          const q = ctx.quotedMessage
-          if (q) texto = q.conversation || q.extendedTextMessage?.text || q.imageMessage?.caption || ""
-        }
-        if (!texto) return sock.sendMessage(jid, { text: "📢 *!totag <texto>*" }, { quoted: msg })
-        const mentions = groupMetadata.participants.map(p => p.id)
-        await sock.sendMessage(jid, { text: texto, mentions }, { quoted: msg })
-      }
-    },
-
-    // ============ SUBADM ============
-    subadm: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid
-        const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: "🦅 Marque~" }, { quoted: msg })
-        const subs = db.subadmins(); subs[jid] = subs[jid] || []
-        if (subs[jid].some(s => utils.soNumero(s) === utils.soNumero(alvo))) return sock.sendMessage(jid, { text: "🦅 Já é sub-general!" }, { quoted: msg })
-        subs[jid].push(alvo); db.salvarSubadmins(subs)
-        await sock.sendMessage(jid, { text: "🎩 @" + utils.soNumero(alvo) + " agora é *Sub-General*!", mentions: [alvo] }, { quoted: msg })
-      }
-    },
-
-    delsubadm: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid
-        const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: "🦅 Marque~" }, { quoted: msg })
-        const subs = db.subadmins()
-        subs[jid] = (subs[jid] || []).filter(s => utils.soNumero(s) !== utils.soNumero(alvo))
-        db.salvarSubadmins(subs)
-        await sock.sendMessage(jid, { text: "⚔️ @" + utils.soNumero(alvo) + " não é mais *Sub-General*~", mentions: [alvo] }, { quoted: msg })
-      }
-    },
-
-    listasubadm: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid
-        const subs = db.subadmins()[jid] || []
-        if (!subs.length) return sock.sendMessage(jid, { text: "🎩 Nenhum Sub-General~" }, { quoted: msg })
-        let t = "🎩 *SUB-GENERAIS*\n\n"
-        subs.forEach((s, i) => { t += (i + 1) + ". @" + utils.soNumero(s) + "\n" })
-        await sock.sendMessage(jid, { text: t, mentions: subs }, { quoted: msg })
-      }
-    },
-
-    // ============ SOADM ============
-    soadm: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid
-        const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: "🔒 *!soadm on/off*" }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].soadm = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: "🏰 Só oficiais: *" + opcao.toUpperCase() + "*" }, { quoted: msg })
-      }
-    },
-
-    // ============ MULTIPREFIXO ============
-    multiprefixo: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid
-        const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: "⚙️ *!multiprefixo on/off*" }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].multiprefixo = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: "⚙️ Multiprefixo: *" + opcao.toUpperCase() + "*" }, { quoted: msg })
-      }
-    },
-
-    setprefixo: {
-      aliases: ["setprefix", "trocarp"],
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid
-        const g = db.grupos()
-        const conf = g[jid] || {}
-        if (!conf.multiprefixo) return sock.sendMessage(jid, { text: "🦅 Multiprefixo OFF~" }, { quoted: msg })
-        const novo = args[0]
-        if (!novo) return sock.sendMessage(jid, { text: "⚙️ *!setprefixo <novo>*" }, { quoted: msg })
-        if (novo.length > 3) return sock.sendMessage(jid, { text: "💢 Máx 3!" }, { quoted: msg })
-        g[jid].prefixo = novo; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: "⚔️ Prefixo: *" + novo + "*" }, { quoted: msg })
-      }
-    },
-
-    // ============ X9 ============
-    x9: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid
-        const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: "🕵️ *!x9 on/off*" }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].x9 = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: "🕵️ Espionagem X9: *" + opcao.toUpperCase() + "*" }, { quoted: msg })
-      }
-    },
-
-    // ============ LISTA NEGRA ============
-    listanegra: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db, groupMetadata, utils }) {
-        const jid = msg.key.remoteJid
-        const numero = (args[0] || "").replace(/\D/g, "")
-        if (!numero || numero.length < 8) return sock.sendMessage(jid, { text: "🚫 *!listanegra <número>*" }, { quoted: msg })
-        const lista = db.listanegra(); lista[jid] = lista[jid] || []
-        if (lista[jid].includes(numero)) return sock.sendMessage(jid, { text: "🦅 Já tá na lista negra!" }, { quoted: msg })
-        lista[jid].push(numero); db.salvarListanegra(lista)
-        await sock.sendMessage(jid, { text: "🚫 +" + numero + " marcado como *traidor*!" }, { quoted: msg })
-        try {
-          const part = groupMetadata?.participants.find(p => [p.id, p.lid, p.phoneNumber].filter(Boolean).map(utils.soNumero).includes(numero))
-          if (part) {
-            await sock.groupParticipantsUpdate(jid, [part.id], "remove")
-            await sock.sendMessage(jid, { text: "⚔️ @" + numero + " expulso!", mentions: [part.id] })
+          const meta = await sock.groupMetadata(remetente).catch(() => null)
+          if (meta) {
+            const p = meta.participants.find(x => x.lid === senderRaw || x.id === senderRaw || (x.lid && soNumero(x.lid) === soNumero(senderRaw)))
+            if (p?.phoneNumber) sender = p.phoneNumber
+            else if (p?.id && !p.id.endsWith("@lid")) sender = p.id
           }
         } catch (_) {}
       }
-    },
+    }
 
-    blacklist: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, db }) {
-        const jid = msg.key.remoteJid
-        const lista = (db.listanegra()[jid] || [])
-        if (!lista.length) return sock.sendMessage(jid, { text: "🚫 Lista negra vazia~" }, { quoted: msg })
-        let t = "🚫 *TRAIDORES*\n\n"
-        lista.forEach((n, i) => { t += (i + 1) + ". +" + n + "\n" })
-        await sock.sendMessage(jid, { text: t }, { quoted: msg })
-      }
-    },
+    const numerosDono = (Array.isArray(config.dono) ? config.dono : [config.dono]).map(soNumero)
+    const senderCandidatos = [sender, senderRaw, msg.key?.participant, msg.key?.participantPn, msg.key?.participantLid, msg.key?.remoteJid, msg.participant, sock.user?.id, sock.user?.lid].filter(Boolean)
+    const senderNums = senderCandidatos.map(soNumero).filter(Boolean)
+    const isDono = msg.key.fromMe === true || senderNums.some(n => numerosDono.includes(n))
 
-    dellista: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid
-        const numero = (args[0] || "").replace(/\D/g, "")
-        if (!numero) return sock.sendMessage(jid, { text: "🚫 *!dellista <número>*" }, { quoted: msg })
-        const lista = db.listanegra(); const arr = lista[jid] || []
-        const idx = arr.indexOf(numero)
-        if (idx === -1) return sock.sendMessage(jid, { text: "🦅 Não tá na lista!" }, { quoted: msg })
-        arr.splice(idx, 1); lista[jid] = arr; db.salvarListanegra(lista)
-        await sock.sendMessage(jid, { text: "✅ +" + numero + " perdoado!" }, { quoted: msg })
-      }
-    },
+    const cfgSub = db.config()
+    const numerosSub = (cfgSub.subdonos || []).map(soNumero)
+    const isSubDono = senderNums.some(n => numerosSub.includes(n)) && !isDono
 
-    // ============ BEMVINDO ============
-    bemvindo: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid
-        const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: "👋 *!bemvindo on/off*" }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].bemvindo = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: "🎩 Boas-vindas: *" + opcao.toUpperCase() + "*" }, { quoted: msg })
-      }
-    },
+    if (isGrupo && !isDono && !isSubDono) {
+      const b = db.bangp()
+      if (b.grupos?.[remetente]) return
+    }
 
-    textobv: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid
-        const t = args.join(" ").trim()
-        if (!t) return sock.sendMessage(jid, { text: "📝 *!textobv <texto>* (%nmr%)" }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].textobv = t; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: "✅ Texto de boas-vindas salvo!" }, { quoted: msg })
-      }
-    },
-
-    fundobv: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid
-        const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
-        const quoted = ctx.quotedMessage
-        const tem = msg.message?.imageMessage || quoted?.imageMessage
-        if (!tem) return sock.sendMessage(jid, { text: "🖼️ Manda imagem~" }, { quoted: msg })
-        const alvoMsg = msg.message?.imageMessage ? msg : { ...msg, message: { imageMessage: quoted.imageMessage } }
-        const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].fundobv = buffer.toString("base64"); db.salvarGrupos(g)
-        await sock.sendMessage(jid, { image: buffer, caption: "🎩 Foto de chegada salva!" }, { quoted: msg })
-      }
-    },
-
-    legendasaiu: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid
-        const t = args.join(" ").trim()
-        if (!t) return sock.sendMessage(jid, { text: "📝 *!legendasaiu <texto>* (%nmr%)" }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].legendasaiu = t; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: "✅ Legenda de partida salva!" }, { quoted: msg })
-      }
-    },
-
-    fundosaiu: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid
-        const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
-        const quoted = ctx.quotedMessage
-        const tem = msg.message?.imageMessage || quoted?.imageMessage
-        if (!tem) return sock.sendMessage(jid, { text: "🖼️ Manda imagem~" }, { quoted: msg })
-        const alvoMsg = msg.message?.imageMessage ? msg : { ...msg, message: { imageMessage: quoted.imageMessage } }
-        const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].fundosaiu = buffer.toString("base64"); db.salvarGrupos(g)
-        await sock.sendMessage(jid, { image: buffer, caption: "🎩 Foto de partida salva!" }, { quoted: msg })
-      }
-    },
-
-    // ============ AGENDAMENTO ============
-    abrirgp: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db, utils, groupMetadata }) {
-        const jid = msg.key.remoteJid
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "🦅 Preciso ser *admin*!" }, { quoted: msg })
-        const hora = args[0]
-        if (!hora || !/^\d{1,2}:\d{2}$/.test(hora)) return sock.sendMessage(jid, { text: "⏰ *!abrirgp hh:mm*" }, { quoted: msg })
-        const [h, m] = hora.split(":").map(Number)
-        const fmt = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0")
-        const g = db.grupos(); g[jid] = g[jid] || {}
-        g[jid].abrirHora = fmt; g[jid].ultimoAbrir = null; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: "🏰 Abertura agendada para *" + fmt + "*" }, { quoted: msg })
-      }
-    },
-
-    fechargp: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db, utils, groupMetadata }) {
-        const jid = msg.key.remoteJid
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "🦅 Preciso ser *admin*!" }, { quoted: msg })
-        const hora = args[0]
-        if (!hora || !/^\d{1,2}:\d{2}$/.test(hora)) return sock.sendMessage(jid, { text: "⏰ *!fechargp hh:mm*" }, { quoted: msg })
-        const [h, m] = hora.split(":").map(Number)
-        const fmt = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0")
-        const g = db.grupos(); g[jid] = g[jid] || {}
-        g[jid].fecharHora = fmt; g[jid].ultimoFechar = null; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: "🏰 Fechamento agendado para *" + fmt + "*" }, { quoted: msg })
-      }
-    },
-
-    fotoabrir: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db, utils }) {
-        const jid = msg.key.remoteJid
-        const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
-        const quoted = ctx.quotedMessage
-        const tem = msg.message?.imageMessage || quoted?.imageMessage
-        const legenda = (args.join(" ").trim()) || (quoted?.imageMessage?.caption) || null
-        const g = db.grupos(); g[jid] = g[jid] || {}
-        if (tem) {
-          const alvoMsg = msg.message?.imageMessage ? msg : { ...msg, message: { imageMessage: quoted.imageMessage } }
-          const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
-          g[jid].fotoAbrir = buffer.toString("base64")
-          if (legenda) g[jid].legendaAbrir = legenda
-          db.salvarGrupos(g)
-          return sock.sendMessage(jid, { image: buffer, caption: "🎩 Foto de abertura salva!" }, { quoted: msg })
+    // 🎨 AUTOFIX / AUTOTTK (antes dos comandos)
+    if (isGrupo && !msg.key.fromMe) {
+      try {
+        const confAuto = db.autocfg().grupos?.[remetente] || {}
+        if (confAuto.autottk) {
+          const feito = await processarAutoTtk(sock, msg, remetente, isGrupo)
+          if (feito) return
         }
-        if (legenda) { g[jid].legendaAbrir = legenda; db.salvarGrupos(g); return sock.sendMessage(jid, { text: "✅ " + legenda }, { quoted: msg }) }
-      }
-    },
-
-    fotofechar: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db, utils }) {
-        const jid = msg.key.remoteJid
-        const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
-        const quoted = ctx.quotedMessage
-        const tem = msg.message?.imageMessage || quoted?.imageMessage
-        const legenda = (args.join(" ").trim()) || (quoted?.imageMessage?.caption) || null
-        const g = db.grupos(); g[jid] = g[jid] || {}
-        if (tem) {
-          const alvoMsg = msg.message?.imageMessage ? msg : { ...msg, message: { imageMessage: quoted.imageMessage } }
-          const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
-          g[jid].fotoFechar = buffer.toString("base64")
-          if (legenda) g[jid].legendaFechar = legenda
-          db.salvarGrupos(g)
-          return sock.sendMessage(jid, { image: buffer, caption: "🎩 Foto de fechamento salva!" }, { quoted: msg })
+        if (confAuto.autofig) {
+          const feito = await processarAutoFig(sock, msg, remetente, isGrupo)
+          if (feito) return
         }
-        if (legenda) { g[jid].legendaFechar = legenda; db.salvarGrupos(g); return sock.sendMessage(jid, { text: "✅ " + legenda }, { quoted: msg }) }
-      }
-    },
+      } catch (e) { console.log("Erro auto:", e.message) }
+    }
 
-    // ============ SORTEIO ============
-    sorteio: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, utils }) {
-        const jid = msg.key.remoteJid
-        if (args.length < 2) return sock.sendMessage(jid, { text: "🎁 *!sorteio <prêmio> <tempo>*" }, { quoted: msg })
-        const dRaw = args[args.length - 1].toLowerCase()
-        const premio = args.slice(0, -1).join(" ")
-        const m = dRaw.match(/^(\d+)(s|m|h)$/)
-        if (!m) return sock.sendMessage(jid, { text: "🦅 Use 30s/5m/1h" }, { quoted: msg })
-        const v = parseInt(m[1]), u = m[2]
-        let ms = 0, txt = ""
-        if (u === "s") { ms = v * 1000; txt = v + "s" }
-        if (u === "m") { ms = v * 60000; txt = v + "min" }
-        if (u === "h") { ms = v * 3600000; txt = v + "h" }
-        await sock.sendMessage(jid, { text: "⚔️ *SORTEIO IMPERIAL*\n\n" + premio + "\n⏰ " + txt }, { quoted: msg })
-        setTimeout(async () => {
-          try {
-            const meta = await sock.groupMetadata(jid)
-            const mbs = meta.participants.map(p => p.id)
-            if (!mbs.length) return
-            const g = mbs[Math.floor(Math.random() * mbs.length)]
-            await sock.sendMessage(jid, { text: "🎉 *VENCEDOR!*\n\n" + premio + "\n🥇 @" + utils.soNumero(g) + "\n🦅 _\"A fortuna sorri aos corajosos.\"_", mentions: [g] })
-          } catch (_) {}
-        }, ms)
-      }
-    },
-
-    // ============ PARCERIA ============
-    modoparceria: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid
-        const parcerias = db.parcerias()
-        parcerias[jid] = parcerias[jid] || { ativo: false, parceiros: {} }
-        const sub = (args[0] || "").toLowerCase()
-        if (sub === "on") parcerias[jid].ativo = true
-        else if (sub === "off") parcerias[jid].ativo = false
-        else parcerias[jid].ativo = !parcerias[jid].ativo
-        db.salvarParcerias(parcerias)
-        await sock.sendMessage(jid, { text: "🤝 Aliança: *" + (parcerias[jid].ativo ? "ON" : "OFF") + "*" }, { quoted: msg })
-      }
-    },
-
-    addparceria: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db, utils }) {
-        const jid = msg.key.remoteJid
-        const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: "⚔️ Marque um soldado!" }, { quoted: msg })
-        const qtd = parseInt(args.find(a => /^\d+$/.test(a)) || "0", 10)
-        if (!qtd) return sock.sendMessage(jid, { text: "⚠️ Quantidade!" }, { quoted: msg })
-        const parcerias = db.parcerias()
-        parcerias[jid] = parcerias[jid] || { ativo: false, parceiros: {} }
-        parcerias[jid].parceiros = parcerias[jid].parceiros || {}
-        parcerias[jid].parceiros[alvo] = { total: qtd, usados: 0, desde: Date.now() }
-        db.salvarParcerias(parcerias)
-        await sock.sendMessage(jid, { text: "🤝 @" + utils.soNumero(alvo) + " → *" + qtd + "*", mentions: [alvo] }, { quoted: msg })
-      }
-    },
-
-    rmparceria: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid
-        const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: "⚔️ Marque!" }, { quoted: msg })
-        const parcerias = db.parcerias()
-        if (!parcerias[jid]?.parceiros?.[alvo]) return sock.sendMessage(jid, { text: "💔 Sem aliança." }, { quoted: msg })
-        delete parcerias[jid].parceiros[alvo]; db.salvarParcerias(parcerias)
-        await sock.sendMessage(jid, { text: "⚔️ @" + utils.soNumero(alvo) + " fora da aliança!", mentions: [alvo] }, { quoted: msg })
-      }
-    },
-
-    parcerias: {
-      adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid
-        const dados = (db.parcerias())[jid] || {}
-        if (!dados.parceiros || !Object.keys(dados.parceiros).length) return sock.sendMessage(jid, { text: "🤝 Nenhuma aliança." }, { quoted: msg })
-        const ativo = dados.ativo ? "🟢" : "🔴"
-        let txt = "🤝 *ALIANÇAS* (" + ativo + ")\n\n"
-        const mentions = []
-        for (const [jidP, info] of Object.entries(dados.parceiros)) {
-          txt += "👤 @" + utils.soNumero(jidP) + "\n📊 " + info.usados + "/" + info.total + "\n\n"
-          mentions.push(jidP)
+    // 💰 GOLD DIÁRIO
+    if (isGrupo && !msg.key.fromMe) {
+      try {
+        const grupos = db.grupos()
+        const conf = grupos[remetente] || {}
+        if (conf.rpgAtivo === true) {
+          const rpg = db.rpg()
+          const dataHoje = dataBrasil()
+          const num = soNumero(sender)
+          rpg.usuarios = rpg.usuarios || {}
+          rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
+          if (rpg.usuarios[num].ultimoGanho !== dataHoje) {
+            rpg.usuarios[num].moedas = (rpg.usuarios[num].moedas || 0) + 100
+            rpg.usuarios[num].ultimoGanho = dataHoje
+            db.salvarRpg(rpg)
+            await sock.sendMessage(remetente, {
+              text: "⚡💰 Gold diario! +100 pra @" + num + "\nSaldo: " + rpg.usuarios[num].moedas,
+              mentions: [sender]
+            })
+          }
         }
-        await sock.sendMessage(jid, { text: txt, mentions: mentions }, { quoted: msg })
+      } catch (_) {}
+    }
+
+    if (isGrupo && aluguelAtivo() && !isDono && !isSubDono && !grupoTemAluguel(remetente)) return
+
+    if (isGrupo && !msg.key.fromMe) {
+      const cands = [sender, msg.key?.participantPn, msg.key?.participantLid].filter(Boolean)
+      if (cands.some(j => naListaNegra(remetente, j))) {
+        try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+        try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
+        return
       }
     }
 
-  }
-                                         }
+    if (isGrupo && !msg.key.fromMe) {
+      const grupos = db.grupos()
+      const conf = grupos[remetente] || {}
+      const meta = await sock.groupMetadata(remetente).catch(() => null)
+
+      const isAdm = meta?.participants.find(p => p.id === sender || soNumero(p.id) === soNumero(sender) || soNumero(p.lid) === soNumero(sender))?.admin
+      const ehAdmin = isAdm === "admin" || isAdm === "superadmin"
+      const ehSub = ehSubAdmin(remetente, sender)
+      const podeBurlar = ehAdmin || isDono || isSubDono || ehSub
+
+      const mutados = db.mutados()
+      const mutadosG = mutados[remetente] || {}
+      const candsM = [sender, msg.key?.participantPn, msg.key?.participantLid].filter(Boolean)
+      let jidMutado = null
+      for (const c of candsM) {
+        for (const j of Object.keys(mutadosG)) {
+          if (soNumero(j) === soNumero(c) && mutadosG[j] > Date.now()) { jidMutado = j; break }
+        }
+        if (jidMutado) break
+      }
+      if (jidMutado && !podeBurlar) {
+        try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+        return
+      }
+
+      if (conf.palavrao && !podeBurlar) {
+        const lista = db.palavroes()[remetente] || []
+        const normalizar = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim()
+        const textoNorm = normalizar(getTexto(msg))
+        const temPalavrao = lista.some(p => {
+          const pl = normalizar(p)
+          if (!pl) return false
+          return new RegExp("\\b" + pl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(textoNorm)
+        })
+        if (lista.length && textoNorm && temPalavrao) {
+          try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+          const n = adicionarAviso(remetente, sender, "palavrao")
+          if (n >= 3) {
+            limparAvisos(remetente, sender, "palavrao")
+            await sock.sendMessage(remetente, { text: "@" + soNumero(sender) + " 3/3 palavras proibidas!", mentions: [sender] })
+            try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
+          } else {
+            await sock.sendMessage(remetente, { text: "@" + soNumero(sender) + " palavra proibida - " + n + "/3", mentions: [sender] })
+          }
+          return
+        }
+      }
+
+      const afks = db.afk()
+      const afkGrupo = afks[remetente] || {}
+      const candsAutor = [sender, msg.key?.participantPn, msg.key?.participantLid].filter(Boolean)
+      let jidAfk = null
+      for (const c of candsAutor) {
+        for (const j of Object.keys(afkGrupo)) {
+          if (soNumero(j) === soNumero(c)) { jidAfk = j; break }
+        }
+        if (jidAfk) break
+      }
+
+      if (jidAfk && afkGrupo[jidAfk]) {
+        const info = afkGrupo[jidAfk]
+        const tempo = formatarTempo(Date.now() - info.desde)
+        delete afkGrupo[jidAfk]
+        afks[remetente] = afkGrupo
+        db.salvarAfk(afks)
+        await sock.sendMessage(remetente, {
+          text: "⚡ @" + soNumero(jidAfk) + " voltou! Ficou AFK " + tempo,
+          mentions: [jidAfk]
+        })
+      }
+
+      const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
+      const mencionados = ctx.mentionedJid || []
+      for (const m of mencionados) {
+        for (const [j, info] of Object.entries(afkGrupo)) {
+          if (soNumero(j) === soNumero(m)) {
+            const tempo = formatarTempo(Date.now() - info.desde)
+            await sock.sendMessage(remetente, {
+              text: "⚡💤 AFK: @" + soNumero(j) + "\nHa " + tempo + "\nMotivo: " + info.motivo,
+              mentions: [j]
+            })
+          }
+        }
+      }
+
+      if (conf.antilink && !podeBurlar) {
+        const textoMsg = getTexto(msg)
+        const linkGrupo = /(chat\.whatsapp\.com|wa\.me\/)/i.test(textoMsg)
+        const linkGeral = /(https?:\/\/|www\.|\.com|\.net|\.br|\.io|\.org|\.xyz|\.tv|\.me|\.gg)/i.test(textoMsg)
+
+        if (linkGrupo) {
+          const parcerias = db.parcerias()
+          const p = parcerias[remetente] || {}
+          const parceiros = p.parceiros || {}
+          const modoParceria = p.ativo === true
+          const senderNum = soNumero(sender)
+
+          let encontrado = null
+          for (const [jidP, info] of Object.entries(parceiros)) {
+            if (soNumero(jidP) === senderNum) { encontrado = { jid: jidP, info }; break }
+          }
+
+          if (modoParceria && encontrado) {
+            if (encontrado.info.usados < encontrado.info.total) {
+              encontrado.info.usados++
+              db.salvarParcerias(parcerias)
+              await sock.sendMessage(remetente, { text: "Parceria liberada para @" + senderNum + "\nUsos: " + encontrado.info.usados + "/" + encontrado.info.total, mentions: [sender] })
+              return
+            } else {
+              try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+              await sock.sendMessage(remetente, { text: "Parceria esgotada para @" + senderNum, mentions: [sender] })
+              return
+            }
+          }
+
+          try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+          const n = adicionarAviso(remetente, sender, "link")
+          if (n >= 3) {
+            limparAvisos(remetente, sender, "link")
+            await sock.sendMessage(remetente, { text: "@" + senderNum + " 3/3 divulgacoes!", mentions: [sender] })
+            try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
+          } else {
+            await sock.sendMessage(remetente, { text: "Divulgacao bloqueada! Avisos: " + n + "/3", mentions: [sender] })
+          }
+          return
+        }
+
+        if (linkGeral) {
+          try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+          const n = adicionarAviso(remetente, sender, "link")
+          if (n >= 3) {
+            limparAvisos(remetente, sender, "link")
+            await sock.sendMessage(remetente, { text: "@" + soNumero(sender) + " 3/3 links!", mentions: [sender] })
+            try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
+          } else {
+            await sock.sendMessage(remetente, { text: "Link bloqueado! " + n + "/3", mentions: [sender] })
+          }
+          return
+        }
+      }
+
+      const antimap = [
+        { cond: conf.antiaudio && msg.message?.audioMessage, tipo: "audio", nome: "Audio" },
+        { cond: conf.antivideo && msg.message?.videoMessage, tipo: "video", nome: "Video" },
+        { cond: conf.antifoto && msg.message?.imageMessage, tipo: "foto", nome: "Foto" },
+        { cond: conf.antifig && msg.message?.stickerMessage, tipo: "fig", nome: "Figurinha" }
+      ]
+      for (const a of antimap) {
+        if (a.cond && !podeBurlar) {
+          const n = adicionarAviso(remetente, sender, a.tipo)
+          try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+          if (n >= 3) {
+            limparAvisos(remetente, sender, a.tipo)
+            await sock.sendMessage(remetente, { text: "@" + soNumero(sender) + " 3/3 " + a.nome + "s!", mentions: [sender] })
+            try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
+          } else {
+            await sock.sendMessage(remetente, { text: a.nome + "! " + n + "/3", mentions: [sender] })
+          }
+          return
+        }
+      }
+    }
+
+    const hoje = dataBrasil()
+    const cfgAll = db.config()
+    if (cfgAll.ultimoReset !== hoje) {
+      const parceriasAll = db.parcerias()
+      for (const jid of Object.keys(parceriasAll)) {
+        const p = parceriasAll[jid]
+        if (p?.parceiros) for (const jidP of Object.keys(p.parceiros)) p.parceiros[jidP].usados = 0
+      }
+      db.salvarParcerias(parceriasAll)
+      cfgAll.ultimoReset = hoje
+      db.salvarConfig(cfgAll)
+    }
+
+    const grupos = db.grupos()
+    const confGrupo = grupos[remetente] || {}
+    const cfgGlobal = db.config()
+
+    const prefixoGlobal = cfgGlobal.prefixoGlobal || config.prefixo || "!"
+    let prefixosAtivos
+    if (isGrupo && confGrupo.multiprefixo && confGrupo.prefixo) prefixosAtivos = [confGrupo.prefixo]
+    else prefixosAtivos = [prefixoGlobal]
+
+    let texto = getTexto(msg)
+
+    const btnId = getTextoBotao(msg)
+    if (btnId) {
+      const prefixos = ["!", "/", ".", "-", "#", ","]
+      const temPrefixo = prefixos.some(p => btnId.startsWith(p))
+      texto = temPrefixo ? btnId : (prefixoGlobal || "!") + btnId
+    }
+
+    let prefixoUsado = prefixosAtivos.find(p => texto.startsWith(p))
+    let cmdName = ""
+    let args = []
+
+    if (prefixoUsado) {
+      const partes = texto.slice(prefixoUsado.length).trim().split(/\s+/)
+      cmdName = partes[0]
+      args = partes.slice(1)
+    } else {
+      const partes = texto.trim().split(/\s+/)
+      const primeira = (partes[0] || "").toLowerCase()
+      if (primeira === "prefixo") {
+        cmdName = "prefixo"
+        args = partes.slice(1)
+        prefixoUsado = ""
+      } else return
+    }
+
+    const cmd = getComando(cmdName.toLowerCase())
+    if (!cmd) {
+      const p = (isGrupo && confGrupo.multiprefixo && confGrupo.prefixo) ? confGrupo.prefixo : prefixoGlobal
+      const parecidos = comandosParecidos(cmdName, 3)
+      let lista = parecidos.length ? "\n" + parecidos.map((r, i) => (i + 1) + ". " + p + r.comando + " (" + r.porcentagem + "%)").join("\n") : ""
+      const textoBase = lista ? "⚡ Nao viu!\nVoce digitou: " + texto + "\nTalvez quis dizer:" + lista : "⚡ Nao viu!\n" + texto + " nao existe!\nUse " + p + "menu"
+      await sock.sendMessage(remetente, { text: textoBase }, { quoted: msg })
+      return
+    }
+
+    // 🚔 CHECA SE TÁ PRESO
+    try {
+      const cidData = dbLer("cidade.json", { usuarios: {} })
+      const numSender = soNumero(sender)
+      const userCidade = cidData.usuarios?.[numSender]
+      if (userCidade?.preso && userCidade.preso > Date.now()) {
+        const tempoRestante = formatarTempo(userCidade.preso - Date.now())
+        if (cmdName.toLowerCase() !== "prefixo") {
+          await sock.sendMessage(remetente, { text: "⚡🚔 *VOCÊ ESTÁ PRESO!*\n\n⏰ Tempo: *" + tempoRestante + "*" }, { quoted: msg })
+          return
+        }
+      }
+      if (userCidade?.preso && userCidade.preso <= Date.now()) {
+        cidData.usuarios[numSender].preso = null
+        dbSalvar("cidade.json", cidData)
+      }
+    } catch (_) {}
+
+    let groupMetadata = null
+    let isAdmin = false
+    if (isGrupo) {
+      groupMetadata = await sock.groupMetadata(remetente)
+      const p = groupMetadata.participants.find(x => x.id === sender || soNumero(x.id) === soNumero(sender) || soNumero(x.lid) === soNumero(sender))
+      isAdmin = p?.admin === "admin" || p?.admin === "superadmin"
+    }
+
+    const ehSub = isGrupo && ehSubAdmin(remetente, sender)
+    const permitidoSub = ["mute", "desmute", "ban", "kick", "link", "linkgp", "fechar", "closenow", "abrir", "opennow"]
+    const ehComandoSub = permitidoSub.includes(cmd.nome) || (cmd.aliases || []).some(a => permitidoSub.includes(a))
+    const podeAdmin = isAdmin || isDono || isSubDono || (ehSub && ehComandoSub)
+
+    if (cfgGlobal.slow && !isDono && !isSubDono) await new Promise(r => setTimeout(r, 2500))
+
+    if (cmd.categoria === "menu-rpg" && isGrupo) {
+      const excecoes = ["rpg", "menurpg", "prefixo"]
+      if (!excecoes.includes(cmd.nome) && confGrupo.rpgAtivo !== true) {
+        return sock.sendMessage(remetente, { text: "⚡ RPG OFF! Ative com !rpg on" }, { quoted: msg })
+      }
+    }
+
+    if (cmd.donoOnly && !isDono && !isSubDono) return sock.sendMessage(remetente, { text: "⚡ Esse comando e so do imperador!" }, { quoted: msg })
+    if (cmd.adminOnly && !podeAdmin && !isSubDono) return sock.sendMessage(remetente, { text: "⚡ Esse comando e de general!" }, { quoted: msg })
+    if (cmd.grupoOnly && !isGrupo) return sock.sendMessage(remetente, { text: "⚡ So em grupo!" }, { quoted: msg })
+
+    try {
+      await cmd.executar({
+        sock, msg, args,
+        sender, isGrupo, isAdmin, isDono, isSubDono,
+        ehSub, podeAdmin,
+        groupMetadata, config, prefixoAtivo: prefixoUsado || prefixoGlobal,
+        db,
+        utils: {
+          getAlvo, soNumero, getTexto, downloadMediaMessage, recarregarCanal,
+          naListaNegra, aluguelAtivo, grupoTemAluguel, formatarTempo,
+          adicionarAviso, limparAvisos, DATA_DIR, botEhAdmin,
+          dbLer, dbSalvar, getTextoBotao, ehSubAdmin
+        }
+      })
+    } catch (e) {
+      console.log("ERRO em " + cmd.nome + ":")
+      console.log(e)
+      try { await sock.sendMessage(remetente, { text: "⚡ ERRO no comando " + cmd.nome + "\n\n" + e.message }, { quoted: msg }) } catch (_) {}
+    }
+  })
+
+  sock.ev.on("group-participants.update", async (ev) => {
+    try {
+      const { id, participants, action, author } = ev
+      const conf = db.grupos()[id] || {}
+
+      function normalizar(p) {
+        if (!p) return null
+        if (typeof p === "string") return { jidReal: p.endsWith("@lid") ? null : p, melhor: p, num: soNumero(p) }
+        if (typeof p === "object") {
+          const jidReal = p.phoneNumber || (p.id && !p.id.endsWith("@lid") ? p.id : null)
+          const lid = p.id && p.id.endsWith("@lid") ? p.id : null
+          const melhor = jidReal || lid || p.id || p.phoneNumber
+          return { jidReal, melhor, num: soNumero(melhor) }
+        }
+        return null
+      }
+
+      if (author && conf.x9) {
+        for (const p of participants) {
+          const info = normalizar(p)
+          if (!info) continue
+          if (action === "promote") await notificarX9(sock, id, "PROMOTE", author, info.melhor)
+          else if (action === "demote") await notificarX9(sock, id, "DEMOTE", author, info.melhor)
+          else if (action === "remove") await notificarX9(sock, id, "REMOVE", author, info.melhor)
+        }
+      }
+
+      if (action === "add") {
+        for (const p of participants) {
+          const info = normalizar(p)
+          if (!info) continue
+          if (naListaNegra(id, info.jidReal || info.melhor)) {
+            try { await sock.groupParticipantsUpdate(id, [info.melhor], "remove") } catch (_) {}
+          }
+        }
+      }
+
+      if (!conf.bemvindo) return
+      const aplicar = (t, num, fb) => (t && t.trim() ? t : fb).replace(/%nmr%/g, "@" + num).replace(/#numero/g, "@" + num)
+
+      if (action === "add") {
+        for (const p of participants) {
+          const info = normalizar(p)
+          if (!info) continue
+          if (naListaNegra(id, info.jidReal || info.melhor)) continue
+          const txt = aplicar(conf.textobv, info.num, "Bem-vindo(a) @" + info.num + "!")
+          try {
+            if (conf.fundobv) await sock.sendMessage(id, { image: Buffer.from(conf.fundobv, "base64"), caption: txt, mentions: [info.melhor] })
+            else await sock.sendMessage(id, { text: txt, mentions: [info.melhor] })
+          } catch (_) {}
+        }
+      }
+
+      if (action === "remove") {
+        for (const p of participants) {
+          const info = normalizar(p)
+          if (!info) continue
+          const txt = aplicar(conf.legendasaiu, info.num, "Ate logo @" + info.num + "!")
+          try {
+            if (conf.fundosaiu) await sock.sendMessage(id, { image: Buffer.from(conf.fundosaiu, "base64"), caption: txt, mentions: [info.melhor] })
+            else await sock.sendMessage(id, { text: txt, mentions: [info.melhor] })
+          } catch (_) {}
+        }
+      }
+    } catch (e) { console.log("Erro participants:", e.message) }
+  })
+}
+
+// ============================================================
+// ⏰ AGENDAMENTOS
+// ============================================================
+function checarAgendamentos() {
+  setInterval(async () => {
+    if (!sockGlobal) return
+
+    const v = db.vips()
+    let vipAlterou = false
+    const agoraMs = Date.now()
+    for (const [jidVip, info] of Object.entries(v.vips || {})) {
+      if (info.expira !== "inf" && info.expira <= agoraMs) { delete v.vips[jidVip]; vipAlterou = true }
+    }
+    if (vipAlterou) db.salvarVips(v)
+
+    if (global.rendasAutomaticas?.length) {
+      for (const fn of global.rendasAutomaticas) {
+        try { await fn(sockGlobal, db) } catch (e) { console.log("Erro renda auto:", e.message) }
+      }
+    }
+
+    // 🏙️ RENDA CIDADE
+    try {
+      const cidData = dbLer("cidade.json", { usuarios: {}, casas: {}, predios: {} })
+      const rpg = db.rpg()
+      rpg.usuarios = rpg.usuarios || {}
+
+      const INTERVALO = 60 * 60 * 1000
+      if (!global._ultimaRendaCidade) global._ultimaRendaCidade = 0
+      const agora2 = Date.now()
+
+      if (agora2 - global._ultimaRendaCidade >= INTERVALO) {
+        global._ultimaRendaCidade = agora2
+        let alterouCidade = false
+
+        for (const [num, user] of Object.entries(cidData.usuarios || {})) {
+          let rendaTotal = 0
+          if (user.casa && cidData.casas?.[user.casa]) {
+            const casa = cidData.casas[user.casa]
+            const sujeira = user.sujeiraCasa || 0
+            rendaTotal += casa.renda - Math.floor(casa.renda * (sujeira / 100))
+            cidData.usuarios[num].sujeiraCasa = Math.min(100, (user.sujeiraCasa || 0) + 10)
+            alterouCidade = true
+          }
+          if (user.predio && cidData.predios?.[user.predio]) {
+            const predio = cidData.predios[user.predio]
+            const sujeira = user.sujeiraPredio || 0
+            rendaTotal += predio.renda - Math.floor(predio.renda * (sujeira / 100))
+            cidData.usuarios[num].sujeiraPredio = Math.min(100, (user.sujeiraPredio || 0) + 10)
+            alterouCidade = true
+          }
+          if (rendaTotal > 0) {
+            rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
+            rpg.usuarios[num].moedas = (rpg.usuarios[num].moedas || 0) + rendaTotal
+          }
+        }
+
+        if (alterouCidade) dbSalvar("cidade.json", cidData)
+        db.salvarRpg(rpg)
+      }
+    } catch (e) { console.log("Erro renda cidade:", e.message) }
+
+    const agora = new Date()
+    const horaAtual = String(agora.getHours()).padStart(2, "0") + ":" + String(agora.getMinutes()).padStart(2, "0")
+    const dataHoje = agora.toISOString().slice(0, 10)
+    const grupos = db.grupos()
+    let alterou = false
+    for (const [jid, conf] of Object.entries(grupos)) {
+      if (!jid.endsWith("@g.us")) continue
+      if (conf.abrirHora === horaAtual && conf.ultimoAbrir !== dataHoje) {
+        try {
+          await sockGlobal.groupSettingUpdate(jid, "not_announcement")
+          const legenda = conf.legendaAbrir?.trim() || "Territorio aberto!"
+          if (conf.fotoAbrir) await sockGlobal.sendMessage(jid, { image: Buffer.from(conf.fotoAbrir, "base64"), caption: legenda })
+          else await sockGlobal.sendMessage(jid, { text: legenda })
+          conf.ultimoAbrir = dataHoje; alterou = true
+        } catch (e) {}
+      }
+      if (conf.fecharHora === horaAtual && conf.ultimoFechar !== dataHoje) {
+        try {
+          await sockGlobal.groupSettingUpdate(jid, "announcement")
+          const legenda = conf.legendaFechar?.trim() || "Territorio fechado!"
+          if (conf.fotoFechar) await sockGlobal.sendMessage(jid, { image: Buffer.from(conf.fotoFechar, "base64"), caption: legenda })
+          else await sockGlobal.sendMessage(jid, { text: legenda })
+          conf.ultimoFechar = dataHoje; alterou = true
+        } catch (e) {}
+      }
+    }
+    if (alterou) db.salvarGrupos(grupos)
+  }, 30000)
+}
+
+// ============================================================
+// 💻 CONSOLE
+// ============================================================
+function iniciarConsole() {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: "zenitsu> " })
+  rl.prompt()
+  rl.on("line", async (linha) => {
+    const texto = linha.trim()
+    const [cmd, ...args] = texto.split(/\s+/)
+    const c = (cmd || "").toLowerCase()
+    if (!c) { rl.prompt(); return }
+    if (c === "saida" || c === "exit") process.exit(0)
+    if (c === "canal") {
+      const sub = (args[0] || "").toLowerCase()
+      if (sub === "ver") {
+        const c1 = db.canal()
+        console.log(c1?.jid ? "\n" + c1.nome + " | " + c1.link + "\n" : "\nNenhum canal.\n")
+        rl.prompt(); return
+      }
+      if (sub === "0" || sub === "off") {
+        db.salvarCanal({ jid: null, nome: null, link: null })
+        recarregarCanal()
+        console.log("\nDesativado!\n"); rl.prompt(); return
+      }
+      if (sub.startsWith("http")) { await salvarCanalPeloLink(sub); rl.prompt(); return }
+      rl.question("Link (ou 0): ", async (l) => {
+        l = (l || "").trim()
+        if (l === "0" || !l) { rl.prompt(); return }
+        await salvarCanalPeloLink(l); rl.prompt()
+      })
+      return
+    }
+    if (c === "reload") {
+      comandos.clear()
+      aliases.clear()
+      global.rendasAutomaticas = []
+      carregarMenus()
+      console.log("Menus recarregados!\n")
+      rl.prompt(); return
+    }
+    rl.prompt()
+  })
+}
+
+async function salvarCanalPeloLink(link) {
+  const codigo = String(link).replace(/.*whatsapp\.com\/channel\//, "").replace(/.*wa\.me\/channel\//, "").split(/[\/?\s]/)[0]
+  if (!codigo || !sockGlobal) return
+  try {
+    const meta = await sockGlobal.newsletterMetadata("invite", codigo)
+    const jidReal = meta?.jid || meta?.id
+    if (!jidReal) throw new Error("Canal nao encontrado")
+    db.salvarCanal({ jid: jidReal, nome: meta?.name || "Canal", link: "https://whatsapp.com/channel/" + codigo })
+    recarregarCanal()
+    console.log("\nCanal salvo!\n")
+  } catch (e) { console.log(e.message + "\n") }
+}
+
+// ============================================================
+// 🚀 START
+// ============================================================
+carregarMenus()
+iniciar()
+iniciarConsole()
+checarAgendamentos()
