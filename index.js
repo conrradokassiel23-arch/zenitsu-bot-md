@@ -1,5 +1,5 @@
 /* ============================================================
-   ⚡ ZENITSU BOT MD - DEMON SLAYER
+   🌙 KOKUSHIBO BOT MD - DEMON SLAYER
    ============================================================ */
 
 const {
@@ -69,7 +69,7 @@ const db = {
   salvarGrupos: (d) => dbSalvar("grupos.json", d),
   advs: () => dbLer("advs.json", {}),
   salvarAdvs: (d) => dbSalvar("advs.json", d),
-  config: () => dbLer("config.json", { fotoMenu: null, prefixoGlobal: null, slow: false, subdonos: [] }),
+  config: () => dbLer("config.json", { fotoMenu: null, prefixoGlobal: null, slow: false, subdonos: [], nomeBot: "Kokushibo" }),
   salvarConfig: (d) => dbSalvar("config.json", d),
   canal: () => dbLer("canal.json", { jid: null, nome: null, link: null }),
   salvarCanal: (d) => dbSalvar("canal.json", d),
@@ -203,9 +203,9 @@ async function notificarX9(sock, groupJid, tipo, autor, alvo) {
     const nomeGrupo = meta.subject || "Grupo"
     const hora = new Date().toLocaleString("pt-BR")
     let texto = ""
-    if (tipo === "PROMOTE") texto = "⚡ X9 - @" + autorNum + " promoveu @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
-    else if (tipo === "DEMOTE") texto = "⚡ X9 - @" + autorNum + " rebaixou @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
-    else if (tipo === "REMOVE") texto = "⚡ X9 - @" + autorNum + " removeu @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
+    if (tipo === "PROMOTE") texto = "🌙 X9 - @" + autorNum + " promoveu @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
+    else if (tipo === "DEMOTE") texto = "🌙 X9 - @" + autorNum + " rebaixou @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
+    else if (tipo === "REMOVE") texto = "🌙 X9 - @" + autorNum + " removeu @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
     else return
     await sock.sendMessage(groupJid, { text: texto, mentions: [autor, alvo].filter(Boolean) })
   } catch (e) { console.log("X9 erro:", e.message) }
@@ -268,7 +268,7 @@ async function processarAutoTtk(sock, msg, remetente, isGrupo) {
     const buffer = Buffer.from(await vid.arrayBuffer())
 
     if (buffer.length > 16 * 1024 * 1024) {
-      await sock.sendMessage(remetente, { text: "⚡💢 Vídeo muito grande (max 16MB)" }, { quoted: msg })
+      await sock.sendMessage(remetente, { text: "🌙💢 Vídeo muito grande (max 16MB)" }, { quoted: msg })
       return true
     }
 
@@ -340,13 +340,11 @@ function carregarMenus() {
   global.totalAliases = aliases.size
   global.comandosPorCategoria = categorias
 
-  console.log("\n⚡ Zenitsu carregou " + comandos.size + " comandos...")
+  console.log("\n🌙 Kokushibo carregou " + comandos.size + " comandos...")
   console.log(aliases.size + " aliases registrados\n")
 }
 
-// ============================================================
 // ⚠️ ESSA LINHA É OBRIGATÓRIA PRO !REINICIAR E !ATUALIZAR
-// ============================================================
 global.__carregarMenus = carregarMenus
 
 function getComando(n) {
@@ -413,6 +411,91 @@ function envolverSendMessage(sock) {
 }
 
 // ============================================================
+// 🌙 COMANDOS SEM PREFIXO (nome do bot)
+// ============================================================
+async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo, isDono, isSubDono) {
+  if (!isGrupo) return false
+  if (msg.key.fromMe) return false
+
+  try {
+    const texto = getTexto(msg).toLowerCase().trim()
+    if (!texto) return false
+
+    const cfg = db.config()
+    const nomeBot = (cfg.nomeBot || "kokushibo").toLowerCase().trim()
+    if (!nomeBot) return false
+
+    // Verifica se começa com o nome do bot
+    if (!texto.startsWith(nomeBot)) return false
+
+    // Extrai o resto da mensagem depois do nome
+    const resto = texto.slice(nomeBot.length).trim()
+
+    // Verifica se é "fecha" ou "abre"
+    if (resto !== "fecha" && resto !== "abre") return false
+
+    // Verifica permissão (admin/dono/subdono)
+    let ehAdmin = false
+    try {
+      const meta = await sock.groupMetadata(remetente)
+      const p = meta.participants.find(x => 
+        x.id === sender || 
+        soNumero(x.id) === soNumero(sender) || 
+        soNumero(x.lid) === soNumero(sender)
+      )
+      ehAdmin = p && (p.admin === "admin" || p.admin === "superadmin")
+    } catch (e) { console.log("Erro ao verificar admin:", e.message) }
+
+    if (!ehAdmin && !isDono && !isSubDono) {
+      await sock.sendMessage(remetente, {
+        text: "🌙⚔️ *SEM PERMISSÃO*\n\n" +
+          "> 👁️ _\"Meus 6 olhos veem que você não é admin.\"_\n" +
+          "> _\"Não posso obedecer.\"_"
+      }, { quoted: msg })
+      return true
+    }
+
+    // FECHA
+    if (resto === "fecha") {
+      try {
+        await sock.groupSettingUpdate(remetente, "announcement")
+        await sock.sendMessage(remetente, {
+          text: "🌙🔒 *GRUPO FECHADO*\n\n" +
+            "> _\"A lua observa em silêncio.\"_\n" +
+            "> _\"Só os dignos falam.\"_\n\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━\n" +
+            "⚔️ _Respiração da Lua Crescente ativada._"
+        }, { quoted: msg })
+      } catch (e) {
+        await sock.sendMessage(remetente, { text: "🌙💢 *Erro ao fechar:* " + e.message }, { quoted: msg })
+      }
+      return true
+    }
+
+    // ABRE
+    if (resto === "abre") {
+      try {
+        await sock.groupSettingUpdate(remetente, "not_announcement")
+        await sock.sendMessage(remetente, {
+          text: "🌙🔓 *GRUPO ABERTO*\n\n" +
+            "> _\"A lua ilumina todos.\"_\n" +
+            "> _\"Respirem, mortais.\"_\n\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━\n" +
+            "⚔️ _Respirando Lua Crescente..._"
+        }, { quoted: msg })
+      } catch (e) {
+        await sock.sendMessage(remetente, { text: "🌙💢 *Erro ao abrir:* " + e.message }, { quoted: msg })
+      }
+      return true
+    }
+
+  } catch (e) {
+    console.log("Erro comando sem prefixo:", e.message)
+  }
+  return false
+}
+
+// ============================================================
 // 🚀 START
 // ============================================================
 let NUMERO_PAREAMENTO = null
@@ -443,7 +526,7 @@ async function iniciar() {
     setTimeout(async () => {
       try {
         console.log("\n═══════════════════════════════")
-        console.log("   ⚡ ZENITSU BOT - MD")
+        console.log("   🌙 KOKUSHIBO BOT - MD")
         console.log("═══════════════════════════════\n")
         console.log("Digite o NUMERO do bot (com DDI, so digitos):")
         console.log("Exemplo: 5511999999999\n")
@@ -475,7 +558,7 @@ async function iniciar() {
       if (motivo === DisconnectReason.loggedOut) process.exit(1)
       else setTimeout(() => iniciar(), 3000)
     } else if (connection === "open") {
-      console.log("\n⚡ CONECTADO! Zenitsu online\n")
+      console.log("\n🌙 CONECTADO! Kokushibo online\n")
     }
   })
 
@@ -524,6 +607,12 @@ async function iniciar() {
       if (b.grupos && b.grupos[remetente]) return
     }
 
+    // 🌙 COMANDOS SEM PREFIXO (fecha/abre)
+    if (isGrupo && !msg.key.fromMe) {
+      const feito = await processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo, isDono, isSubDono)
+      if (feito) return
+    }
+
     // 🎨 AUTOFIX / AUTOTTK (antes dos comandos)
     if (isGrupo && !msg.key.fromMe) {
       try {
@@ -555,7 +644,7 @@ async function iniciar() {
             rpg.usuarios[num].ultimoGanho = dataHoje
             db.salvarRpg(rpg)
             await sock.sendMessage(remetente, {
-              text: "⚡💰 Gold diario! +100 pra @" + num + "\nSaldo: " + rpg.usuarios[num].moedas,
+              text: "🌙💰 Gold diario! +100 pra @" + num + "\nSaldo: " + rpg.usuarios[num].moedas,
               mentions: [sender]
             })
           }
@@ -640,7 +729,7 @@ async function iniciar() {
         afks[remetente] = afkGrupo
         db.salvarAfk(afks)
         await sock.sendMessage(remetente, {
-          text: "⚡ @" + soNumero(jidAfk) + " voltou! Ficou AFK " + tempo,
+          text: "🌙 @" + soNumero(jidAfk) + " voltou! Ficou AFK " + tempo,
           mentions: [jidAfk]
         })
       }
@@ -652,7 +741,7 @@ async function iniciar() {
           if (soNumero(j) === soNumero(m)) {
             const tempo = formatarTempo(Date.now() - info.desde)
             await sock.sendMessage(remetente, {
-              text: "⚡💤 AFK: @" + soNumero(j) + "\nHa " + tempo + "\nMotivo: " + info.motivo,
+              text: "🌙💤 AFK: @" + soNumero(j) + "\nHa " + tempo + "\nMotivo: " + info.motivo,
               mentions: [j]
             })
           }
@@ -791,7 +880,7 @@ async function iniciar() {
       const p = (isGrupo && confGrupo.multiprefixo && confGrupo.prefixo) ? confGrupo.prefixo : prefixoGlobal
       const parecidos = comandosParecidos(cmdName, 3)
       let lista = parecidos.length ? "\n" + parecidos.map((r, i) => (i + 1) + ". " + p + r.comando + " (" + r.porcentagem + "%)").join("\n") : ""
-      const textoBase = lista ? "⚡ Nao viu!\nVoce digitou: " + texto + "\nTalvez quis dizer:" + lista : "⚡ Nao viu!\n" + texto + " nao existe!\nUse " + p + "menu"
+      const textoBase = lista ? "🌙 Nao viu!\nVoce digitou: " + texto + "\nTalvez quis dizer:" + lista : "🌙 Nao viu!\n" + texto + " nao existe!\nUse " + p + "menu"
       await sock.sendMessage(remetente, { text: textoBase }, { quoted: msg })
       return
     }
@@ -804,7 +893,7 @@ async function iniciar() {
       if (userCidade && userCidade.preso && userCidade.preso > Date.now()) {
         const tempoRestante = formatarTempo(userCidade.preso - Date.now())
         if (cmdName.toLowerCase() !== "prefixo") {
-          await sock.sendMessage(remetente, { text: "⚡🚔 VOCÊ ESTÁ PRESO!\n\n⏰ Tempo: " + tempoRestante }, { quoted: msg })
+          await sock.sendMessage(remetente, { text: "🌙🚔 VOCÊ ESTÁ PRESO!\n\n⏰ Tempo: " + tempoRestante }, { quoted: msg })
           return
         }
       }
@@ -834,18 +923,18 @@ async function iniciar() {
     if (cmd.categoria === "menu-rpg" && isGrupo) {
       const excecoes = ["rpg", "menurpg", "prefixo"]
       if (!excecoes.includes(cmd.nome) && confGrupo.rpgAtivo !== true) {
-        return sock.sendMessage(remetente, { text: "⚡ RPG OFF! Ative com !rpg on" }, { quoted: msg })
+        return sock.sendMessage(remetente, { text: "🌙 RPG OFF! Ative com !rpg on" }, { quoted: msg })
       }
     }
 
     if (cmd.donoOnly && !isDono && !isSubDono) {
-      return sock.sendMessage(remetente, { text: "⚡ Esse comando e so do imperador!" }, { quoted: msg })
+      return sock.sendMessage(remetente, { text: "🌙 Esse comando e so do imperador!" }, { quoted: msg })
     }
     if (cmd.adminOnly && !podeAdmin && !isSubDono) {
-      return sock.sendMessage(remetente, { text: "⚡ Esse comando e de general!" }, { quoted: msg })
+      return sock.sendMessage(remetente, { text: "🌙 Esse comando e de general!" }, { quoted: msg })
     }
     if (cmd.grupoOnly && !isGrupo) {
-      return sock.sendMessage(remetente, { text: "⚡ So em grupo!" }, { quoted: msg })
+      return sock.sendMessage(remetente, { text: "🌙 So em grupo!" }, { quoted: msg })
     }
 
     try {
@@ -866,7 +955,7 @@ async function iniciar() {
       console.log("ERRO em " + cmd.nome + ":")
       console.log(e)
       try {
-        await sock.sendMessage(remetente, { text: "⚡ ERRO no comando " + cmd.nome + "\n\n" + e.message }, { quoted: msg })
+        await sock.sendMessage(remetente, { text: "🌙 ERRO no comando " + cmd.nome + "\n\n" + e.message }, { quoted: msg })
       } catch (_) {}
     }
   })
@@ -1035,7 +1124,7 @@ function checarAgendamentos() {
 // 💻 CONSOLE
 // ============================================================
 function iniciarConsole() {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: "zenitsu> " })
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: "kokushibo> " })
   rl.prompt()
   rl.on("line", async (linha) => {
     const texto = linha.trim()
