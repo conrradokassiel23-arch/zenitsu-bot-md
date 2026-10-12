@@ -19,15 +19,17 @@ const POSICAO_NOME = {
 }
 
 const NOITES = [
-  { noite: 1, animatronicos: 1, velocidade: 12000, energiaQueda: 800, chanceFicar: 0.15 },
-  { noite: 2, animatronicos: 2, velocidade: 10000, energiaQueda: 900, chanceFicar: 0.20 },
-  { noite: 3, animatronicos: 3, velocidade: 8500, energiaQueda: 1000, chanceFicar: 0.25 },
-  { noite: 4, animatronicos: 4, velocidade: 7000, energiaQueda: 1100, chanceFicar: 0.30 },
-  { noite: 5, animatronicos: 4, velocidade: 5500, energiaQueda: 1200, chanceFicar: 0.35 }
+  { noite: 1, animatronicos: 1, velocidade: 12000, velocidadeEnergia: 800, chanceFicar: 0.15 },
+  { noite: 2, animatronicos: 2, velocidade: 10000, velocidadeEnergia: 900, chanceFicar: 0.20 },
+  { noite: 3, animatronicos: 3, velocidade: 8500, velocidadeEnergia: 1000, chanceFicar: 0.25 },
+  { noite: 4, animatronicos: 4, velocidade: 7000, velocidadeEnergia: 1100, chanceFicar: 0.30 },
+  { noite: 5, animatronicos: 4, velocidade: 5500, velocidadeEnergia: 1200, chanceFicar: 0.35 }
 ]
 
-// Armazena jogos ativos em memória
-const jogosAtivos = new Map()
+// Lobbys em memória
+const lobbys = new Map()  // jid → { criador, jogadores: [], aberto: true }
+// Jogos ativos em memória
+const jogosAtivos = new Map()  // jid → { ... }
 
 function renderStatus(jogo) {
   const tempoRestante = Math.max(0, Math.ceil((jogo.fimEm - Date.now()) / 1000))
@@ -120,7 +122,6 @@ async function loopFnaf(sock, jogo, msgEdit) {
     jogo.finalizado = true
     jogosAtivos.delete(jogo.jid)
 
-    // VITÓRIA
     if (jogo.noite >= 5) {
       await sock.sendMessage(jogo.jid, {
         text: "╔══════════════════════════════╗\n" +
@@ -134,19 +135,6 @@ async function loopFnaf(sock, jogo, msgEdit) {
           "⚔️ _\"Kokushibo te reconhece.\"_\n" +
           "━━━━━━━━━━━━━━━━━━━━━━"
       })
-      // Dá recompensa
-      try {
-        const db = require("path").join(__dirname, "..", "..", "data")
-        const fs = require("fs")
-        const rpgPath = require("path").join(db, "rpg.json")
-        if (fs.existsSync(rpgPath)) {
-          const rpg = JSON.parse(fs.readFileSync(rpgPath, "utf8"))
-          rpg.usuarios = rpg.usuarios || {}
-          rpg.usuarios[jogo.num] = rpg.usuarios[jogo.num] || { moedas: 0 }
-          rpg.usuarios[jogo.num].moedas = (rpg.usuarios[jogo.num].moedas || 0) + 5000
-          fs.writeFileSync(rpgPath, JSON.stringify(rpg, null, 2))
-        }
-      } catch (_) {}
     } else {
       await sock.sendMessage(jogo.jid, {
         text: "╔══════════════════════════════╗\n" +
@@ -162,9 +150,8 @@ async function loopFnaf(sock, jogo, msgEdit) {
     return
   }
 
-  // Atualiza energia
-  const intervalo = jogo.velocidadeEnergia
-  const energiaCaindo = (intervalo / 1000) * 1 // ~1% por segundo
+  // Energia
+  const energiaCaindo = (jogo.velocidadeEnergia / 1000) * 0.1
   let energiaExtra = 0
   if (jogo.portas[0]) energiaExtra += 0.3
   if (jogo.portas[1]) energiaExtra += 0.3
@@ -192,21 +179,17 @@ async function loopFnaf(sock, jogo, msgEdit) {
 
   // Move animatrônicos
   for (const a of jogo.animatronicos) {
-    // Se tá na porta, verifica
     if (a.posicao === "porta1" || a.posicao === "porta2") {
       const portaIdx = a.posicao === "porta1" ? 0 : 1
       const portaFechada = jogo.portas[portaIdx]
 
       if (portaFechada) {
-        // Tem chance de ir embora
         if (Math.random() > jogo.chanceFicar) {
           a.posicao = "corredor"
           a.tempoPorta = 0
         } else {
-          // Não se abalou
           a.tempoPorta = (a.tempoPorta || 0) + 1
           if (a.tempoPorta >= 3) {
-            // ATACA
             jogo.finalizado = true
             jogosAtivos.delete(jogo.jid)
             await sock.sendMessage(jogo.jid, {
@@ -214,19 +197,15 @@ async function loopFnaf(sock, jogo, msgEdit) {
                 "║  🌙💀 𝐆𝐀𝐌𝐄 𝐎𝐕𝐄𝐑 💀🌙\n" +
                 "╚══════════════════════════════╝\n\n" +
                 a.emoji + " *" + a.nome + "* te pegou!\n\n" +
-                "> _\"Ele não se abalou...\"_\n" +
-                "> _\"A escuridão da lua o consumiu.\"_\n\n" +
+                "> _\"Ele não se abalou...\"_\n\n" +
                 "━━━━━━━━━━━━━━━━━━━━━━\n" +
                 "❌ Você morreu na *Noite " + jogo.noite + "/5*\n" +
-                "🔁 Voltou pra Noite 1\n" +
-                "💡 Manda `!fnaf começar` pra tentar de novo\n" +
-                "━━━━━━━━━━━━━━━━━━━━━━"
+                "💡 Manda `!fnaf começar` pra tentar de novo"
             })
             return
           }
         }
       } else {
-        // Porta aberta e animatrônico na porta → ataca rápido
         jogo.finalizado = true
         jogosAtivos.delete(jogo.jid)
         await sock.sendMessage(jogo.jid, {
@@ -237,19 +216,15 @@ async function loopFnaf(sock, jogo, msgEdit) {
             "> _\"Ele não precisou se esforçar...\"_\n\n" +
             "━━━━━━━━━━━━━━━━━━━━━━\n" +
             "❌ Você morreu na *Noite " + jogo.noite + "/5*\n" +
-            "🔁 Voltou pra Noite 1\n" +
-            "💡 Manda `!fnaf começar` pra tentar de novo\n" +
-            "━━━━━━━━━━━━━━━━━━━━━━"
+            "💡 Manda `!fnaf começar` pra tentar de novo"
         })
         return
       }
     } else {
-      // Move normalmente
       if (Math.random() < 0.5) {
         const idx = POSICOES.indexOf(a.posicao)
         if (idx < POSICOES.length - 1) {
           a.posicao = POSICOES[idx + 1]
-          // 50% de chance de ir pra porta 1 ou 2
           if (a.posicao === "cozinha" && Math.random() < 0.5) {
             a.posicao = Math.random() < 0.5 ? "porta1" : "porta2"
           }
@@ -258,10 +233,7 @@ async function loopFnaf(sock, jogo, msgEdit) {
     }
   }
 
-  // Atualiza mensagem
   await atualizarMensagem(sock, jogo, msgEdit)
-
-  // Próximo loop
   setTimeout(() => loopFnaf(sock, jogo, msgEdit), jogo.velocidadeAnim)
 }
 
@@ -273,8 +245,9 @@ module.exports = {
 
   commands: {
 
+    // ============ MENU ============
     menufnaf: {
-      aliases: ["fnaf", "fnafmenu", "menuf"],
+      aliases: ["fnafmenu", "menuf", "ajudafnaf"],
       async executar({ sock, msg, prefixoAtivo, db }) {
         const jid = msg.key.remoteJid
         const p = prefixoAtivo
@@ -283,29 +256,22 @@ module.exports = {
           "> _\"Cinco noites... 4 minutos cada.\"_\n" +
           "> _\"Será que você sobrevive?\"_\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "🎮 *COMO JOGAR*\n" +
-          "▸ `" + p + "fnaf começar` — inicia a noite atual\n" +
-          "▸ `" + p + "fecharporta 1/2` — fecha porta esq/dir\n" +
-          "▸ `" + p + "portaluz 1/2` — acende luz esq/dir\n" +
-          "▸ `" + p + "cameras` — vê onde os animatrônicos estão\n" +
+          "🎮 *LOBBY*\n" +
+          "▸ `" + p + "lobbyfnaf` — cria um lobby\n" +
+          "▸ `" + p + "entrarfnaf` — entra no lobby\n" +
+          "▸ `" + p + "sairlobby` — sai do lobby\n" +
+          "▸ `" + p + "iniciarfnaf` — inicia o jogo\n\n" +
+          "━━━━━━━━━━━━━━━━━━━━━━\n" +
+          "🎯 *EM JOGO*\n" +
+          "▸ `" + p + "fecharporta 1/2` — fecha porta\n" +
+          "▸ `" + p + "portaluz 1/2` — acende luz\n" +
+          "▸ `" + p + "cameras` — vê os animatrônicos\n" +
           "▸ `" + p + "statusfnaf` — status geral\n" +
-          "▸ `" + p + "sairfnaf` — abandona o jogo\n\n" +
+          "▸ `" + p + "sairfnaf` — abandona\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "🐻 *ANIMATRÔNICOS*\n" +
-          "▸ 🐻 Freddy\n" +
-          "▸ 🐰 Bonnie\n" +
-          "▸ 🐔 Chica\n" +
-          "▸ 🦊 Foxy\n\n" +
-          "━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "🌙 *SISTEMA*\n" +
-          "▸ 🔋 Energia cai sozinha\n" +
-          "▸ 🚪 Portas fechadas gastam mais\n" +
-          "▸ 💡 Luzes ligadas também gastam\n" +
-          "▸ 🎲 Animatrônicos podem NÃO se abalar (30%)\n" +
-          "▸ ⏰ Cada noite dura 4 minutos\n\n" +
+          "🐻 *ANIMATRÔNICOS:* 🐰🐔🦊\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
-          "> ⚔️ _\"Meus 6 olhos veem o medo em você.\"_\n" +
-          "> 🌙 _\"Sobreviva se puder.\"_"
+          "⚔️ _\"Meus 6 olhos veem o medo em você.\"_"
 
         const cfg = db.config()
         if (cfg.fotoMenu) {
@@ -317,19 +283,147 @@ module.exports = {
       }
     },
 
-    iniciarfnaf: {
-      aliases: ["fnafcomecar", "comecarfnaf", "startfnaf"],
+    // ============ LOBBY ============
+    lobbyfnaf: {
+      aliases: ["criarlobby", "lobbyfnaf", "novolobby"],
       async executar({ sock, msg, sender, utils }) {
         const jid = msg.key.remoteJid
         if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: "🌙 Só em grupo!" }, { quoted: msg })
 
         if (jogosAtivos.has(jid)) {
-          return sock.sendMessage(jid, { text: "🌙👁️ *JÁ TEM JOGO*\n\n> _\"Espere a partida atual terminar.\"_\n\n💡 Use `!sairfnaf` pra cancelar" }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "🌙⚔️ *JOGO EM ANDAMENTO*\n\n> _\"Espere a partida atual terminar.\"_" }, { quoted: msg })
+        }
+
+        if (lobbys.has(jid)) {
+          return sock.sendMessage(jid, { text: "🌙👁️ *JÁ TEM LOBBY*\n\n> _\"Meus olhos veem um lobby aberto.\"_\n\n💡 Use `!entrarfnaf` pra entrar" }, { quoted: msg })
         }
 
         const num = utils.soNumero(sender)
+        lobbys.set(jid, {
+          criador: num,
+          criadorJid: sender,
+          jogadores: [sender],
+          aberto: true,
+          criadoEm: Date.now()
+        })
 
-        // Verifica qual noite o jogador tá
+        await sock.sendMessage(jid, {
+          text: "╔══════════════════════════════╗\n" +
+            "║  🌙 𝐋𝐎𝐁𝐁𝐘 𝐅𝐍𝐀𝐅 𝐂𝐑𝐈𝐀𝐃𝐎 🌙\n" +
+            "╚══════════════════════════════╝\n\n" +
+            "> 👁️ _\"A lua observa a chegada dos corajosos.\"_\n\n" +
+            "👑 *Host:* @" + num + "\n" +
+            "👥 *Jogadores:* *1/5*\n\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━\n" +
+            "📋 *JOGADORES:*\n" +
+            "▸ 1. @" + num + "\n\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━\n" +
+            "💡 Use `!entrarfnaf` pra entrar\n" +
+            "🎮 Use `!iniciarfnaf` quando todos estiverem prontos\n\n" +
+            "⚔️ _Máx: 5 jogadores_",
+          mentions: [sender]
+        }, { quoted: msg })
+      }
+    },
+
+    entrarlobby: {
+      aliases: ["entrarfnaf", "entrarlobbyfnaf", "participo"],
+      async executar({ sock, msg, sender, utils }) {
+        const jid = msg.key.remoteJid
+        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: "🌙 Só em grupo!" }, { quoted: msg })
+
+        const lobby = lobbys.get(jid)
+        if (!lobby || !lobby.aberto) {
+          return sock.sendMessage(jid, { text: "🌙💢 *SEM LOBBY ABERTO*\n\n> _\"Ninguém criou lobby ainda.\"_\n\n💡 Use `!lobbyfnaf`" }, { quoted: msg })
+        }
+
+        const num = utils.soNumero(sender)
+        if (lobby.jogadores.some(j => utils.soNumero(j) === num)) {
+          return sock.sendMessage(jid, { text: "🌙 Você já tá no lobby!" }, { quoted: msg })
+        }
+
+        if (lobby.jogadores.length >= 5) {
+          return sock.sendMessage(jid, { text: "🌙💢 *LOBBY CHEIO*\n\n> _\"Máx 5 corajosos.\"_" }, { quoted: msg })
+        }
+
+        lobby.jogadores.push(sender)
+
+        let lista = ""
+        lobby.jogadores.forEach((j, i) => {
+          lista += "▸ " + (i + 1) + ". @" + utils.soNumero(j) + "\n"
+        })
+
+        await sock.sendMessage(jid, {
+          text: "🌙✅ *@" + num + " ENTROU!*\n\n" +
+            "👥 *Jogadores:* *" + lobby.jogadores.length + "/5*\n\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━\n" +
+            "📋 *JOGADORES:*\n" + lista + "\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━\n" +
+            "💡 Mais alguém? `!entrarfnaf`",
+          mentions: lobby.jogadores
+        }, { quoted: msg })
+      }
+    },
+
+    sairlobby: {
+      aliases: ["sairlobbyfnaf", "abandonarlobby"],
+      async executar({ sock, msg, sender, utils }) {
+        const jid = msg.key.remoteJid
+        const lobby = lobbys.get(jid)
+        if (!lobby) return
+
+        const num = utils.soNumero(sender)
+        const idx = lobby.jogadores.findIndex(j => utils.soNumero(j) === num)
+        if (idx === -1) return
+
+        lobby.jogadores.splice(idx, 1)
+
+        if (lobby.jogadores.length === 0) {
+          lobbys.delete(jid)
+          return sock.sendMessage(jid, { text: "🌙💤 *LOBBY CANCELADO*\n\n> _\"Todos saíram...\"_" }, { quoted: msg })
+        }
+
+        if (utils.soNumero(lobby.criadorJid) === num) {
+          lobby.criador = utils.soNumero(lobby.jogadores[0])
+          lobby.criadorJid = lobby.jogadores[0]
+        }
+
+        await sock.sendMessage(jid, {
+          text: "🌙👋 *@" + num + " SAIU DO LOBBY*\n\n👥 *Jogadores:* *" + lobby.jogadores.length + "/5*",
+          mentions: [sender]
+        }, { quoted: msg })
+      }
+    },
+
+    iniciarfnaf: {
+      aliases: ["comecarfnaf", "startfnaf", "fnafcomecar"],
+      async executar({ sock, msg, sender, utils }) {
+        const jid = msg.key.remoteJid
+        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: "🌙 Só em grupo!" }, { quoted: msg })
+
+        if (jogosAtivos.has(jid)) {
+          return sock.sendMessage(jid, { text: "🌙⚔️ *JOGO EM ANDAMENTO*" }, { quoted: msg })
+        }
+
+        const lobby = lobbys.get(jid)
+        if (!lobby) {
+          return sock.sendMessage(jid, { text: "🌙💢 *SEM LOBBY*\n\n💡 Use `!lobbyfnaf` primeiro" }, { quoted: msg })
+        }
+
+        const num = utils.soNumero(sender)
+        if (utils.soNumero(lobby.criadorJid) !== num) {
+          return sock.sendMessage(jid, { text: "🌙⚔️ *SÓ O HOST*\n\n> _\"Só @" + lobby.criador + " pode iniciar.\"_\n\n💡 Host: @" + lobby.criador, mentions: [lobby.criadorJid] }, { quoted: msg })
+        }
+
+        if (lobby.jogadores.length < 1) {
+          return sock.sendMessage(jid, { text: "🌙💢 *PRECISA DE PELO MENOS 1 JOGADOR*" }, { quoted: msg })
+        }
+
+        // Fecha lobby
+        lobby.aberto = false
+        lobbys.delete(jid)
+
+        // Pega a noite do primeiro jogador (host)
         let noiteAtual = 1
         try {
           const fs = require("fs")
@@ -337,90 +431,94 @@ module.exports = {
           const progPath = path.join(__dirname, "..", "..", "data", "fnaf_progresso.json")
           if (fs.existsSync(progPath)) {
             const prog = JSON.parse(fs.readFileSync(progPath, "utf8"))
-            noiteAtual = prog[num]?.noite || 1
+            noiteAtual = (prog[lobby.criador]?.noite) || 1
           }
         } catch (_) {}
 
         if (noiteAtual > 5) noiteAtual = 1
 
         const cfg = NOITES[noiteAtual - 1]
-
-        // Escolhe animatrônicos aleatórios
         const anims = [...ANIMATRONICOS].sort(() => Math.random() - 0.5).slice(0, cfg.animatronicos)
 
         const jogo = {
           jid,
-          num,
+          jogadores: lobby.jogadores,
+          host: lobby.criador,
+          hostJid: lobby.criadorJid,
           noite: noiteAtual,
           energia: 100,
           portas: [false, false],
           luzes: [false, false],
           animatronicos: anims.map(a => ({ ...a, posicao: "salao", tempoPorta: 0 })),
-          fimEm: Date.now() + 4 * 60 * 1000, // 4 minutos
+          fimEm: Date.now() + 4 * 60 * 1000,
           velocidadeAnim: cfg.velocidade,
-          velocidadeEnergia: cfg.energiaQueda,
+          velocidadeEnergia: cfg.velocidadeEnergia,
           chanceFicar: cfg.chanceFicar,
           finalizado: false
         }
 
         jogosAtivos.set(jid, jogo)
 
-        // Mensagem inicial
+        let lista = ""
+        lobby.jogadores.forEach((j, i) => {
+          lista += "▸ " + (i + 1) + ". @" + utils.soNumero(j) + "\n"
+        })
+
         const msgInicial = "╔══════════════════════════════╗\n" +
           "║  🌙 𝐅𝐍𝐀𝐅 𝐋𝐔𝐍𝐀𝐑 - 𝐍𝐎𝐈𝐓𝐄 " + noiteAtual + "/5\n" +
           "╚══════════════════════════════╝\n\n" +
           "> 👁️ _\"A noite começa...\"_\n" +
-          "> _\"Meus 6 olhos veem você, @" + num + ".\"_\n\n" +
+          "> _\"Meus 6 olhos veem todos vocês.\"_\n\n" +
+          "━━━━━━━━━━━━━━━━━━━━━━\n" +
+          "👥 *JOGADORES:*\n" + lista + "\n" +
           "━━━━━━━━━━━━━━━━━━━━━━\n" +
           "⏰ Duração: *4 minutos*\n" +
           "🔋 Energia: *100%*\n" +
           "🐻 Animatrônicos: *" + cfg.animatronicos + "*\n" +
           "🎲 Chance de não se abalar: *" + Math.floor(cfg.chanceFicar * 100) + "%*\n" +
           "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
-          "⚔️ _Sobreviva usando:_\n" +
+          "⚔️ _Sobrevivam usando:_\n" +
           "▸ `!fecharporta 1/2`\n" +
           "▸ `!portaluz 1/2`\n" +
           "▸ `!cameras`\n\n" +
-          "🌙 _\"Boa sorte...\"_"
+          "🌙 _\"Boa sorte, mortais.\"_"
 
-        const msgEdit = await sock.sendMessage(jid, { text: msgInicial }, { quoted: msg })
-
-        // Inicia loop
+        const msgEdit = await sock.sendMessage(jid, { text: msgInicial, mentions: lobby.jogadores }, { quoted: msg })
         setTimeout(() => loopFnaf(sock, jogo, msgEdit), 5000)
       }
     },
 
+    // ============ EM JOGO ============
     fecharporta: {
-      aliases: ["portafechar", "fechar"],
+      aliases: ["portafechar", "fecharporta"],
       async executar({ sock, msg, args, utils }) {
         const jid = msg.key.remoteJid
         const jogo = jogosAtivos.get(jid)
         if (!jogo || jogo.finalizado) return
 
         const num = utils.soNumero(msg.key.participant || msg.key.remoteJid)
-        if (num !== jogo.num) return
+        if (!jogo.jogadores.some(j => utils.soNumero(j) === num)) return
 
         const idx = parseInt(args[0]) - 1
         if (idx !== 0 && idx !== 1) return sock.sendMessage(jid, { text: "🌙 Use `!fecharporta 1` ou `!fecharporta 2`" }, { quoted: msg })
 
         jogo.portas[idx] = !jogo.portas[idx]
-
         const estado = jogo.portas[idx] ? "🔒 FECHADA" : "🔓 ABERTA"
         await sock.sendMessage(jid, {
-          text: "🌙🚪 *PORTA " + (idx + 1) + " " + estado + "*\n\n> _\"A lua controla as portas.\"_\n\n_\"Meus olhos vigiam...\"_"
+          text: "🌙🚪 *PORTA " + (idx + 1) + " " + estado + "*\n\n> _\"A lua controla as portas.\"_"
         }, { quoted: msg })
       }
     },
 
     portaluz: {
-      aliases: ["luzporta", "luz"],
+      aliases: ["luzporta", "ligarluz"],
       async executar({ sock, msg, args, utils }) {
         const jid = msg.key.remoteJid
         const jogo = jogosAtivos.get(jid)
         if (!jogo || jogo.finalizado) return
 
         const num = utils.soNumero(msg.key.participant || msg.key.remoteJid)
-        if (num !== jogo.num) return
+        if (!jogo.jogadores.some(j => utils.soNumero(j) === num)) return
 
         const idx = parseInt(args[0]) - 1
         if (idx !== 0 && idx !== 1) return sock.sendMessage(jid, { text: "🌙 Use `!portaluz 1` ou `!portaluz 2`" }, { quoted: msg })
@@ -452,41 +550,43 @@ module.exports = {
         if (!jogo || jogo.finalizado) return
 
         const num = utils.soNumero(msg.key.participant || msg.key.remoteJid)
-        if (num !== jogo.num) return
+        if (!jogo.jogadores.some(j => utils.soNumero(j) === num)) return
 
         await sock.sendMessage(jid, { text: renderCameras(jogo) }, { quoted: msg })
       }
     },
 
     statusfnaf: {
-      aliases: ["fnafstatus", "meufnaf"],
+      aliases: ["fnafstatus", "meufnaf", "statusjogo"],
       async executar({ sock, msg, utils }) {
         const jid = msg.key.remoteJid
         const jogo = jogosAtivos.get(jid)
-        if (!jogo || jogo.finalizado) return
+        if (!jogo || jogo.finalizado) {
+          return sock.sendMessage(jid, { text: "🌙💢 *SEM JOGO*\n\n> _\"Nenhuma partida em andamento.\"_\n\n💡 Use `!lobbyfnaf` pra criar" }, { quoted: msg })
+        }
 
         const num = utils.soNumero(msg.key.participant || msg.key.remoteJid)
-        if (num !== jogo.num) return
+        if (!jogo.jogadores.some(j => utils.soNumero(j) === num)) return
 
         await sock.sendMessage(jid, { text: renderStatus(jogo) }, { quoted: msg })
       }
     },
 
     sairfnaf: {
-      aliases: ["sair", "abandonarfnaf", "cancelarfnaf"],
+      aliases: ["abandonarfnaf", "cancelarfnaf", "fugirfnaf"],
       async executar({ sock, msg, utils }) {
         const jid = msg.key.remoteJid
         const jogo = jogosAtivos.get(jid)
-        if (!jogo) return
+        if (!jogo || jogo.finalizado) return
 
         const num = utils.soNumero(msg.key.participant || msg.key.remoteJid)
-        if (num !== jogo.num) return
+        if (!jogo.jogadores.some(j => utils.soNumero(j) === num)) return
 
         jogo.finalizado = true
         jogosAtivos.delete(jid)
 
         await sock.sendMessage(jid, {
-          text: "🌙💤 *JOGO ENCERRADO*\n\n> _\"Você fugiu da lua...\"_\n> _\"Covarde.\"_\n\n━━━━━━━━━━━━━━━━━━━━━━\n💡 Manda `!fnaf começar` pra tentar de novo"
+          text: "🌙💤 *JOGO ENCERRADO*\n\n> _\"Você fugiu da lua...\"_\n> _\"Covarde.\"_\n\n━━━━━━━━━━━━━━━━━━━━━━\n💡 Manda `!lobbyfnaf` pra criar outro"
         }, { quoted: msg })
       }
     }
