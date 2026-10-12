@@ -18,13 +18,6 @@ function dbSalvar(a, d) {
   fs.writeFileSync(path.join(DATA_DIR, a), JSON.stringify(d, null, 2))
 }
 
-async function baixarTikTok(u) {
-  const r = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(u)}&hd=1`)
-  const d = await r.json()
-  if (d.code !== 0 || !d.data || !d.data.play) throw new Error("Falha no link.")
-  return d.data.play
-}
-
 function checarVip(db, sJ, isD, isS) {
   if (isD || isS) return true
   const v = (db.vips() || {}).vips || {}
@@ -39,13 +32,15 @@ function checarVip(db, sJ, isD, isS) {
   return false
 }
 
-const sleep = ms => new Promise(r => setTimeout(r, ms))
-const nJid = j => String(j).split("@")[0].split(":")[0].replace(/\D/g, "")
-const rnd = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a
-const chance = p => Math.random() < p
+async function baixarTikTok(u) {
+  const r = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(u)}&hd=1`)
+  const d = await r.json()
+  if (d.code !== 0 || !d.data || !d.data.play) throw new Error("Falha no link.")
+  return d.data.play
+}
 
 // ============================================================
-// 🎵 FUNÇÃO DE BAIXAR MÚSICA
+// 🎵 BAIXAR MÚSICA (YouTube via yt-dlp)
 // ============================================================
 function baixarMusica(busca, qualidade = 64) {
   const tmpDir = os.tmpdir()
@@ -72,6 +67,93 @@ function baixarMusica(busca, qualidade = 64) {
         const buffer = fs.readFileSync(caminho)
         try { fs.unlinkSync(caminho) } catch (_) {}
         return { ok: true, buffer, qualidade }
+      }
+    } catch (e) {
+      ultimoErro = e.message
+    }
+  }
+
+  return { ok: false, erro: ultimoErro }
+}
+
+// ============================================================
+// 🎵 BAIXAR SPOTIFY (via spottydl)
+// ============================================================
+async function baixarSpotify(link) {
+  const tmpDir = os.tmpdir()
+  const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
+  const pastaTemp = path.join(tmpDir, "kokushibo_spot_" + id)
+
+  if (!fs.existsSync(pastaTemp)) fs.mkdirSync(pastaTemp, { recursive: true })
+
+  try {
+    const SpottyDL = require("spottydl")
+
+    // Pega info da música
+    let trackInfo
+    try {
+      trackInfo = await SpottyDL.getTrack(link)
+    } catch (e) {
+      throw new Error("Link inválido ou música não encontrada")
+    }
+
+    if (!trackInfo || !trackInfo.title) {
+      throw new Error("Não consegui pegar info da música")
+    }
+
+    // Baixa
+    const resultado = await SpottyDL.downloadTrack(trackInfo, pastaTemp)
+
+    if (!resultado || !resultado[0] || resultado[0].status !== "Success") {
+      throw new Error("Falha ao baixar a música")
+    }
+
+    const arquivoBaixado = resultado[0].filename
+
+    if (!fs.existsSync(arquivoBaixado)) {
+      throw new Error("Arquivo não encontrado após download")
+    }
+
+    const buffer = fs.readFileSync(arquivoBaixado)
+
+    // Limpa
+    try { fs.unlinkSync(arquivoBaixado) } catch (_) {}
+    try { fs.rmSync(pastaTemp, { recursive: true, force: true }) } catch (_) {}
+
+    return { ok: true, buffer, titulo: trackInfo.title, artista: trackInfo.artist || "?" }
+
+  } catch (e) {
+    try { fs.rmSync(pastaTemp, { recursive: true, force: true }) } catch (_) {}
+    return { ok: false, erro: e.message }
+  }
+}
+
+// ============================================================
+// 📸 BAIXAR INSTAGRAM (via yt-dlp)
+// ============================================================
+function baixarInstagram(link) {
+  const tmpDir = os.tmpdir()
+  const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
+  const outTpl = path.join(tmpDir, "kokushibo_insta_" + id + ".%(ext)s")
+
+  const cmds = [
+    `yt-dlp -o "${outTpl}" --no-playlist "${link}"`,
+    `python3 -m yt_dlp -o "${outTpl}" --no-playlist "${link}"`,
+    `python -m yt_dlp -o "${outTpl}" --no-playlist "${link}"`
+  ]
+
+  let ultimoErro = "yt-dlp não encontrado"
+  for (const cmd of cmds) {
+    try {
+      execSync(cmd, { stdio: "ignore", timeout: 90000 })
+      const prefixo = "kokushibo_insta_" + id
+      const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && !f.endsWith(".part") && !f.endsWith(".ytdl"))
+      if (arquivos.length > 0) {
+        const caminho = path.join(tmpDir, arquivos[0])
+        const buffer = fs.readFileSync(caminho)
+        const ehVideo = /\.(mp4|mov|webm|mkv)$/i.test(arquivos[0])
+        try { fs.unlinkSync(caminho) } catch (_) {}
+        return { ok: true, buffer, ehVideo }
       }
     } catch (e) {
       ultimoErro = e.message
@@ -157,22 +239,21 @@ module.exports = {
           "> _\"Apenas nobres podem ver esses segredos.\"_\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
           "🎵 *MÚSICA*\n" +
-          "▸ `" + p + "play <nome ou link>`\n\n" +
+          "▸ `" + p + "play <nome ou link>` (YouTube)\n" +
+          "▸ `" + p + "spot <link>` (Spotify)\n\n" +
+          "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+          "📥 *DOWNLOADS*\n" +
+          "▸ `" + p + "insta <link>` (Instagram)\n" +
+          "▸ `" + p + "tiktok <link>` (TikTok)\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
           "🤖 *AUTOMAÇÃO*\n" +
           "▸ `" + p + "autofig on/off`\n" +
           "▸ `" + p + "autottk on/off`\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "🎨 *CRIAÇÃO*\n" +
-          "▸ `" + p + "logo <estilo> <texto>`\n\n" +
-          "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
           "🎨 *FIGURINHAS*\n" +
           "▸ `" + p + "brat / " + p + "ttps / " + p + "s`\n" +
           "▸ `" + p + "smeme / " + p + "s3 / " + p + "rename`\n" +
           "▸ `" + p + "procurado / " + p + "wasted / " + p + "revela`\n\n" +
-          "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "📥 *DOWNLOADS*\n" +
-          "▸ `" + p + "tiktok <link>`\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
           "🎮 *JOGOS*\n" +
           "▸ `" + p + "verdadedesafio`\n" +
@@ -196,7 +277,7 @@ module.exports = {
       }
     },
 
-    // ============ PLAY ============
+    // ============ PLAY (YouTube) ============
     play: {
       aliases: ["tocar", "musica", "music"],
       async executar({ sock, msg, args, db, isDono, isSubDono }) {
@@ -225,10 +306,8 @@ module.exports = {
         }, { quoted: msg })
 
         try {
-          // Tenta com qualidade 64 kbps primeiro
           let res = baixarMusica(busca, 64)
 
-          // Se passou de 16MB, tenta com qualidade menor
           if (res.ok && res.buffer.length > 16 * 1024 * 1024) {
             await sock.sendMessage(jid, { text: "🌙💢 *MÚSICA MUITO GRANDE*\n\n> _\"Tentando reduzir qualidade...\"_" }, { quoted: msg })
             res = baixarMusica(busca, 32)
@@ -270,6 +349,156 @@ module.exports = {
           console.log("Erro play:", e.message)
           await sock.sendMessage(jid, {
             text: "🌙💥 *ERRO AO BAIXAR*\n\n⚠️ `" + e.message + "`"
+          }, { quoted: msg })
+        }
+      }
+    },
+
+    // ============ SPOT (Spotify) ============
+    spot: {
+      aliases: ["spotify", "musicaspot", "spotdl"],
+      async executar({ sock, msg, args, db, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+
+        if (!checarVip(db, sJ, isDono, isSubDono)) {
+          return sock.sendMessage(jid, { text: "🌙💜 *SÓ VIP*\n\n> _\"Spotify é privilégio dos nobres.\"_\n\n_\"Vá embora, mortal.\"_" }, { quoted: msg })
+        }
+
+        const link = args[0]
+        if (!link || !/open\.spotify\.com/i.test(link)) {
+          return sock.sendMessage(jid, {
+            text: "🌙🎵 *SPOTIFY*\n\n" +
+              "> _\"Me diga o link da música.\"_\n\n" +
+              "💡 `!spot <link do Spotify>`\n\n" +
+              "⚠️ _Aceita música, álbum ou playlist_"
+          }, { quoted: msg })
+        }
+
+        await sock.sendMessage(jid, {
+          text: "🌙🎵 *BUSCANDO NO SPOTIFY...*\n\n" +
+            "> _\"Meus 6 olhos procuram a melodia...\"_\n\n" +
+            "📥 _Baixando... aguarde._"
+        }, { quoted: msg })
+
+        try {
+          const res = await baixarSpotify(link)
+
+          if (!res.ok) {
+            return sock.sendMessage(jid, {
+              text: "🌙💥 *ERRO NO SPOTIFY*\n\n" +
+                "> _\"Não consegui baixar...\"_\n\n" +
+                "⚠️ `" + res.erro + "`\n\n" +
+                "💡 *Verifique se:*\n" +
+                "▸ O link é do Spotify\n" +
+                "▸ O `npm install spottydl` foi feito\n" +
+                "▸ O `ffmpeg` tá instalado"
+            }, { quoted: msg })
+          }
+
+          const buffer = res.buffer
+          const tamanhoMB = (buffer.length / 1024 / 1024).toFixed(2)
+
+          if (buffer.length > 16 * 1024 * 1024) {
+            return sock.sendMessage(jid, {
+              text: "🌙💢 *MÚSICA MUITO GRANDE*\n\n" +
+                "> _\"" + tamanhoMB + "MB é muito pro WhatsApp.\"_\n" +
+                "> _\"Limite: 16MB\"_"
+            }, { quoted: msg })
+          }
+
+          await sock.sendMessage(jid, {
+            audio: buffer,
+            mimetype: "audio/mp4",
+            ptt: false,
+            fileName: res.titulo + " - " + res.artista + ".mp3"
+          }, { quoted: msg })
+
+          console.log("🎵 Spotify enviado:", res.titulo, "(" + tamanhoMB + "MB)")
+
+        } catch (e) {
+          console.log("Erro spot:", e.message)
+          await sock.sendMessage(jid, {
+            text: "🌙💥 *ERRO NO SPOTIFY*\n\n" +
+              "> _\"Não consegui baixar...\"_\n\n" +
+              "⚠️ `" + e.message + "`"
+          }, { quoted: msg })
+        }
+      }
+    },
+
+    // ============ INSTA ============
+    insta: {
+      aliases: ["instagram", "instadl", "ig"],
+      async executar({ sock, msg, args, db, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+
+        if (!checarVip(db, sJ, isDono, isSubDono)) {
+          return sock.sendMessage(jid, { text: "🌙💜 *SÓ VIP*\n\n> _\"Instagram é privilégio dos nobres.\"_\n\n_\"Vá embora, mortal.\"_" }, { quoted: msg })
+        }
+
+        const link = args[0]
+        if (!link || !/instagram\.com|instagr\.am/i.test(link)) {
+          return sock.sendMessage(jid, {
+            text: "🌙📥 *INSTAGRAM*\n\n" +
+              "> _\"Me diga o link.\"_\n\n" +
+              "💡 `!insta <link do Instagram>`\n\n" +
+              "⚠️ _Aceita foto, vídeo, reels e stories_"
+          }, { quoted: msg })
+        }
+
+        await sock.sendMessage(jid, {
+          text: "🌙📥 *BAIXANDO DO INSTAGRAM...*\n\n" +
+            "> _\"Meus 6 olhos capturam a mídia...\"_\n\n" +
+            "📥 _Aguarde..._"
+        }, { quoted: msg })
+
+        try {
+          const res = baixarInstagram(link)
+
+          if (!res.ok) {
+            return sock.sendMessage(jid, {
+              text: "🌙💥 *ERRO NO INSTAGRAM*\n\n" +
+                "> _\"Não consegui baixar...\"_\n\n" +
+                "⚠️ `" + res.erro + "`\n\n" +
+                "💡 *Possíveis motivos:*\n" +
+                "▸ Post privado (precisa de cookies)\n" +
+                "▸ Post apagado\n" +
+                "▸ Link inválido"
+            }, { quoted: msg })
+          }
+
+          const buffer = res.buffer
+          const tamanhoMB = (buffer.length / 1024 / 1024).toFixed(2)
+
+          if (buffer.length > 16 * 1024 * 1024) {
+            return sock.sendMessage(jid, {
+              text: "🌙💢 *MÍDIA MUITO GRANDE*\n\n" +
+                "> _\"" + tamanhoMB + "MB é muito.\"_\n" +
+                "> _\"Limite: 16MB\"_"
+            }, { quoted: msg })
+          }
+
+          if (res.ehVideo) {
+            await sock.sendMessage(jid, {
+              video: buffer,
+              mimetype: "video/mp4",
+              fileName: "instagram.mp4"
+            }, { quoted: msg })
+          } else {
+            await sock.sendMessage(jid, {
+              image: buffer,
+              caption: "🌙📸 *INSTAGRAM*\n\n> _\"Meus 6 olhos capturaram.\"_"
+            }, { quoted: msg })
+          }
+
+          console.log("📸 Instagram enviado (" + tamanhoMB + "MB)")
+
+        } catch (e) {
+          console.log("Erro insta:", e.message)
+          await sock.sendMessage(jid, {
+            text: "🌙💥 *ERRO*\n\n⚠️ `" + e.message + "`"
           }, { quoted: msg })
         }
       }
@@ -333,6 +562,29 @@ module.exports = {
             ? "🌙✅ *AUTOTTK LIGADO*\n\n> _\"Todo link do TikTok será baixado.\"_\n> _\"Meus 6 olhos observam.\"_"
             : "🌙💤 *AUTOTTK DESLIGADO*\n\n> _\"Chega de TikTok.\"_"
         }, { quoted: msg })
+      }
+    },
+
+    // ============ TIKTOK ============
+    tiktok: {
+      aliases: ["tt", "ttk"],
+      async executar({ sock, msg, args, db, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+
+        const link = args[0]
+        if (!link || !/tiktok\.com|vm\.tiktok|vt\.tiktok/i.test(link)) return sock.sendMessage(jid, { text: "🌙📥 `!tiktok <link>`" }, { quoted: msg })
+
+        await sock.sendMessage(jid, { text: "🌙📥 *BAIXANDO...*" }, { quoted: msg })
+
+        try {
+          const url = await baixarTikTok(link)
+          const r = await fetch(url)
+          await sock.sendMessage(jid, { video: Buffer.from(await r.arrayBuffer()), mimetype: "video/mp4", fileName: "tiktok.mp4" }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+        }
       }
     },
 
@@ -572,29 +824,6 @@ module.exports = {
               .toBuffer()
           }
           await sock.sendMessage(jid, { sticker: resultado }, { quoted: msg })
-        } catch (e) {
-          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
-        }
-      }
-    },
-
-    // ============ TIKTOK ============
-    tiktok: {
-      aliases: ["tt", "ttk"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid
-        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
-
-        const link = args[0]
-        if (!link || !/tiktok\.com|vm\.tiktok|vt\.tiktok/i.test(link)) return sock.sendMessage(jid, { text: "🌙📥 `!tiktok <link>`" }, { quoted: msg })
-
-        await sock.sendMessage(jid, { text: "🌙📥 *BAIXANDO...*" }, { quoted: msg })
-
-        try {
-          const url = await baixarTikTok(link)
-          const r = await fetch(url)
-          await sock.sendMessage(jid, { video: Buffer.from(await r.arrayBuffer()), mimetype: "video/mp4", fileName: "tiktok.mp4" }, { quoted: msg })
         } catch (e) {
           await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
         }
