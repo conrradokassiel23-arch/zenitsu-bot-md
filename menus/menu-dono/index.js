@@ -10,6 +10,7 @@ const { execSync } = require("child_process")
 const DATA_DIR = path.join(__dirname, "..", "..", "data")
 const REPO_URL = "https://github.com/conrradokassiel23-arch/zenitsu-bot-md"
 const REPO_API = "https://api.github.com/repos/conrradokassiel23-arch/zenitsu-bot-md/commits/main"
+const REPO_COMMITS = "https://api.github.com/repos/conrradokassiel23-arch/zenitsu-bot-md/commits?per_page=5"
 const BOT_DIR = path.join(__dirname, "..", "..")
 
 function dbLer(a, p = {}) {
@@ -19,6 +20,12 @@ function dbLer(a, p = {}) {
 }
 function dbSalvar(a, d) {
   fs.writeFileSync(path.join(DATA_DIR, a), JSON.stringify(d, null, 2))
+}
+
+function formatarDataHora(iso) {
+  try {
+    return new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })
+  } catch (e) { return "?" }
 }
 
 module.exports = {
@@ -45,7 +52,11 @@ module.exports = {
           "▸ `" + p + "reiniciar`\n" +
           "▸ `" + p + "reload`\n" +
           "▸ `" + p + "setfoto` (reply img/vídeo)\n" +
-          "▸ `" + p + "atualizar`\n\n" +
+          "▸ `" + p + "nomebot` <nome>\n\n" +
+          "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+          "🌙 *SISTEMA*\n" +
+          "▸ `" + p + "atualizar`\n" +
+          "▸ `" + p + "changelog`\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
           "💜 *NOBREZA*\n" +
           "▸ `" + p + "addvip` @user <tempo>\n" +
@@ -114,17 +125,23 @@ module.exports = {
           if (commitSalvo.hash === commitHash) {
             return sock.sendMessage(jid, {
               text: "🌙✅ *TUDO EM ORDEM...*\n\n> 👁️ _\"Já está atualizado, mestre.\"_\n\n" +
-                "📌 Commit: `" + commitHash.slice(0, 7) + "`\n" +
+                "📌 Versão atual: `" + commitHash.slice(0, 7) + "`\n" +
                 "📝 _" + commitMsg + "_\n" +
-                "📅 " + (commitData ? new Date(commitData).toLocaleString("pt-BR") : "?") + "\n\n" +
-                "> 🌙 _\"Nada escapa dos meus olhos.\"_"
+                "📅 " + formatarDataHora(commitData) + "\n\n" +
+                "> 🌙 _\"Nada escapa dos meus olhos.\"_\n\n" +
+                "💡 Use `!changelog` pra ver as últimas mudanças."
             }, { quoted: msg })
           }
 
           await sock.sendMessage(jid, {
-            text: "🌙⚔️ *NOVO CONTEÚDO DETECTADO!*\n\n> _\"Meus 6 olhos captaram mudanças...\"_\n\n" +
-              "📌 Commit: `" + commitHash.slice(0, 7) + "`\n" +
-              "📝 _" + commitMsg + "_\n\n" +
+            text: "🌙⚔️ *NOVA ATUALIZAÇÃO DETECTADA*\n\n" +
+              "> 👁️ _\"Meus 6 olhos captaram mudanças...\"_\n\n" +
+              "━━━━━━━━━━━━━━━━━━━━━━\n" +
+              "📌 *Versão:* `" + commitHash.slice(0, 7) + "`\n" +
+              "📝 *Mudança:*\n" +
+              "> _" + commitMsg + "_\n" +
+              "📅 *Data:* " + formatarDataHora(commitData) + "\n" +
+              "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
               "📥 _Extraindo do reino lunar..._"
           }, { quoted: msg })
 
@@ -195,15 +212,22 @@ module.exports = {
           } catch (e) { console.log("Aviso reload:", e.message) }
 
           await sock.sendMessage(jid, {
-            text: "🌙✅ *ATUALIZAÇÃO CONCLUÍDA*\n\n> 👁️ _\"Meus 6 olhos assimilaram tudo.\"_\n\n" +
-              "📌 Commit: `" + commitHash.slice(0, 7) + "`\n" +
-              "📝 _" + commitMsg + "_\n\n" +
+            text: "🌙✅ *ATUALIZAÇÃO CONCLUÍDA*\n\n" +
+              "> 👁️ _\"Meus 6 olhos assimilaram tudo.\"_\n\n" +
+              "━━━━━━━━━━━━━━━━━━━━━━\n" +
+              "📌 *Versão:* `" + commitHash.slice(0, 7) + "`\n" +
+              "📝 *Mudança aplicada:*\n" +
+              "> _" + commitMsg + "_\n" +
+              "📅 *Data:* " + formatarDataHora(commitData) + "\n" +
+              "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
               "🔒 *Preservado:*\n" +
               "▸ `auth/` (sessão do WhatsApp)\n" +
               "▸ `data/` (dados do bot)\n" +
               "▸ `config.js`\n\n" +
               "━━━━━━━━━━━━━━━━━━━━━━\n" +
-              (reloadOk ? "♻️ _Menus recarregados na hora!_\n\n> 🌙 _\"Nenhuma interrupção... a lua é eterna.\"_" : "⚠️ _Precisa reiniciar no painel._")
+              (reloadOk 
+                ? "♻️ *Menus recarregados na hora!*\n\n> 🌙 _\"Nenhuma interrupção... a lua é eterna.\"_" 
+                : "⚠️ *Precisa reiniciar no painel.*\n\n> _\"Meus olhos precisam descansar...\"_")
           }, { quoted: msg })
 
         } catch (e) {
@@ -214,6 +238,93 @@ module.exports = {
             text: "🌙💥 *FALHA NA ATUALIZAÇÃO!*\n\n⚠️ `" + e.message + "`\n\n> _\"Nem meus 6 olhos previram isso...\"_"
           }, { quoted: msg })
         }
+      }
+    },
+
+    changelog: {
+      aliases: ["historico", "mudancas", "log"],
+      async executar({ sock, msg }) {
+        const jid = msg.key.remoteJid
+        try {
+          const r = await fetch(REPO_COMMITS, { headers: { "User-Agent": "KokushiboBot" } })
+          if (!r.ok) throw new Error("HTTP " + r.status)
+          const commits = await r.json()
+
+          if (!Array.isArray(commits) || !commits.length) {
+            return sock.sendMessage(jid, { text: "🌙 *SEM HISTÓRICO*\n\n> _\"Ainda não há mudanças registradas.\"_" }, { quoted: msg })
+          }
+
+          let txt = "🌙📜 *HISTÓRICO DE MUDANÇAS*\n\n" +
+            "> _\"Meus 6 olhos veem o passado.\"_\n\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+
+          commits.forEach((c, i) => {
+            const hash = c.sha ? c.sha.slice(0, 7) : "?"
+            const msgCommit = (c.commit && c.commit.message || "").split("\n")[0]
+            const autor = c.commit && c.commit.author && c.commit.author.name || "?"
+            const data = c.commit && c.commit.author && c.commit.author.date
+
+            const medalha = i === 0 ? "🟣" : i === 1 ? "💜" : "▸"
+
+            txt += medalha + " *Versão* `" + hash + "`\n"
+            txt += "📝 _" + msgCommit + "_\n"
+            txt += "👤 " + autor + "\n"
+            txt += "📅 " + formatarDataHora(data) + "\n"
+
+            if (i < commits.length - 1) txt += "\n━━━━━━━━━━━━━━━━━━━━━━\n\n"
+          })
+
+          txt += "\n\n> 🌙 _\"O passado ilumina o futuro.\"_\n" +
+            "> ⚔️ _\"Cada versão é uma batalha vencida.\"_"
+
+          await sock.sendMessage(jid, { text: txt }, { quoted: msg })
+
+        } catch (e) {
+          await sock.sendMessage(jid, {
+            text: "🌙💥 *ERRO NO HISTÓRICO*\n\n⚠️ " + e.message + "\n\n> _\"Meus olhos falharam...\"_"
+          }, { quoted: msg })
+        }
+      }
+    },
+
+    nomebot: {
+      aliases: ["setnomebot", "nomedobot"],
+      async executar({ sock, msg, args, db }) {
+        const jid = msg.key.remoteJid
+        const novoNome = args.join(" ").trim()
+
+        if (!novoNome) {
+          const cfg = db.config()
+          return sock.sendMessage(jid, {
+            text: "🌙⚔️ *NOME DO BOT*\n\n" +
+              "> _\"Me chame como quiser.\"_\n\n" +
+              "📝 Atual: *" + (cfg.nomeBot || "Kokushibo") + "*\n\n" +
+              "💡 Use: `!nomebot <novo nome>`\n\n" +
+              "⚠️ *Máx 20 caracteres*\n\n" +
+              "⚔️ Comandos sem prefixo:\n" +
+              "▸ `<nome> fecha`\n" +
+              "▸ `<nome> abre`"
+          }, { quoted: msg })
+        }
+
+        if (novoNome.length > 20) {
+          return sock.sendMessage(jid, { text: "🌙💢 *NOME MUITO LONGO*\n\n> _\"Máx 20 caracteres.\"_" }, { quoted: msg })
+        }
+
+        const cfg = db.config()
+        cfg.nomeBot = novoNome
+        db.salvarConfig(cfg)
+
+        await sock.sendMessage(jid, {
+          text: "🌙✅ *NOME ATUALIZADO*\n\n" +
+            "> _\"A lua ganha um novo nome.\"_\n\n" +
+            "📝 Novo nome: *" + novoNome + "*\n\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━\n" +
+            "⚔️ Agora os comandos sem prefixo são:\n" +
+            "▸ `" + novoNome + " fecha`\n" +
+            "▸ `" + novoNome + " abre`\n\n" +
+            "> 🌙 _\"Meus olhos atendem a esse nome.\"_"
+        }, { quoted: msg })
       }
     },
 
@@ -640,7 +751,7 @@ module.exports = {
         }).map(p => p.id)
         for (const a of alvos) {
           try { await sock.groupParticipantsUpdate(jid, [a], "remove") } catch (_) {}
-          await new Promise(r => setTimeout(r, 500)) 
+          await new Promise(r => setTimeout(r, 500))
         }
       }
     }
