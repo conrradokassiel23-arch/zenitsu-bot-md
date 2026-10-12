@@ -1,85 +1,759 @@
-/* 🎩 MENU VIP - ZENITSU BOT MD */
-const fs=require("fs"),path=require("path")
-const DATA_DIR=path.join(__dirname,"..","..","data")
-function dbLer(a,p={}){const f=path.join(DATA_DIR,a);if(!fs.existsSync(f)){fs.writeFileSync(f,JSON.stringify(p,null,2));return p}try{return JSON.parse(fs.readFileSync(f,"utf8"))}catch{return p}}
-function dbSalvar(a,d){fs.writeFileSync(path.join(DATA_DIR,a),JSON.stringify(d,null,2))}
-async function baixarTikTok(u){const r=await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(u)}&hd=1`);const d=await r.json();if(d.code!==0||!d.data||!d.data.play)throw new Error("Falha no link.");return d.data.play}
-function checarVip(db,sJ,isD,isS){if(isD||isS)return true;const v=(db.vips()||{}).vips||{};for(const j of sJ){const n=String(j).split("@")[0].split(":")[0].replace(/\D/g,"");for(const[k,i]of Object.entries(v)){if(String(k).split("@")[0].split(":")[0].replace(/\D/g,"")===n){if(i.expira==="inf"||i.expira>Date.now())return true}}}return false}
-const sleep=ms=>new Promise(r=>setTimeout(r,ms)),nJid=j=>String(j).split("@")[0].split(":")[0].replace(/\D/g,""),rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a,chance=p=>Math.random()<p
-const VERDADES=["Qual é o seu maior sonho?","Qual foi o momento mais feliz da sua vida?","Qual é o seu maior medo?","Quem é a pessoa que você mais admira?","Qual foi a coisa mais engraçada que já te aconteceu?","Qual é a sua comida favorita?","Qual a música que mais te marca?","Qual foi o melhor presente que você já ganhou?","Se você pudesse viajar pra qualquer lugar agora, pra onde iria?","Qual é o seu hobby favorito?","Qual filme você já assistiu mais de 10 vezes?","O que te faz rir muito?","Qual é a sua maior qualidade?","E o seu maior defeito?","Se você pudesse ter um superpoder, qual seria?","Qual foi a última vez que você riu até chorar?","Qual é o seu desenho ou anime favorito?","Qual é a coisa mais aleatória que você já pesquisou?","Qual animal você seria se pudesse escolher?","Qual foi a melhor fase da sua vida até agora?"]
-const DESAFIOS=["Mande um áudio cantando uma música aleatória","Tire uma selfie com pose engraçada","Marque alguém do grupo e diga 'você é top'","Mande áudio imitando alguém do grupo","Conte uma piada pra todos","Fale 'bom dia' pra 3 pessoas aleatórias e mande print","Escreva um poema de 4 linhas sobre alguém do grupo","Mande áudio com sotaque diferente","Escreva 3 coisas aleatórias sobre você","Mande uma foto sua de um ângulo bem feio","Faça uma declaração divertida pra alguém do grupo","Mande áudio falando 'miau' 5 vezes","Marque alguém e elogie 3 coisas nessa pessoa","Escreva um status engraçado e mande print","Faça uma dancinha e mande o vídeo","Fale só em emojis pelas próximas 3 mensagens","Descreva alguém do grupo sem falar o nome","Mande uma foto sua de 2 anos atrás"]
-const BOLAS=[{id:"comum",nome:"Comum",emoji:"⚪",dano:16,ch:0,ef:"nenhum",desc:"Básica equilibrada"},{id:"fogo",nome:"Fogo",emoji:"🔴",dano:18,ch:0.30,ef:"queimar",desc:"30% Queimar"},{id:"gelo",nome:"Gelo",emoji:"🔵",dano:12,ch:0.30,ef:"congelar",desc:"30% Congelar"},{id:"eletrica",nome:"Elétrica",emoji:"🟡",dano:17,ch:0.35,ef:"critico",desc:"35% Crit x2"},{id:"pesada",nome:"Pesada",emoji:"🟤",dano:24,ch:0.25,ef:"armadura",desc:"25% -armadura"},{id:"rapida",nome:"Rápida",emoji:"🟢",dano:11,ch:0.50,ef:"duplo",desc:"50% Ataque duplo"},{id:"venenosa",nome:"Venenosa",emoji:"🟣",dano:9,ch:0.60,ef:"veneno",desc:"60% Veneno"},{id:"cura",nome:"Cura",emoji:"🩷",dano:8,ch:0.70,ef:"cura",desc:"70% Cura"},{id:"dourada",nome:"Dourada",emoji:"🌟",dano:19,ch:0.35,ef:"brilho",desc:"35% Brilho x1.8"},{id:"diamante",nome:"Diamante",emoji:"💎",dano:22,ch:0.35,ef:"perfurar",desc:"35% Golpe x3"},{id:"nuclear",nome:"Nuclear",emoji:"☢️",dano:30,ch:0.20,ef:"nuclear",desc:"20% x2 mas perde 10HP"},{id:"vampira",nome:"Vampira",emoji:"🧛",dano:15,ch:0.50,ef:"vampira",desc:"50% rouba 30%"},{id:"morte",nome:"Morte",emoji:"💀",dano:18,ch:0.15,ef:"morte",desc:"15% instakill <30%"},{id:"sorte",nome:"Sorte",emoji:"🎰",dano:20,ch:0.40,ef:"sorte",desc:"40% dano 5-50"},{id:"dragao",nome:"Dragão",emoji:"🐉",dano:23,ch:0.30,ef:"lava",desc:"30% chamas 6/t"},{id:"samurai",nome:"Samurai",emoji:"⚔️",dano:20,ch:0,ef:"preciso",desc:"Nunca erra"}]
-function sortear3Bolas(){const pool=[...BOLAS],r=[];for(let i=0;i<3;i++){const idx=Math.floor(Math.random()*pool.length);r.push(pool.splice(idx,1)[0])}return r}
-function statusIcones(p){let s="";if(p.queimando>0)s+=" 🔥"+p.queimando;if(p.lava>0)s+=" 🌋"+p.lava;if(p.envenenado>0)s+=" ☠️"+p.envenenado;if(p.congelado)s+=" ❄️";if(p.paralisado)s+=" ⚡";if(p.cego)s+=" 🌫️";return s}
-function barra(hp,max){const c=Math.max(0,Math.min(10,Math.round(hp/max*10)));return"🟨".repeat(c)+"⬛".repeat(10-c)}
-function renderArena(a,log="",sub=""){const p1=a.jogadores[0],p2=a.jogadores[1],b1=p1.bolas?.[p1.escolhida]||{emoji:"❓",nome:"???"},b2=p2.bolas?.[p2.escolhida]||{emoji:"❓",nome:"???"};let g="";for(let y=0;y<5;y++){let l="║ ";for(let x=0;x<5;x++){const cl=(a.clones||[]).find(c=>c.posX===x&&c.posY===y);if(cl)l+=(cl.emoji||"🧬")+" ";else if(p1.posX===x&&p1.posY===y)l+=b1.emoji+" ";else if(p2.posX===x&&p2.posY===y)l+=b2.emoji+" ";else l+="⬛ "}g+=l+"  ║\n"}let t="╔════════════════════════╗\n║ ⚡ 𝐁𝐎𝐋𝐀 𝐕𝐒 𝐁𝐎𝐋𝐀 · R"+a.rodada+"/3\n╠════════════════════════╣\n"+g+"╠════════════════════════╣\n";t+="║ "+b1.emoji+" "+b1.nome.padEnd(8)+"  "+b2.emoji+" "+b2.nome.padEnd(8)+"\n";t+="║ "+barra(p1.hp,p1.hpMax)+" "+String(p1.hp).padStart(3)+statusIcones(p1)+"\n";t+="║ "+barra(p2.hp,p2.hpMax)+" "+String(p2.hp).padStart(3)+statusIcones(p2)+"\n";t+="╠════════════════════════╣\n";if(log)t+="║ "+log+"\n";if(sub)t+="║ "+sub+"\n";t+="╚════════════════════════╝";return t}
-function moverBola(p){if(p.lentidao>0){p.lentidao--;if(chance(0.5))return}const s=(p.turboPendente||0)>0?2:1;if(p.turboPendente>0)p.turboPendente--;for(let i=0;i<s;i++){p.posX+=p.dx;p.posY+=p.dy;if(p.posX<0){p.posX=0;p.dx=Math.abs(p.dx);p.bateuParede=true}if(p.posX>4){p.posX=4;p.dx=-Math.abs(p.dx);p.bateuParede=true}if(p.posY<0){p.posY=0;p.dy=Math.abs(p.dy);p.bateuParede=true}if(p.posY>4){p.posY=4;p.dy=-Math.abs(p.dy);p.bateuParede=true}}}
-function verificarColisao(p1,p2){return Math.abs(p1.posX-p2.posX)+Math.abs(p1.posY-p2.posY)<=1}
-async function processarEfeito(a,atP,dP,atB,dB){let d=atB.dano+rnd(0,4),ex="";switch(atB.ef){case"queimar":if(chance(atB.ch)){dP.queimando=2;ex+=" 🔥"}break;case"lava":if(chance(atB.ch)){dP.lava=2;ex+=" 🌋"}break;case"congelar":if(chance(atB.ch)){dP.congelado=true;ex+=" ❄️"}break;case"critico":if(chance(atB.ch)){d*=2;ex+=" ⚡x2"}break;case"armadura":if(chance(atB.ch)){dP.armaduraQuebrada=2;ex+=" 🛡️💥"}break;case"duplo":if(chance(atB.ch)){d*=2;ex+=" 💨x2"}break;case"veneno":if(chance(atB.ch)){dP.envenenado=3;ex+=" ☠️"}break;case"cura":atP.hp=Math.min(atP.hpMax,atP.hp+4);if(chance(atB.ch)){atP.hp=Math.min(atP.hpMax,atP.hp+10);ex+=" 💗+"}break;case"brilho":if(chance(atB.ch)){d=Math.floor(d*1.8);ex+=" ✨"}if(chance(0.10)){dP.cego=true;ex+=" 🌫️"}break;case"perfurar":if(chance(atB.ch)){d*=3;ex+=" 💎x3"}break;case"nuclear":d*=2;atP.hp=Math.max(0,atP.hp-10);ex+=" ☢️";break;case"vampira":if(chance(atB.ch)){const r=Math.floor(d*0.3);atP.hp=Math.min(atP.hpMax,atP.hp+r);ex+=" 🧛+"+r}break;case"morte":if(chance(atB.ch)&&dP.hp<=dP.hpMax*0.3){dP.hp=0;ex+=" 💀 KILL!"}break;case"sorte":if(chance(atB.ch)){d=rnd(5,50);ex+=" 🎰"+d}break;case"preciso":ex+=" ⚔️";break}if(dP.defesa>0){d=Math.floor(d*0.7);dP.defesa--;ex+=" 🛡️-30%"}dP.hp=Math.max(0,dP.hp-d);const dr=Math.max(1,Math.floor(d*0.5));atP.hp=Math.max(0,atP.hp-dr);ex+=" | 💥recuo -"+dr;return{dano:d,extra:ex}}
-async function aplicarEfeitosTurno(p){let ex="";if(p.queimando>0){p.hp=Math.max(0,p.hp-4);p.queimando--;ex+=" 🔥-4"}if(p.lava>0){p.hp=Math.max(0,p.hp-6);p.lava--;ex+=" 🌋-6"}if(p.envenenado>0){p.hp=Math.max(0,p.hp-5);p.envenenado--;ex+=" ☠️-5"}return ex}
-async function proximoJogador(sock,jid,db){const g=dbLer("verdadedesafio.json",{jogos:{}}),jo=g.jogos?.[jid];if(!jo||jo.fase!=="jogando")return;const p=jo.jogadores[jo.atual];if(!p){delete g.jogos[jid];dbSalvar("verdadedesafio.json",g);return}jo.ultimaPergunta=null;dbSalvar("verdadedesafio.json",g);await sock.sendMessage(jid,{text:"╭━━━〔 ⚡🎮 𝐒𝐔𝐀 𝐕𝐄𝐙 🎮⚡ 〕━━━╮\n┃ 👤 @"+nJid(p)+"\n┃ 👁️ Escolha:\n┃ ⚡ *!verdade*\n┃ ⚔️ *!desafio*\n╰━━━━━━━━━━━━━━━━━━━━━━╯",mentions:[p]})}
-async function processarEscolha(sock,msg,db,utils,sender,tipo){const jid=msg.key.remoteJid,g=dbLer("verdadedesafio.json",{jogos:{}}),jo=g.jogos?.[jid];if(!jo||jo.fase!=="jogando")return sock.sendMessage(jid,{text:"⚡❌ Sem jogo!"},{quoted:msg});const p=jo.jogadores[jo.atual];if(utils.soNumero(p)!==utils.soNumero(sender))return sock.sendMessage(jid,{text:"⚡⏳ É a vez de @"+utils.soNumero(p),mentions:[p]},{quoted:msg});if(jo.ultimaPergunta)return sock.sendMessage(jid,{text:"⚡👁️ Já escolheu!"},{quoted:msg});const lista=tipo==="verdade"?VERDADES:DESAFIOS,pergunta=lista[Math.floor(Math.random()*lista.length)];jo.ultimaPergunta={tipo,pergunta};dbSalvar("verdadedesafio.json",g);await sock.sendMessage(jid,{text:"╭━━━〔 "+(tipo==="verdade"?"⚡ VERDADE":"⚔️ DESAFIO")+" ━━━╮\n┃ 👤 @"+utils.soNumero(sender)+"\n┃ 👁️ "+pergunta+"\n╰━━━━━━━━━━━━━━━━━━━━━━╯",mentions:[sender]},{quoted:msg});setTimeout(async()=>{const g2=dbLer("verdadedesafio.json",{jogos:{}}),j2=g2.jogos?.[jid];if(!j2||j2.fase!=="jogando")return;j2.atual=(j2.atual+1)%j2.jogadores.length;j2.ultimaPergunta=null;dbSalvar("verdadedesafio.json",g2);proximoJogador(sock,jid,db)},15000)}
-async function iniciarRoundBVB(sock,jid,db,a){for(let i=0;i<a.jogadores.length;i++){const p=a.jogadores[i];p.bolas=sortear3Bolas();p.escolhida=-1;p.hpMax=100;p.hp=100;p.congelado=false;p.paralisado=false;p.cego=false;p.queimando=0;p.lava=0;p.envenenado=0;p.armaduraQuebrada=0;p.defesa=0;p.lentidao=0;p.turboPendente=0;p.posX=i===0?0:4;p.posY=2;p.dx=i===0?1:-1;p.dy=chance(0.5)?1:-1;p.bateuParede=false}a.clones=[];a.fase="escolhendo";dbSalvar("batalhadebola.json",{arenas:{[jid]:a}});for(const p of a.jogadores){const lista=p.bolas.map((b,i)=>"┃ "+(i+1)+". "+b.emoji+" *"+b.nome+"*\n┃   💥 "+b.dano+" | 👁️ "+b.desc).join("\n");await sock.sendMessage(jid,{text:"╭━━━〔 ⚡🎯 𝐒𝐔𝐀𝐒 𝐁𝐎𝐋𝐀𝐒 🎯⚡ 〕━━━╮\n┃ 👤 @"+nJid(p.jid)+"\n┃ 🏆 Round "+a.rodada+"/3\n┃\n"+lista+"\n┃\n┃ 👁️ *!escolherbola <1|2|3>*\n╰━━━━━━━━━━━━━━━━━━━━━━━━╯",mentions:[p.jid]})}}
-async function batalharBVB(sock,jid,db,a){a.fase="batalhando";const p1=a.jogadores[0],p2=a.jogadores[1];dbSalvar("batalhadebola.json",{arenas:{[jid]:a}});const me=await sock.sendMessage(jid,{text:renderArena(a,"⏳ Preparando..."),mentions:[p1.jid,p2.jid]}),k=me.key;await sleep(1500);let f=0,ui=Date.now(),la="⚡ Bolas na arena!";while(p1.hp>0&&p2.hp>0&&f<120){f++;if(Date.now()-ui>10000){try{await sock.sendMessage(jid,{text:renderArena(a,"⏰ 10s SEM IMPACTO!","🔄 Round reiniciado"),mentions:[p1.jid,p2.jid],edit:k})}catch(_){}await sleep(2500);return iniciarRoundBVB(sock,jid,db,a)}moverBola(p1);moverBola(p2);if(verificarColisao(p1,p2)){const b1=p1.bolas[p1.escolhida],b2=p2.bolas[p2.escolhida],atP=b1.dano>=b2.dano?p1:p2,dP=b1.dano>=b2.dano?p2:p1,atB=b1.dano>=b2.dano?b1:b2,dB=b1.dano>=b2.dano?b2:b1,{dano,extra}=await processarEfeito(a,atP,dP,atB,dB);la="💥 "+atB.emoji+"↔"+dB.emoji+"! -"+dano+extra;ui=Date.now();p1.dx=-p1.dx;p1.dy=-p1.dy;p2.dx=-p2.dx;p2.dy=-p2.dy;const e1=await aplicarEfeitosTurno(p1),e2=await aplicarEfeitosTurno(p2);if(e1)la+=" | "+e1;if(e2)la+=" | "+e2;dbSalvar("batalhadebola.json",{arenas:{[jid]:a}});try{await sock.sendMessage(jid,{text:renderArena(a,la),mentions:[p1.jid,p2.jid],edit:k})}catch(_){}await sleep(1800)}else{if(f%3===0)la="⚡ Bolas se movendo...";dbSalvar("batalhadebola.json",{arenas:{[jid]:a}});try{await sock.sendMessage(jid,{text:renderArena(a,la),mentions:[p1.jid,p2.jid],edit:k})}catch(_){}}await sleep(900)}await sleep(500);let vI;if(p1.hp>0&&p2.hp<=0)vI=0;else if(p2.hp>0&&p1.hp<=0)vI=1;else vI=p1.hp>=p2.hp?0:1;a.jogadores[vI].vitorias++;const venc=a.jogadores[vI];try{await sock.sendMessage(jid,{text:renderArena(a,"🏆 @"+nJid(venc.jid)+" venceu!","📊 "+p1.vitorias+" x "+p2.vitorias),mentions:[p1.jid,p2.jid],edit:k})}catch(_){}await sleep(2500);if(a.rodada>=3||a.jogadores[0].vitorias>=2||a.jogadores[1].vitorias>=2){const camp=a.jogadores[0].vitorias>a.jogadores[1].vitorias?a.jogadores[0]:a.jogadores[1],nV=nJid(camp.jid);await sock.sendMessage(jid,{text:"╔══════════════════════╗\n║ 🏆⚡ FIM DE JOGO ⚡🏆\n╠══════════════════════╣\n║ 🥇 *@"+nV+"*\n║ 📊 "+a.jogadores[0].vitorias+" x "+a.jogadores[1].vitorias+"\n║ 💰 +500 gold\n╚══════════════════════╝",mentions:[camp.jid,a.jogadores[0].jid,a.jogadores[1].jid]});try{const rpg=db.rpg();rpg.usuarios[nV]=rpg.usuarios[nV]||{moedas:0};rpg.usuarios[nV].moedas=(rpg.usuarios[nV].moedas||0)+500;db.salvarRpg(rpg)}catch(_){}const g=dbLer("batalhadebola.json",{arenas:{}});if(g.arenas)delete g.arenas[jid];dbSalvar("batalhadebola.json",g);return}a.rodada++;await sock.sendMessage(jid,{text:"╭━━━〔 ⚡ ROUND "+a.rodada+"/3 〕━━━╮\n┃ 📊 "+p1.vitorias+" x "+p2.vitorias+"\n┃ 👁️ 3 novas bolas!\n╰━━━━━━━━━━━━━━━━━━━━━━╯"});await sleep(2000);await iniciarRoundBVB(sock,jid,db,a)}
-function renderVelha(t){const cel=i=>t.tabuleiro[i]||String(i+1);return"╭━━━〔 ⚡ 𝐉𝐎𝐆𝐎 𝐃𝐀 𝐕𝐄𝐋𝐇𝐀 ⚡ 〕━━━╮\n┃\n┃    "+cel(0)+"  │  "+cel(1)+"  │  "+cel(2)+"\n┃   ───┼───┼───\n┃    "+cel(3)+"  │  "+cel(4)+"  │  "+cel(5)+"\n┃   ───┼───┼───\n┃    "+cel(6)+"  │  "+cel(7)+"  │  "+cel(8)+"\n┃\n┃ ❌ @"+nJid(t.j1)+"\n┃ ⭕ @"+nJid(t.j2)+"\n┃\n┃ "+(t.msg||"Vez de ❌")+"\n╰━━━━━━━━━━━━━━━━━━━━━━━━━╯"}
-function checarVitoria(t){const l=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];for(const c of l){if(t.tabuleiro[c[0]]&&t.tabuleiro[c[0]]===t.tabuleiro[c[1]]&&t.tabuleiro[c[1]]===t.tabuleiro[c[2]])return t.tabuleiro[c[0]]}return null}
+/* ============================================================
+   🌙 MENU VIP - KOKUSHIBO BOT MD
+   ============================================================ */
 
-// ══════════════════════════════════════════════════════════════
-// 🎨 AUTO-FIG + AUTO-TTK (config por grupo)
-// ══════════════════════════════════════════════════════════════
-function getAutocfg() {
-  return dbLer("autocfg.json", { grupos: {} })
+const fs = require("fs")
+const path = require("path")
+const os = require("os")
+const { execSync } = require("child_process")
+
+const DATA_DIR = path.join(__dirname, "..", "..", "data")
+
+function dbLer(a, p = {}) {
+  const f = path.join(DATA_DIR, a)
+  if (!fs.existsSync(f)) { fs.writeFileSync(f, JSON.stringify(p, null, 2)); return p }
+  try { return JSON.parse(fs.readFileSync(f, "utf8")) } catch { return p }
+}
+function dbSalvar(a, d) {
+  fs.writeFileSync(path.join(DATA_DIR, a), JSON.stringify(d, null, 2))
 }
 
-module.exports={menu:"menu-vip",grupoOnly:false,adminOnly:false,donoOnly:false,commands:{
+async function baixarTikTok(u) {
+  const r = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(u)}&hd=1`)
+  const d = await r.json()
+  if (d.code !== 0 || !d.data || !d.data.play) throw new Error("Falha no link.")
+  return d.data.play
+}
 
-menuvip:{aliases:["vipmenu","menuv"],async executar({sock,msg,prefixoAtivo,db,isDono,isSubDono}){const jid=msg.key.remoteJid,p=prefixoAtivo,sJ=[msg.key.participant,msg.key.remoteJid,msg.participant].filter(Boolean);let infoVip=null;const vips=(db.vips()||{}).vips||{};for(const j of sJ){const num=String(j).split("@")[0].split(":")[0].replace(/\D/g,"");for(const[jV,i]of Object.entries(vips)){if(String(jV).split("@")[0].split(":")[0].replace(/\D/g,"")===num){if(i.expira==="inf"||i.expira>Date.now()){infoVip=i;break}}}if(infoVip)break}if(!infoVip&&!isDono&&!isSubDono)return sock.sendMessage(jid,{text:"⚡ Só VIP!"},{quoted:msg});const cfg=db.config();const texto="⚡ *MENU VIP - ZENITSU*\n\n👤 *CONTA*\n▸ "+p+"meuvip\n▸ "+p+"proteçãovip\n\n🤖 *AUTOMAÇÃO*\n▸ "+p+"autofig on/off\n▸ "+p+"autottk on/off\n\n🎨 *CRIAÇÃO*\n▸ "+p+"logo <estilo> <texto>\n\n🎨 *FIGURINHAS*\n▸ "+p+"brat / "+p+"ttps / "+p+"s / "+p+"smeme / "+p+"s3\n▸ "+p+"procurado / "+p+"wasted / "+p+"rename\n▸ "+p+"revela\n\n📥 *DOWNLOADS*\n▸ "+p+"tiktok\n\n🎮 *JOGOS*\n▸ "+p+"verdadedesafio / "+p+"bolavsbola / "+p+"jogodavelha\n\n⚔️ *EXTRAS*\n▸ "+p+"fraseprofunda / "+p+"mito / "+p+"napoleao";if(cfg.fotoMenu){const buf=Buffer.from(cfg.fotoMenu,"base64");if(cfg.tipoMenu==="video")return sock.sendMessage(jid,{video:buf,mimetype:"video/mp4",fileName:"zenitsu.mp4",gifPlayback:true,caption:texto},{quoted:msg});return sock.sendMessage(jid,{image:buf,caption:texto},{quoted:msg})}await sock.sendMessage(jid,{text:texto},{quoted:msg})}},
+function checarVip(db, sJ, isD, isS) {
+  if (isD || isS) return true
+  const v = (db.vips() || {}).vips || {}
+  for (const j of sJ) {
+    const n = String(j).split("@")[0].split(":")[0].replace(/\D/g, "")
+    for (const [k, i] of Object.entries(v)) {
+      if (String(k).split("@")[0].split(":")[0].replace(/\D/g, "") === n) {
+        if (i.expira === "inf" || i.expira > Date.now()) return true
+      }
+    }
+  }
+  return false
+}
 
-// ============ AUTOFIX ============
-autofig:{aliases:["autosticker","autofigu"],async executar({sock,msg,args,db,isDono,isSubDono}){const jid=msg.key.remoteJid,sJ=[msg.key.participant,msg.key.remoteJid,msg.participant].filter(Boolean);if(!checarVip(db,sJ,isDono,isSubDono))return sock.sendMessage(jid,{text:"⚡ Só nobres!"},{quoted:msg});if(!jid.endsWith("@g.us"))return sock.sendMessage(jid,{text:"⚡ Só funciona em grupos!"},{quoted:msg});const op=(args[0]||"").toLowerCase();const ac=getAutocfg();ac.grupos=ac.grupos||{};ac.grupos[jid]=ac.grupos[jid]||{};if(!["on","off"].includes(op)){const s=ac.grupos[jid].autofig?"ON ✅":"OFF ❌";return sock.sendMessage(jid,{text:"⚡ *AUTOFIX*\n\n📊 Status: *"+s+"*\n\n💡 Use *!autofig on/off*"},{quoted:msg})}ac.grupos[jid].autofig=op==="on";dbSalvar("autocfg.json",ac);await sock.sendMessage(jid,{text:op==="on"?"╔══════════════════════════════╗\n║   ⚡🎨 𝐀𝐔𝐓𝐎𝐅𝐈𝐆 𝐎𝐍 ⚡🎨\n╚══════════════════════════════╝\n\n✅ Toda imagem/vídeo que mandarem agora vira figurinha!":"╔══════════════════════════════╗\n║   ⚡💤 𝐀𝐔𝐓𝐎𝐅𝐈𝐆 𝐎𝐅𝐅 💤⚡\n╚══════════════════════════════╝\n\n❌ Autofig desativado."},{quoted:msg})}},
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+const nJid = j => String(j).split("@")[0].split(":")[0].replace(/\D/g, "")
+const rnd = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a
+const chance = p => Math.random() < p
 
-// ============ AUTOTTK ============
-autottk:{aliases:["autotiktok","autott"],async executar({sock,msg,args,db,isDono,isSubDono}){const jid=msg.key.remoteJid,sJ=[msg.key.participant,msg.key.remoteJid,msg.participant].filter(Boolean);if(!checarVip(db,sJ,isDono,isSubDono))return sock.sendMessage(jid,{text:"⚡ Só nobres!"},{quoted:msg});if(!jid.endsWith("@g.us"))return sock.sendMessage(jid,{text:"⚡ Só funciona em grupos!"},{quoted:msg});const op=(args[0]||"").toLowerCase();const ac=getAutocfg();ac.grupos=ac.grupos||{};ac.grupos[jid]=ac.grupos[jid]||{};if(!["on","off"].includes(op)){const s=ac.grupos[jid].autottk?"ON ✅":"OFF ❌";return sock.sendMessage(jid,{text:"⚡ *AUTOTTK*\n\n📊 Status: *"+s+"*\n\n💡 Use *!autottk on/off*"},{quoted:msg})}ac.grupos[jid].autottk=op==="on";dbSalvar("autocfg.json",ac);await sock.sendMessage(jid,{text:op==="on"?"╔══════════════════════════════╗\n║   ⚡🎵 𝐀𝐔𝐓𝐎𝐓𝐓𝐊 𝐎𝐍 ⚡🎵\n╚══════════════════════════════╝\n\n✅ Todo link do TikTok agora é baixado automaticamente!":"╔══════════════════════════════╗\n║   ⚡💤 𝐀𝐔𝐓𝐎𝐓𝐓𝐊 𝐎𝐅𝐅 💤⚡\n╚══════════════════════════════╝\n\n❌ Autottk desativado."},{quoted:msg})}},
+// ============================================================
+// 🎵 FUNÇÃO DE BAIXAR MÚSICA
+// ============================================================
+function baixarMusica(busca, qualidade = 64) {
+  const tmpDir = os.tmpdir()
+  const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
+  const outTpl = path.join(tmpDir, "kokushibo_mus_" + id + ".%(ext)s")
 
-revela:{aliases:["revelar","reveal","ver"],async executar({sock,msg,db,utils}){const jid=msg.key.remoteJid;const ctx=msg.message?.extendedTextMessage?.contextInfo||{};let q=ctx.quotedMessage;if(!q)return sock.sendMessage(jid,{text:"👁️ Responda uma mensagem de *ver uma vez* com *!revela*"},{quoted:msg});let isVU=false;if(q.viewOnceMessageV2){q=q.viewOnceMessageV2.message||q.viewOnceMessageV2;isVU=true}else if(q.viewOnceMessage){q=q.viewOnceMessage.message||q.viewOnceMessage;isVU=true}const img=q.imageMessage,vid=q.videoMessage,aud=q.audioMessage;if(img&&img.viewOnce)isVU=true;if(vid&&vid.viewOnce)isVU=true;if(aud&&aud.viewOnce)isVU=true;if(!isVU)return sock.sendMessage(jid,{text:"❌ Essa mensagem não é de *ver uma vez*!"},{quoted:msg});if(!img&&!vid&&!aud)return sock.sendMessage(jid,{text:"❌ Não achei mídia!"},{quoted:msg});await sock.sendMessage(jid,{text:"👁️ Revelando..."},{quoted:msg});try{const tipo=img?"image":vid?"video":"audio";const alvo={...msg,message:tipo==="image"?{imageMessage:img}:tipo==="video"?{videoMessage:vid}:{audioMessage:aud}};const buf=await utils.downloadMediaMessage(alvo,"buffer",{},{logger:console,reuploadRequest:sock.updateMediaMessage});if(tipo==="image")await sock.sendMessage(jid,{image:buf,caption:"👁️ *REVELADO*"},{quoted:msg});else if(tipo==="video")await sock.sendMessage(jid,{video:buf,mimetype:"video/mp4",caption:"👁️ *REVELADO*"},{quoted:msg});else await sock.sendMessage(jid,{audio:buf,mimetype:"audio/mp4",ptt:false},{quoted:msg})}catch(e){await sock.sendMessage(jid,{text:"⚡💢 "+e.message},{quoted:msg})}}},
+  const ehUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(busca)
+  const alvo = ehUrl ? busca : "ytsearch1:" + busca
 
-brat:{aliases:["figbrat"],async executar({sock,msg,args,db,isDono,isSubDono}){const jid=msg.key.remoteJid,sJ=[msg.key.participant,msg.key.remoteJid,msg.participant].filter(Boolean);if(!checarVip(db,sJ,isDono,isSubDono))return sock.sendMessage(jid,{text:"⚡ Só nobres!"},{quoted:msg});const t=args.join(" ").trim();if(!t)return sock.sendMessage(jid,{text:"🎨 *!brat <texto>*"},{quoted:msg});await sock.sendMessage(jid,{text:"⚡ Criando..."},{quoted:msg});try{const sharp=require("sharp"),T=512,F=t.length>40?40:t.length>20?55:70,pal=t.split(" "),lin=[];let la="",mc=t.length>40?12:t.length>20?10:8;for(const pa of pal){if((la+" "+pa).trim().length<=mc)la=(la+" "+pa).trim();else{if(la)lin.push(la);la=pa}}if(la)lin.push(la);const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"),aL=F+15,aT=lin.length*aL,yI=(T-aT)/2+F;let tsp="";lin.forEach((l,i)=>{const y=yI+i*aL;tsp+="<text x=\""+(T/2)+"\" y=\""+y+"\" font-family=\"Arial\" font-size=\""+F+"\" font-weight=\"bold\" fill=\"#000\" text-anchor=\"middle\">"+esc(l)+"</text>"});const svg="<svg width=\""+T+"\" height=\""+T+"\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\""+T+"\" height=\""+T+"\" fill=\"#FFF\"/>"+tsp+"</svg>";const buf=await sharp(Buffer.from(svg)).webp({quality:90}).toBuffer();await sock.sendMessage(jid,{sticker:buf},{quoted:msg})}catch(e){await sock.sendMessage(jid,{text:"⚡💢 "+e.message},{quoted:msg})}}},
+  const cmds = [
+    `yt-dlp -x --audio-format mp3 --audio-quality ${qualidade}k -o "${outTpl}" --no-playlist --match-filter "duration < 1200" --max-filesize 16M "${alvo}"`,
+    `python3 -m yt_dlp -x --audio-format mp3 --audio-quality ${qualidade}k -o "${outTpl}" --no-playlist --match-filter "duration < 1200" --max-filesize 16M "${alvo}"`,
+    `python -m yt_dlp -x --audio-format mp3 --audio-quality ${qualidade}k -o "${outTpl}" --no-playlist --match-filter "duration < 1200" --max-filesize 16M "${alvo}"`
+  ]
 
-ttps:{aliases:["ttpsfig","colorido","glow"],async executar({sock,msg,args,db,isDono,isSubDono}){const jid=msg.key.remoteJid,sJ=[msg.key.participant,msg.key.remoteJid,msg.participant].filter(Boolean);if(!checarVip(db,sJ,isDono,isSubDono))return sock.sendMessage(jid,{text:"⚡ Só nobres!"},{quoted:msg});const t=args.join(" ").trim();if(!t)return sock.sendMessage(jid,{text:"🎨 *!ttps <texto>*"},{quoted:msg});await sock.sendMessage(jid,{text:"⚡ Criando figurinha colorida..."},{quoted:msg});try{const sharp=require("sharp"),ff=require("@ffmpeg-installer/ffmpeg").path,os=require("os"),{execSync}=require("child_process");const T=512;const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");const F=t.length>40?40:t.length>20?55:70;const pal=t.split(" "),lin=[];let la="",mc=t.length>40?12:t.length>20?10:8;for(const pa of pal){if((la+" "+pa).trim().length<=mc)la=(la+" "+pa).trim();else{if(la)lin.push(la);la=pa}}if(la)lin.push(la);const aL=F+15,aT=lin.length*aL,yI=(T-aT)/2+F;const totalFrames=8;const frames=[];function cor(){const h=Math.floor(Math.random()*360);return"hsl("+h+", 90%, 55%)"}for(let f=0;f<totalFrames;f++){const c1=cor(),c2=cor(),c3=cor();const gid="g"+f;let tsp="";lin.forEach((l,i)=>{const y=yI+i*aL;tsp+="<text x=\""+(T/2)+"\" y=\""+y+"\" font-family=\"Arial\" font-size=\""+F+"\" font-weight=\"900\" fill=\"url(#"+gid+")\" stroke=\"#000\" stroke-width=\"3\" text-anchor=\"middle\" paint-order=\"stroke fill\">"+esc(l)+"</text>"});const svg="<svg width=\""+T+"\" height=\""+T+"\" xmlns=\"http://www.w3.org/2000/svg\"><defs><linearGradient id=\""+gid+"\" x1=\""+((f*12)%100)+"%\" y1=\"0%\" x2=\""+(((f*12)+80)%100)+"%\" y2=\"100%\"><stop offset=\"0%\" stop-color=\""+c1+"\"/><stop offset=\"50%\" stop-color=\""+c2+"\"/><stop offset=\"100%\" stop-color=\""+c3+"\"/></linearGradient></defs><rect width=\""+T+"\" height=\""+T+"\" fill=\"#FFF\"/>"+tsp+"</svg>";const pngBuf=await sharp(Buffer.from(svg)).png().toBuffer();frames.push(pngBuf)}const tmpDir=os.tmpdir();const tmpPrefix=path.join(tmpDir,"ttps_"+Date.now());for(let i=0;i<frames.length;i++)fs.writeFileSync(tmpPrefix+"_"+i+".png",frames[i]);const outWebp=tmpPrefix+"_out.webp";execSync("\""+ff+"\" -y -framerate 8 -i \""+tmpPrefix+"_%d.png\" -vcodec libwebp -lossless 0 -compression_level 6 -q:v 70 -loop 0 -preset default -an -vsync 0 -s 512:512 \""+outWebp+"\"",{stdio:"ignore"});const resultado=fs.readFileSync(outWebp);try{for(let i=0;i<frames.length;i++)fs.unlinkSync(tmpPrefix+"_"+i+".png");fs.unlinkSync(outWebp)}catch(_){}await sock.sendMessage(jid,{sticker:resultado},{quoted:msg})}catch(e){await sock.sendMessage(jid,{text:"⚡💢 "+e.message},{quoted:msg})}}},
+  let ultimoErro = "yt-dlp não encontrado"
+  for (const cmd of cmds) {
+    try {
+      execSync(cmd, { stdio: "ignore", timeout: 120000 })
+      const prefixo = "kokushibo_mus_" + id
+      const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && (f.endsWith(".mp3") || f.endsWith(".m4a") || f.endsWith(".webm") || f.endsWith(".opus")))
+      if (arquivos.length > 0) {
+        const caminho = path.join(tmpDir, arquivos[0])
+        const buffer = fs.readFileSync(caminho)
+        try { fs.unlinkSync(caminho) } catch (_) {}
+        return { ok: true, buffer, qualidade }
+      }
+    } catch (e) {
+      ultimoErro = e.message
+    }
+  }
 
-s:{aliases:["sticker","fig"],async executar({sock,msg,db,isDono,isSubDono,utils}){const jid=msg.key.remoteJid,sJ=[msg.key.participant,msg.key.remoteJid,msg.participant].filter(Boolean);if(!checarVip(db,sJ,isDono,isSubDono))return sock.sendMessage(jid,{text:"⚡ Só nobres!"},{quoted:msg});const ctx=msg.message?.extendedTextMessage?.contextInfo||{},q=ctx.quotedMessage,eImg=q?.imageMessage,eVid=q?.videoMessage;if(!eImg&&!eVid)return sock.sendMessage(jid,{text:"🎨 Responda foto/vídeo!"},{quoted:msg});await sock.sendMessage(jid,{text:"⚡ Preparando..."},{quoted:msg});try{const sharp=require("sharp"),ff=require("@ffmpeg-installer/ffmpeg").path,os=require("os"),{execSync}=require("child_process"),alvo={...msg,message:eImg?{imageMessage:q.imageMessage}:{videoMessage:q.videoMessage}},buf=await utils.downloadMediaMessage(alvo,"buffer",{},{logger:console,reuploadRequest:sock.updateMediaMessage});let wp;if(eImg)wp=await sharp(buf).resize(512,512,{fit:"contain",background:{r:0,g:0,b:0,alpha:0}}).webp({quality:90}).toBuffer();else{const tIn=path.join(os.tmpdir(),"s_"+Date.now()+".mp4"),tOut=path.join(os.tmpdir(),"s_"+Date.now()+".webp");fs.writeFileSync(tIn,buf);execSync("\""+ff+"\" -y -i \""+tIn+"\" -vcodec libwebp -filter:v \"fps=15,scale=512:512:force_original_aspect_ratio=decrease\" -lossless 0 -compression_level 6 -q:v 50 -loop 0 -preset default -an -vsync 0 -s 512:512 \""+tOut+"\"",{stdio:"ignore"});wp=fs.readFileSync(tOut);try{fs.unlinkSync(tIn);fs.unlinkSync(tOut)}catch(_){}}await sock.sendMessage(jid,{sticker:wp},{quoted:msg})}catch(e){await sock.sendMessage(jid,{text:"⚡💢 "+e.message},{quoted:msg})}}},
+  return { ok: false, erro: ultimoErro }
+}
 
-s3:{aliases:["esticar","stretch","s3fig","gordo"],async executar({sock,msg,db,isDono,isSubDono,utils}){const jid=msg.key.remoteJid,sJ=[msg.key.participant,msg.key.remoteJid,msg.participant].filter(Boolean);if(!checarVip(db,sJ,isDono,isSubDono))return sock.sendMessage(jid,{text:"⚡ Só nobres!"},{quoted:msg});const ctx=msg.message?.extendedTextMessage?.contextInfo||{},q=ctx.quotedMessage;if(!q)return sock.sendMessage(jid,{text:"🎨 Responda figurinha, foto ou vídeo com */s3*"},{quoted:msg});const eSti=q.stickerMessage,eImg=q.imageMessage,eVid=q.videoMessage;if(!eSti&&!eImg&&!eVid)return sock.sendMessage(jid,{text:"🎨 Responda figurinha, foto ou vídeo!"},{quoted:msg});await sock.sendMessage(jid,{text:"⚡ Engordando 40%..."},{quoted:msg});try{const sharp=require("sharp"),ff=require("@ffmpeg-installer/ffmpeg").path,os=require("os"),{execSync}=require("child_process");let alvo;if(eSti)alvo={...msg,message:{stickerMessage:q.stickerMessage}};else if(eImg)alvo={...msg,message:{imageMessage:q.imageMessage}};else alvo={...msg,message:{videoMessage:q.videoMessage}};const buf=await utils.downloadMediaMessage(alvo,"buffer",{},{logger:console,reuploadRequest:sock.updateMediaMessage});const T=512;const alturaFinal=Math.floor(T*0.6);const paddingVertical=Math.floor((T-alturaFinal)/2);let resultado;if(eVid){const tIn=path.join(os.tmpdir(),"s3_"+Date.now()+".mp4");const tOut=path.join(os.tmpdir(),"s3_"+Date.now()+".webp");fs.writeFileSync(tIn,buf);execSync("\""+ff+"\" -y -i \""+tIn+"\" -vcodec libwebp -filter:v \"fps=15,scale=512:307:force_original_aspect_ratio=disable,pad=512:512:0:102:color=0x00000000\" -lossless 0 -compression_level 6 -q:v 60 -loop 0 -preset default -an -vsync 0 -s 512:512 \""+tOut+"\"",{stdio:"ignore"});resultado=fs.readFileSync(tOut);try{fs.unlinkSync(tIn);fs.unlinkSync(tOut)}catch(_){}}else{resultado=await sharp(buf,{animated:false}).resize(512,alturaFinal,{fit:"fill"}).extend({top:paddingVertical,bottom:paddingVertical,left:0,right:0,background:{r:0,g:0,b:0,alpha:0}}).webp({quality:90}).toBuffer()}await sock.sendMessage(jid,{sticker:resultado},{quoted:msg})}catch(e){await sock.sendMessage(jid,{text:"⚡💢 "+e.message},{quoted:msg})}}},
+const VERDADES = ["Qual é o seu maior sonho?","Qual foi o momento mais feliz da sua vida?","Qual é o seu maior medo?","Quem é a pessoa que você mais admira?","Qual foi a coisa mais engraçada que já te aconteceu?","Qual é a sua comida favorita?","Qual a música que mais te marca?","Qual foi o melhor presente que você já ganhou?","Se você pudesse viajar pra qualquer lugar agora, pra onde iria?","Qual é o seu hobby favorito?","Qual filme você já assistiu mais de 10 vezes?","O que te faz rir muito?","Qual é a sua maior qualidade?","E o seu maior defeito?","Se você pudesse ter um superpoder, qual seria?","Qual foi a última vez que você riu até chorar?","Qual é o seu desenho ou anime favorito?","Qual é a coisa mais aleatória que você já pesquisou?","Qual animal você seria se pudesse escolher?","Qual foi a melhor fase da sua vida até agora?"]
+const DESAFIOS = ["Mande um áudio cantando uma música aleatória","Tire uma selfie com pose engraçada","Marque alguém do grupo e diga 'você é top'","Mande áudio imitando alguém do grupo","Conte uma piada pra todos","Fale 'bom dia' pra 3 pessoas aleatórias e mande print","Escreva um poema de 4 linhas sobre alguém do grupo","Mande áudio com sotaque diferente","Escreva 3 coisas aleatórias sobre você","Mande uma foto sua de um ângulo bem feio","Faça uma declaração divertida pra alguém do grupo","Mande áudio falando 'miau' 5 vezes","Marque alguém e elogie 3 coisas nessa pessoa","Escreva um status engraçado e mande print","Faça uma dancinha e mande o vídeo","Fale só em emojis pelas próximas 3 mensagens","Descreva alguém do grupo sem falar o nome","Mande uma foto sua de 2 anos atrás"]
 
-tiktok:{aliases:["tt","ttk"],async executar({sock,msg,args,db,isDono,isSubDono}){const jid=msg.key.remoteJid,sJ=[msg.key.participant,msg.key.remoteJid,msg.participant].filter(Boolean);if(!checarVip(db,sJ,isDono,isSubDono))return sock.sendMessage(jid,{text:"⚡ Só nobres!"},{quoted:msg});const link=args[0];if(!link||!/tiktok\.com|vm\.tiktok|vt\.tiktok/i.test(link))return sock.sendMessage(jid,{text:"📥 *!tiktok <link>*"},{quoted:msg});await sock.sendMessage(jid,{text:"⚡ Baixando..."},{quoted:msg});try{const url=await baixarTikTok(link),r=await fetch(url);await sock.sendMessage(jid,{video:Buffer.from(await r.arrayBuffer()),mimetype:"video/mp4",fileName:"tiktok.mp4"},{quoted:msg})}catch(e){await sock.sendMessage(jid,{text:"⚡💢 "+e.message},{quoted:msg})}}},
+const BOLAS = [
+  { id: "comum", nome: "Comum", emoji: "⚪", dano: 16, ch: 0, ef: "nenhum", desc: "Básica equilibrada" },
+  { id: "fogo", nome: "Fogo", emoji: "🔴", dano: 18, ch: 0.30, ef: "queimar", desc: "30% Queimar" },
+  { id: "gelo", nome: "Gelo", emoji: "🔵", dano: 12, ch: 0.30, ef: "congelar", desc: "30% Congelar" },
+  { id: "eletrica", nome: "Elétrica", emoji: "🟡", dano: 17, ch: 0.35, ef: "critico", desc: "35% Crit x2" },
+  { id: "pesada", nome: "Pesada", emoji: "🟤", dano: 24, ch: 0.25, ef: "armadura", desc: "25% -armadura" },
+  { id: "rapida", nome: "Rápida", emoji: "🟢", dano: 11, ch: 0.50, ef: "duplo", desc: "50% Ataque duplo" },
+  { id: "venenosa", nome: "Venenosa", emoji: "🟣", dano: 9, ch: 0.60, ef: "veneno", desc: "60% Veneno" },
+  { id: "cura", nome: "Cura", emoji: "🩷", dano: 8, ch: 0.70, ef: "cura", desc: "70% Cura" },
+  { id: "dourada", nome: "Dourada", emoji: "🌟", dano: 19, ch: 0.35, ef: "brilho", desc: "35% Brilho x1.8" },
+  { id: "diamante", nome: "Diamante", emoji: "💎", dano: 22, ch: 0.35, ef: "perfurar", desc: "35% Golpe x3" }
+]
 
-smeme:{aliases:["smem","memefig"],async executar({sock,msg,args,db,isDono,isSubDono,utils}){const jid=msg.key.remoteJid,sJ=[msg.key.participant,msg.key.remoteJid,msg.participant].filter(Boolean);if(!checarVip(db,sJ,isDono,isSubDono))return sock.sendMessage(jid,{text:"⚡ Só nobres!"},{quoted:msg});const t=args.join(" ").trim();if(!t)return sock.sendMessage(jid,{text:"🎨 *!smeme <texto>*"},{quoted:msg});const ctx=msg.message?.extendedTextMessage?.contextInfo||{},q=ctx.quotedMessage;if(!q?.stickerMessage)return sock.sendMessage(jid,{text:"🎨 Responda figurinha!"},{quoted:msg});await sock.sendMessage(jid,{text:"⚡ Criando..."},{quoted:msg});try{const sharp=require("sharp");const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");const alvo={...msg,message:{stickerMessage:q.stickerMessage}},buf=await utils.downloadMediaMessage(alvo,"buffer",{},{logger:console,reuploadRequest:sock.updateMediaMessage});const texto=t.toUpperCase(),T=512,F=texto.length>30?36:texto.length>15?48:60;const svg=`<svg width="${T}" height="${T}" xmlns="http://www.w3.org/2000/svg"><text x="${T/2}" y="${F+10}" font-family="Arial, sans-serif" font-size="${F}" font-weight="900" fill="#FFFFFF" stroke="#000000" stroke-width="4" text-anchor="middle" paint-order="stroke fill">${esc(texto)}</text></svg>`;const ov=await sharp(Buffer.from(svg)).png().toBuffer();const out=await sharp(buf,{animated:false}).resize(T,T,{fit:"contain",background:{r:0,g:0,b:0,alpha:0}}).composite([{input:ov,top:0,left:0}]).webp({quality:90}).toBuffer();await sock.sendMessage(jid,{sticker:out},{quoted:msg})}catch(e){await sock.sendMessage(jid,{text:"⚡💢 "+e.message},{quoted:msg})}}},
+function sortear3Bolas() {
+  const pool = [...BOLAS]
+  const r = []
+  for (let i = 0; i < 3; i++) {
+    const idx = Math.floor(Math.random() * pool.length)
+    r.push(pool.splice(idx, 1)[0])
+  }
+  return r
+}
 
-procurado:{aliases:["wanted","procurase"],async executar({sock,msg,db,isDono,isSubDono,utils}){const jid=msg.key.remoteJid,sJ=[msg.key.participant,msg.key.remoteJid,msg.participant].filter(Boolean);if(!checarVip(db,sJ,isDono,isSubDono))return sock.sendMessage(jid,{text:"⚡ Só nobres!"},{quoted:msg});const ctx=msg.message?.extendedTextMessage?.contextInfo||{},q=ctx.quotedMessage;if(!q?.stickerMessage)return sock.sendMessage(jid,{text:"🎨 Responda figurinha!"},{quoted:msg});await sock.sendMessage(jid,{text:"⚡ Criando..."},{quoted:msg});try{const sharp=require("sharp"),alvo={...msg,message:{stickerMessage:q.stickerMessage}},buf=await utils.downloadMediaMessage(alvo,"buffer",{},{logger:console,reuploadRequest:sock.updateMediaMessage}),T=512,FT=340;const foto=await sharp(buf,{animated:false}).resize(FT,FT,{fit:"cover"}).grayscale().modulate({brightness:0.95}).extend({top:6,bottom:6,left:6,right:6,background:{r:43,g:24,b:16,alpha:1}}).png().toBuffer();const svg=`<svg width="${T}" height="${T}" xmlns="http://www.w3.org/2000/svg"><rect width="${T}" height="${T}" fill="#D4B483"/><rect x="6" y="6" width="${T-12}" height="${T-12}" fill="none" stroke="#2B1810" stroke-width="5"/><text x="${T/2}" y="80" font-family="Georgia, serif" font-size="76" font-weight="900" fill="#2B1810" text-anchor="middle">WANTED</text><text x="${T/2}" y="112" font-family="Georgia, serif" font-size="20" font-weight="bold" fill="#5C3D1E" text-anchor="middle">DEAD OR ALIVE</text><text x="${T/2}" y="${T-42}" font-family="Georgia, serif" font-size="26" font-weight="900" fill="#2B1810" text-anchor="middle">★ REWARD ★</text><text x="${T/2}" y="${T-14}" font-family="Georgia, serif" font-size="24" font-weight="bold" fill="#5C3D1E" text-anchor="middle">$ 999.999.999</text></svg>`;const cartaz=await sharp(Buffer.from(svg)).png().toBuffer(),res=await sharp(cartaz).composite([{input:foto,top:138,left:Math.floor((T-(FT+12))/2)}]).webp({quality:92}).toBuffer();await sock.sendMessage(jid,{sticker:res},{quoted:msg})}catch(e){await sock.sendMessage(jid,{text:"⚡💢 "+e.message},{quoted:msg})}}},
+async function enviarFigTexto(sock, jid, buf, texto, quoted) {
+  try {
+    const sharp = require("sharp")
+    const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    const t = texto.toUpperCase()
+    const T = 512
+    const F = t.length > 30 ? 36 : t.length > 15 ? 48 : 60
+    const svg = `<svg width="${T}" height="${T}" xmlns="http://www.w3.org/2000/svg"><text x="${T/2}" y="${F+10}" font-family="Arial, sans-serif" font-size="${F}" font-weight="900" fill="#FFFFFF" stroke="#000000" stroke-width="4" text-anchor="middle" paint-order="stroke fill">${esc(t)}</text></svg>`
+    const ov = await sharp(Buffer.from(svg)).png().toBuffer()
+    const out = await sharp(buf, { animated: false }).resize(T, T, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).composite([{ input: ov, top: 0, left: 0 }]).webp({ quality: 90 }).toBuffer()
+    await sock.sendMessage(jid, { sticker: out }, { quoted })
+  } catch (e) { await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted }) }
+}
 
-wasted:{aliases:["morto","morreu"],async executar({sock,msg,db,isDono,isSubDono,utils}){const jid=msg.key.remoteJid,sJ=[msg.key.participant,msg.key.remoteJid,msg.participant].filter(Boolean);if(!checarVip(db,sJ,isDono,isSubDono))return sock.sendMessage(jid,{text:"⚡ Só nobres!"},{quoted:msg});const ctx=msg.message?.extendedTextMessage?.contextInfo||{},q=ctx.quotedMessage;if(!q?.stickerMessage)return sock.sendMessage(jid,{text:"🎨 Responda figurinha!"},{quoted:msg});await sock.sendMessage(jid,{text:"⚡ Aplicando..."},{quoted:msg});try{const sharp=require("sharp"),alvo={...msg,message:{stickerMessage:q.stickerMessage}},buf=await utils.downloadMediaMessage(alvo,"buffer",{},{logger:console,reuploadRequest:sock.updateMediaMessage}),T=512;const base=await sharp(buf,{animated:false}).resize(T,T,{fit:"contain",background:{r:0,g:0,b:0,alpha:0}}).modulate({brightness:0.55,saturation:0.15}).png().toBuffer(),baseGray=await sharp(base).grayscale().toBuffer();const svgW=`<svg width="${T}" height="${T}" xmlns="http://www.w3.org/2000/svg"><text x="${T/2}" y="${T/2+25}" font-family="Impact, 'Arial Black', sans-serif" font-size="95" font-weight="900" fill="#CC0000" stroke="#000000" stroke-width="4" text-anchor="middle" transform="rotate(-12 ${T/2} ${T/2})">WASTED</text></svg>`;const ov=await sharp(Buffer.from(svgW)).png().toBuffer(),res=await sharp(baseGray).composite([{input:ov,top:0,left:0}]).webp({quality:92}).toBuffer();await sock.sendMessage(jid,{sticker:res},{quoted:msg})}catch(e){await sock.sendMessage(jid,{text:"⚡💢 "+e.message},{quoted:msg})}}},
+module.exports = {
+  menu: "menu-vip",
+  grupoOnly: false,
+  adminOnly: false,
+  donoOnly: false,
 
-rename:{aliases:["renomear","nomefig","setnome"],async executar({sock,msg,args,db,isDono,isSubDono,utils}){const jid=msg.key.remoteJid,sJ=[msg.key.participant,msg.key.remoteJid,msg.participant].filter(Boolean);if(!checarVip(db,sJ,isDono,isSubDono))return sock.sendMessage(jid,{text:"⚡ Só nobres!"},{quoted:msg});const t=args.join(" ").trim();if(!t)return sock.sendMessage(jid,{text:"🎨 *!rename <texto>* (responda figurinha)"},{quoted:msg});const ctx=msg.message?.extendedTextMessage?.contextInfo||{},q=ctx.quotedMessage;if(!q?.stickerMessage)return sock.sendMessage(jid,{text:"🎨 Responda figurinha!"},{quoted:msg});await sock.sendMessage(jid,{text:"⚡ Renomeando..."},{quoted:msg});try{const alvo={...msg,message:{stickerMessage:q.stickerMessage}},buf=await utils.downloadMediaMessage(alvo,"buffer",{},{logger:console,reuploadRequest:sock.updateMediaMessage});let outBuf=buf;try{const{Image}=require("node-webpmux"),img=new Image();await img.load(buf);const json={"sticker-pack-id":"com.zenitsu."+Date.now(),"sticker-pack-name":t,"sticker-pack-publisher":t,"emojis":["⚡"]};const exifAttr=Buffer.from([0x49,0x49,0x2A,0x00,0x08,0x00,0x00,0x00,0x01,0x00,0x41,0x57,0x07,0x00,0x00,0x00,0x00,0x00,0x16,0x00,0x00,0x00]),jsonBuf=Buffer.from(JSON.stringify(json),"utf8"),exif=Buffer.concat([exifAttr,jsonBuf]);exif.writeUIntLE(jsonBuf.length,14,4);img.exif=exif;outBuf=await img.save(null)}catch(e){console.log("Aviso exif:",e.message)}await sock.sendMessage(jid,{sticker:outBuf,packname:t,author:t},{quoted:msg});await sock.sendMessage(jid,{text:"✅ Renomeado: *"+t+"*"},{quoted:msg})}catch(e){await sock.sendMessage(jid,{text:"⚡💢 "+e.message},{quoted:msg})}}},
+  commands: {
 
-meuvip:{aliases:["vipinfo"],async executar({sock,msg,db,isDono,isSubDono}){const jid=msg.key.remoteJid,sJ=[msg.key.participant,msg.key.remoteJid,msg.participant].filter(Boolean),vips=(db.vips()||{}).vips||{};let info=null;for(const j of sJ){const num=String(j).split("@")[0].split(":")[0].replace(/\D/g,"");for(const[jV,i]of Object.entries(vips)){if(String(jV).split("@")[0].split(":")[0].replace(/\D/g,"")===num){if(i.expira==="inf"||i.expira>Date.now()){info=i;break}}}if(info)break}if(isDono||isSubDono)return sock.sendMessage(jid,{text:"⚡ *MEU VIP*\n\n👤 "+(isDono?"👑 IMPERADOR":"🎖️ MARECHAL"),mentions:[msg.key.participant||jid]},{quoted:msg});if(!info)return sock.sendMessage(jid,{text:"⚡ Você não é nobre!"},{quoted:msg});await sock.sendMessage(jid,{text:"⚡ *MEU VIP*\n\n👤 "+(info.expira==="inf"?"INFINITO ♾️":"expira em "+new Date(info.expira).toLocaleString("pt-BR"))},{quoted:msg})}},
+    // ============ MENU VIP ============
+    menuvip: {
+      aliases: ["vipmenu", "menuv"],
+      async executar({ sock, msg, prefixoAtivo, db, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid
+        const p = prefixoAtivo
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
 
-verdadedesafio:{aliases:["vdd"],grupoOnly:true,async executar({sock,msg,db,utils,sender,isDono,isSubDono}){const jid=msg.key.remoteJid,sJ=[msg.key.participant,msg.key.remoteJid,msg.participant].filter(Boolean);if(!checarVip(db,sJ,isDono,isSubDono))return sock.sendMessage(jid,{text:"⚡ Só nobres!"},{quoted:msg});const g=dbLer("verdadedesafio.json",{jogos:{}});g.jogos=g.jogos||{};if(g.jogos[jid]?.aberto)return sock.sendMessage(jid,{text:"⚡ Já tem jogo!"},{quoted:msg});g.jogos[jid]={aberto:true,jogadores:[sender],atual:0,fase:"lobby",ultimaPergunta:null};dbSalvar("verdadedesafio.json",g);await sock.sendMessage(jid,{text:"⚡ Lobby!\n👤 @"+utils.soNumero(sender)+"\nUse *!entrardesafio*",mentions:[sender]},{quoted:msg})}},
-entrardesafio:{aliases:["participo"],grupoOnly:true,async executar({sock,msg,db,utils,sender}){const jid=msg.key.remoteJid,g=dbLer("verdadedesafio.json",{jogos:{}}),j=g.jogos?.[jid];if(!j||!j.aberto)return sock.sendMessage(jid,{text:"⚡ Sem jogo!"},{quoted:msg});if(j.jogadores.includes(sender))return; j.jogadores.push(sender);dbSalvar("verdadedesafio.json",g);await sock.sendMessage(jid,{text:"⚡ @"+utils.soNumero(sender)+" entrou! *"+j.jogadores.length+"*",mentions:[sender]},{quoted:msg})}},
-iniciardesafio:{grupoOnly:true,async executar({sock,msg,db,isDono,isSubDono}){const jid=msg.key.remoteJid,sJ=[msg.key.participant,msg.key.remoteJid,msg.participant].filter(Boolean);if(!checarVip(db,sJ,isDono,isSubDono))return sock.sendMessage(jid,{text:"⚡ Só nobres!"},{quoted:msg});const g=dbLer("verdadedesafio.json",{jogos:{}}),j=g.jogos?.[jid];if(!j||!j.aberto)return sock.sendMessage(jid,{text:"⚡ Sem jogo!"},{quoted:msg});if(j.jogadores.length<2)return sock.sendMessage(jid,{text:"⚡ Precisa 2+!"},{quoted:msg});j.fase="jogando";j.atual=0;j.aberto=false;dbSalvar("verdadedesafio.json",g);await sock.sendMessage(jid,{text:"⚡ JOGO INICIADO!"},{quoted:msg});setTimeout(()=>proximoJogador(sock,jid,db),2000)}},
-cancelardesafio:{grupoOnly:true,async executar({sock,msg,db,isDono,isSubDono}){const jid=msg.key.remoteJid,g=dbLer("verdadedesafio.json",{jogos:{}});if(g.jogos?.[jid]){delete g.jogos[jid];dbSalvar("verdadedesafio.json",g);await sock.sendMessage(jid,{text:"⚡ Cancelado!"},{quoted:msg})}}},
-sairdesafio:{grupoOnly:true,async executar({sock,msg,db,utils,sender}){const jid=msg.key.remoteJid,g=dbLer("verdadedesafio.json",{jogos:{}}),j=g.jogos?.[jid];if(!j)return;const i=j.jogadores.indexOf(sender);if(i===-1)return; j.jogadores.splice(i,1);if(j.jogadores.length===0)delete g.jogos[jid];dbSalvar("verdadedesafio.json",g);await sock.sendMessage(jid,{text:"⚡ @"+utils.soNumero(sender)+" saiu!"},{quoted:msg})}},
-verdade:{aliases:["v"],grupoOnly:true,async executar({sock,msg,db,utils,sender}){await processarEscolha(sock,msg,db,utils,sender,"verdade")}},
-desafio:{aliases:["d"],grupoOnly:true,async executar({sock,msg,db,utils,sender}){await processarEscolha(sock,msg,db,utils,sender,"desafio")}},
+        let infoVip = null
+        const vips = (db.vips() || {}).vips || {}
+        for (const j of sJ) {
+          const num = String(j).split("@")[0].split(":")[0].replace(/\D/g, "")
+          for (const [jV, i] of Object.entries(vips)) {
+            if (String(jV).split("@")[0].split(":")[0].replace(/\D/g, "") === num) {
+              if (i.expira === "inf" || i.expira > Date.now()) { infoVip = i; break }
+            }
+          }
+          if (infoVip) break
+        }
 
-bolavsbola:{aliases:["bvb"],grupoOnly:true,async executar({sock,msg,db,utils,sender,isDono,isSubDono}){const jid=msg.key.remoteJid,sJ=[msg.key.participant,msg.key.remoteJid,msg.participant].filter(Boolean);if(!checarVip(db,sJ,isDono,isSubDono))return sock.sendMessage(jid,{text:"⚡ Só nobres!"},{quoted:msg});const g=dbLer("batalhadebola.json",{arenas:{}});g.arenas=g.arenas||{};if(g.arenas[jid])return sock.sendMessage(jid,{text:"⚡ Já tem arena!"},{quoted:msg});g.arenas[jid]={fase:"lobby",rodada:1,clones:[],jogadores:[{jid:sender,vitorias:0,bolas:[],escolhida:-1,hp:100,hpMax:100,posX:0,posY:2,dx:1,dy:0,congelado:false,paralisado:false,cego:false,queimando:0,lava:0,envenenado:0,armaduraQuebrada:0,defesa:0,lentidao:0,turboPendente:0,bateuParede:false}]};dbSalvar("batalhadebola.json",g);await sock.sendMessage(jid,{text:"⚡ Lobby BVB!\n👤 @"+utils.soNumero(sender)+"\nUse *!entrararena*",mentions:[sender]},{quoted:msg})}},
-entrararena:{aliases:["jarentena"],grupoOnly:true,async executar({sock,msg,db,utils,sender}){const jid=msg.key.remoteJid,g=dbLer("batalhadebola.json",{arenas:{}}),a=g.arenas?.[jid];if(!a||a.fase!=="lobby")return sock.sendMessage(jid,{text:"⚡ Sem arena!"},{quoted:msg});if(a.jogadores.length>=2)return sock.sendMessage(jid,{text:"⚡ Cheio!"},{quoted:msg});if(a.jogadores.find(p=>utils.soNumero(p.jid)===utils.soNumero(sender)))return; a.jogadores.push({jid:sender,vitorias:0,bolas:[],escolhida:-1,hp:100,hpMax:100,posX:4,posY:2,dx:-1,dy:0,congelado:false,paralisado:false,cego:false,queimando:0,lava:0,envenenado:0,armaduraQuebrada:0,defesa:0,lentidao:0,turboPendente:0,bateuParede:false});dbSalvar("batalhadebola.json",g);await sock.sendMessage(jid,{text:"⚡ @"+utils.soNumero(sender)+" entrou! *"+a.jogadores.length+"/2*",mentions:[sender]},{quoted:msg})}},
-iniciararena:{grupoOnly:true,async executar({sock,msg,db,isDono,isSubDono}){const jid=msg.key.remoteJid,sJ=[msg.key.participant,msg.key.remoteJid,msg.participant].filter(Boolean);if(!checarVip(db,sJ,isDono,isSubDono))return sock.sendMessage(jid,{text:"⚡ Só nobres!"},{quoted:msg});const g=dbLer("batalhadebola.json",{arenas:{}}),a=g.arenas?.[jid];if(!a||a.fase!=="lobby")return sock.sendMessage(jid,{text:"⚡ Sem arena!"},{quoted:msg});if(a.jogadores.length<2)return sock.sendMessage(jid,{text:"⚡ Precisa 2!"},{quoted:msg});await sock.sendMessage(jid,{text:"⚡ Batalha! @"+nJid(a.jogadores[0].jid)+" VS @"+nJid(a.jogadores[1].jid),mentions:[a.jogadores[0].jid,a.jogadores[1].jid]});await sleep(2000);await iniciarRoundBVB(sock,jid,db,a)}},
-escolherbola:{grupoOnly:true,async executar({sock,msg,args,db,utils,sender}){const jid=msg.key.remoteJid,g=dbLer("batalhadebola.json",{arenas:{}}),a=g.arenas?.[jid];if(!a||a.fase!=="escolhendo")return sock.sendMessage(jid,{text:"⚡ Fora de hora!"},{quoted:msg});const p=a.jogadores.find(x=>utils.soNumero(x.jid)===utils.soNumero(sender));if(!p||p.escolhida>=0)return;const n=parseInt(args[0]);if(!n||n<1||n>3)return sock.sendMessage(jid,{text:"⚡ *!escolherbola 1/2/3*"},{quoted:msg});p.escolhida=n-1;dbSalvar("batalhadebola.json",g);await sock.sendMessage(jid,{text:"⚡ @"+utils.soNumero(sender)+" escolheu *"+n+"*!",mentions:[sender]},{quoted:msg});if(a.jogadores.every(x=>x.escolhida>=0)){await sleep(1500);await batalharBVB(sock,jid,db,a)}}},
-cancelararena:{grupoOnly:true,async executar({sock,msg,db,isDono,isSubDono}){const jid=msg.key.remoteJid,g=dbLer("batalhadebola.json",{arenas:{}});if(g.arenas?.[jid]){delete g.arenas[jid];dbSalvar("batalhadebola.json",g);await sock.sendMessage(jid,{text:"⚡ Cancelada!"},{quoted:msg})}}},
-sairarena:{aliases:["sairbvb"],grupoOnly:true,async executar({sock,msg,db,utils,sender}){const jid=msg.key.remoteJid,g=dbLer("batalhadebola.json",{arenas:{}}),a=g.arenas?.[jid];if(!a)return;const i=a.jogadores.findIndex(p=>utils.soNumero(p.jid)===utils.soNumero(sender));if(i===-1)return; a.jogadores.splice(i,1);if(a.jogadores.length===0)delete g.arenas[jid];dbSalvar("batalhadebola.json",g);await sock.sendMessage(jid,{text:"⚡ @"+utils.soNumero(sender)+" saiu!"},{quoted:msg})}},
+        if (!infoVip && !isDono && !isSubDono) {
+          return sock.sendMessage(jid, { text: "🌙💜 *SÓ VIP*\n\n> _\"Meus olhos veem que você não é nobre.\"_\n\n_\"Vá embora.\"_" }, { quoted: msg })
+        }
 
-jogodavelha:{aliases:["velha"],grupoOnly:true,async executar({sock,msg,db,utils,sender}){const jid=msg.key.remoteJid,alvo=utils.getAlvo(msg);if(!alvo)return sock.sendMessage(jid,{text:"❌ *!jogodavelha @user*"},{quoted:msg});if(utils.soNumero(alvo)===utils.soNumero(sender))return; const g=dbLer("velha.json",{jogos:{}});if(g.jogos?.[jid])return sock.sendMessage(jid,{text:"⚡ Já tem jogo!"},{quoted:msg});g.jogos=g.jogos||{};g.jogos[jid]={j1:sender,j2:alvo,vez:1,tabuleiro:{},msg:"Vez de ❌",ativo:true};dbSalvar("velha.json",g);await sock.sendMessage(jid,{text:renderVelha(g.jogos[jid]),mentions:[sender,alvo]},{quoted:msg})}},
-jv:{aliases:["jogarvelha"],grupoOnly:true,async executar({sock,msg,args,db,utils,sender}){const jid=msg.key.remoteJid,g=dbLer("velha.json",{jogos:{}}),j=g.jogos?.[jid];if(!j)return sock.sendMessage(jid,{text:"⚡ Sem jogo!"},{quoted:msg});const num=utils.soNumero(sender),souJ1=utils.soNumero(j.j1)===num,souJ2=utils.soNumero(j.j2)===num;if(!souJ1&&!souJ2)return;if((j.vez===1&&!souJ1)||(j.vez===2&&!souJ2))return sock.sendMessage(jid,{text:"⚡ Não é sua vez!"},{quoted:msg});const pos=parseInt(args[0])-1;if(isNaN(pos)||pos<0||pos>8)return sock.sendMessage(jid,{text:"⚡ *!jv <1-9>*"},{quoted:msg});if(j.tabuleiro[pos])return; j.tabuleiro[pos]=j.vez===1?"❌":"⭕";const v=checarVitoria(j);if(v){j.ativo=false;j.msg="🏆 *"+v+"* VENCEU!";dbSalvar("velha.json",g);return sock.sendMessage(jid,{text:renderVelha(j),mentions:[j.j1,j.j2]},{quoted:msg})}if(Object.keys(j.tabuleiro).length===9){j.ativo=false;j.msg="🤝 *EMPATE!*";dbSalvar("velha.json",g);return sock.sendMessage(jid,{text:renderVelha(j),mentions:[j.j1,j.j2]},{quoted:msg})}j.vez=j.vez===1?2:1;j.msg="Vez de "+(j.vez===1?"❌":"⭕");dbSalvar("velha.json",g);await sock.sendMessage(jid,{text:renderVelha(j),mentions:[j.j1,j.j2]},{quoted:msg})}},
-desistirvelha:{aliases:["fimvelha"],grupoOnly:true,async executar({sock,msg,db,utils,sender}){const jid=msg.key.remoteJid,g=dbLer("velha.json",{jogos:{}}),j=g.jogos?.[jid];if(!j)return;const num=utils.soNumero(sender);if(utils.soNumero(j.j1)!==num&&utils.soNumero(j.j2)!==num)return; delete g.jogos[jid];dbSalvar("velha.json",g);await sock.sendMessage(jid,{text:"⚡ Cancelado!",mentions:[j.j1,j.j2]},{quoted:msg})}}
+        const texto = "🌙💜 *MENU VIP - KOKUSHIBO* 💜🌙\n\n" +
+          "> _\"Apenas nobres podem ver esses segredos.\"_\n\n" +
+          "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+          "🎵 *MÚSICA*\n" +
+          "▸ `" + p + "play <nome ou link>`\n\n" +
+          "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+          "🤖 *AUTOMAÇÃO*\n" +
+          "▸ `" + p + "autofig on/off`\n" +
+          "▸ `" + p + "autottk on/off`\n\n" +
+          "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+          "🎨 *CRIAÇÃO*\n" +
+          "▸ `" + p + "logo <estilo> <texto>`\n\n" +
+          "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+          "🎨 *FIGURINHAS*\n" +
+          "▸ `" + p + "brat / " + p + "ttps / " + p + "s`\n" +
+          "▸ `" + p + "smeme / " + p + "s3 / " + p + "rename`\n" +
+          "▸ `" + p + "procurado / " + p + "wasted / " + p + "revela`\n\n" +
+          "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+          "📥 *DOWNLOADS*\n" +
+          "▸ `" + p + "tiktok <link>`\n\n" +
+          "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+          "🎮 *JOGOS*\n" +
+          "▸ `" + p + "verdadedesafio`\n" +
+          "▸ `" + p + "bolavsbola`\n" +
+          "▸ `" + p + "jogodavelha`\n\n" +
+          "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+          "⚔️ *EXTRAS*\n" +
+          "▸ `" + p + "fraseprofunda`\n" +
+          "▸ `" + p + "mito`\n" +
+          "▸ `" + p + "napoleao`\n\n" +
+          "━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
+          "> 💜 _\"A lua recompensa os nobres.\"_"
 
-}}
+        const cfg = db.config()
+        if (cfg.fotoMenu) {
+          const buf = Buffer.from(cfg.fotoMenu, "base64")
+          if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "kokushibo.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
+          return sock.sendMessage(jid, { image: buf, caption: texto }, { quoted: msg })
+        }
+        await sock.sendMessage(jid, { text: texto }, { quoted: msg })
+      }
+    },
+
+    // ============ PLAY ============
+    play: {
+      aliases: ["tocar", "musica", "music"],
+      async executar({ sock, msg, args, db, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+
+        if (!checarVip(db, sJ, isDono, isSubDono)) {
+          return sock.sendMessage(jid, { text: "🌙💜 *SÓ VIP*\n\n> _\"Música é privilégio dos nobres.\"_\n\n_\"Vá embora, mortal.\"_" }, { quoted: msg })
+        }
+
+        const busca = args.join(" ").trim()
+        if (!busca) {
+          return sock.sendMessage(jid, {
+            text: "🌙🎵 *PLAY*\n\n" +
+              "> _\"Me diga o que quer ouvir.\"_\n\n" +
+              "💡 `!play <nome da música>`\n" +
+              "💡 `!play <link do YouTube>`\n\n" +
+              "⚠️ _Limite: 20 minutos_"
+          }, { quoted: msg })
+        }
+
+        await sock.sendMessage(jid, {
+          text: "🌙🎵 *BUSCANDO...*\n\n" +
+            "> _\"Meus 6 olhos procuram " + busca + "...\"_\n\n" +
+            "📥 _Baixando... aguarde._"
+        }, { quoted: msg })
+
+        try {
+          // Tenta com qualidade 64 kbps primeiro
+          let res = baixarMusica(busca, 64)
+
+          // Se passou de 16MB, tenta com qualidade menor
+          if (res.ok && res.buffer.length > 16 * 1024 * 1024) {
+            await sock.sendMessage(jid, { text: "🌙💢 *MÚSICA MUITO GRANDE*\n\n> _\"Tentando reduzir qualidade...\"_" }, { quoted: msg })
+            res = baixarMusica(busca, 32)
+          }
+
+          if (!res.ok) {
+            return sock.sendMessage(jid, {
+              text: "🌙💥 *ERRO*\n\n" +
+                "> _\"Não consegui baixar...\"_\n\n" +
+                "⚠️ _Verifique se yt-dlp e ffmpeg estão instalados._\n\n" +
+                "💡 *Instalar:*\n" +
+                "▸ `pip install yt-dlp`\n" +
+                "▸ `apt install ffmpeg -y`"
+            }, { quoted: msg })
+          }
+
+          const buffer = res.buffer
+          const tamanhoMB = (buffer.length / 1024 / 1024).toFixed(2)
+
+          if (buffer.length > 16 * 1024 * 1024) {
+            return sock.sendMessage(jid, {
+              text: "🌙💢 *MÚSICA MUITO GRANDE*\n\n" +
+                "> _\"Não consigo enviar " + tamanhoMB + "MB.\"_\n" +
+                "> _\"O WhatsApp tem limite de 16MB.\"_\n\n" +
+                "💡 Tente uma música mais curta."
+            }, { quoted: msg })
+          }
+
+          await sock.sendMessage(jid, {
+            audio: buffer,
+            mimetype: "audio/mp4",
+            ptt: false,
+            fileName: (busca.length > 30 ? busca.slice(0, 30) : busca) + ".mp3"
+          }, { quoted: msg })
+
+          console.log("🎵 Música enviada:", busca, "(" + tamanhoMB + "MB, " + res.qualidade + "kbps)")
+
+        } catch (e) {
+          console.log("Erro play:", e.message)
+          await sock.sendMessage(jid, {
+            text: "🌙💥 *ERRO AO BAIXAR*\n\n⚠️ `" + e.message + "`"
+          }, { quoted: msg })
+        }
+      }
+    },
+
+    // ============ AUTOFIX ============
+    autofig: {
+      aliases: ["autosticker", "autofigu"],
+      async executar({ sock, msg, args, db, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: "🌙 Só funciona em grupos!" }, { quoted: msg })
+
+        const op = (args[0] || "").toLowerCase()
+        const ac = dbLer("autocfg.json", { grupos: {} })
+        ac.grupos = ac.grupos || {}
+        ac.grupos[jid] = ac.grupos[jid] || {}
+
+        if (!["on", "off"].includes(op)) {
+          const s = ac.grupos[jid].autofig ? "ON ✅" : "OFF ❌"
+          return sock.sendMessage(jid, { text: "🌙 *AUTOFIX*\n\n📊 Status: *" + s + "*\n\n💡 Use `!autofig on/off`" }, { quoted: msg })
+        }
+
+        ac.grupos[jid].autofig = op === "on"
+        dbSalvar("autocfg.json", ac)
+
+        await sock.sendMessage(jid, {
+          text: op === "on"
+            ? "🌙✅ *AUTOFIX LIGADO*\n\n> _\"Toda imagem/vídeo virará figurinha.\"_\n> _\"Meus 6 olhos cuidam disso.\"_"
+            : "🌙💤 *AUTOFIX DESLIGADO*\n\n> _\"Chega de figurinhas.\"_"
+        }, { quoted: msg })
+      }
+    },
+
+    autottk: {
+      aliases: ["autotiktok", "autott"],
+      async executar({ sock, msg, args, db, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: "🌙 Só funciona em grupos!" }, { quoted: msg })
+
+        const op = (args[0] || "").toLowerCase()
+        const ac = dbLer("autocfg.json", { grupos: {} })
+        ac.grupos = ac.grupos || {}
+        ac.grupos[jid] = ac.grupos[jid] || {}
+
+        if (!["on", "off"].includes(op)) {
+          const s = ac.grupos[jid].autottk ? "ON ✅" : "OFF ❌"
+          return sock.sendMessage(jid, { text: "🌙 *AUTOTTK*\n\n📊 Status: *" + s + "*\n\n💡 Use `!autottk on/off`" }, { quoted: msg })
+        }
+
+        ac.grupos[jid].autottk = op === "on"
+        dbSalvar("autocfg.json", ac)
+
+        await sock.sendMessage(jid, {
+          text: op === "on"
+            ? "🌙✅ *AUTOTTK LIGADO*\n\n> _\"Todo link do TikTok será baixado.\"_\n> _\"Meus 6 olhos observam.\"_"
+            : "🌙💤 *AUTOTTK DESLIGADO*\n\n> _\"Chega de TikTok.\"_"
+        }, { quoted: msg })
+      }
+    },
+
+    // ============ REVELA ============
+    revela: {
+      aliases: ["revelar", "reveal", "ver"],
+      async executar({ sock, msg, db, utils, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+
+        const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
+        let q = ctx.quotedMessage
+        if (!q) return sock.sendMessage(jid, { text: "🌙👁️ Responda uma mensagem de *ver uma vez* com `!revela`" }, { quoted: msg })
+
+        let isVU = false
+        if (q.viewOnceMessageV2) { q = q.viewOnceMessageV2.message || q.viewOnceMessageV2; isVU = true }
+        else if (q.viewOnceMessage) { q = q.viewOnceMessage.message || q.viewOnceMessage; isVU = true }
+
+        const img = q.imageMessage, vid = q.videoMessage, aud = q.audioMessage
+        if (img && img.viewOnce) isVU = true
+        if (vid && vid.viewOnce) isVU = true
+        if (aud && aud.viewOnce) isVU = true
+        if (!isVU) return sock.sendMessage(jid, { text: "🌙❌ Não é de *ver uma vez*!" }, { quoted: msg })
+        if (!img && !vid && !aud) return sock.sendMessage(jid, { text: "🌙❌ Sem mídia!" }, { quoted: msg })
+
+        await sock.sendMessage(jid, { text: "🌙👁️ *REVELANDO...*\n\n> _\"Meus 6 olhos veem o oculto.\"_" }, { quoted: msg })
+
+        try {
+          const tipo = img ? "image" : vid ? "video" : "audio"
+          const alvo = Object.assign({}, msg, { message: tipo === "image" ? { imageMessage: img } : tipo === "video" ? { videoMessage: vid } : { audioMessage: aud } })
+          const buf = await utils.downloadMediaMessage(alvo, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
+
+          if (tipo === "image") await sock.sendMessage(jid, { image: buf, caption: "🌙👁️ *REVELADO*\n\n_Use !s pra virar figurinha_" }, { quoted: msg })
+          else if (tipo === "video") await sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", caption: "🌙👁️ *REVELADO*" }, { quoted: msg })
+          else await sock.sendMessage(jid, { audio: buf, mimetype: "audio/mp4", ptt: false }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+        }
+      }
+    },
+
+    // ============ BRAT ============
+    brat: {
+      aliases: ["figbrat"],
+      async executar({ sock, msg, args, db, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+
+        const t = args.join(" ").trim()
+        if (!t) return sock.sendMessage(jid, { text: "🌙🎨 `!brat <texto>`" }, { quoted: msg })
+
+        await sock.sendMessage(jid, { text: "🌙🎨 *CRIANDO...*\n\n> _\"A lua molda as palavras.\"_" }, { quoted: msg })
+
+        try {
+          const sharp = require("sharp")
+          const T = 512
+          const F = t.length > 40 ? 40 : t.length > 20 ? 55 : 70
+          const pal = t.split(" ")
+          const lin = []
+          let la = "", mc = t.length > 40 ? 12 : t.length > 20 ? 10 : 8
+          for (const pa of pal) {
+            if ((la + " " + pa).trim().length <= mc) la = (la + " " + pa).trim()
+            else { if (la) lin.push(la); la = pa }
+          }
+          if (la) lin.push(la)
+          const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+          const aL = F + 15
+          const aT = lin.length * aL
+          const yI = (T - aT) / 2 + F
+          let tsp = ""
+          lin.forEach((l, i) => {
+            const y = yI + i * aL
+            tsp += `<text x="${T/2}" y="${y}" font-family="Arial" font-size="${F}" font-weight="bold" fill="#000" text-anchor="middle">${esc(l)}</text>`
+          })
+          const svg = `<svg width="${T}" height="${T}" xmlns="http://www.w3.org/2000/svg"><rect width="${T}" height="${T}" fill="#FFF"/>${tsp}</svg>`
+          const buf = await sharp(Buffer.from(svg)).webp({ quality: 90 }).toBuffer()
+          await sock.sendMessage(jid, { sticker: buf }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+        }
+      }
+    },
+
+    // ============ TTPS ============
+    ttps: {
+      aliases: ["ttpsfig", "colorido", "glow"],
+      async executar({ sock, msg, args, db, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+
+        const t = args.join(" ").trim()
+        if (!t) return sock.sendMessage(jid, { text: "🌙🎨 `!ttps <texto>`" }, { quoted: msg })
+
+        await sock.sendMessage(jid, { text: "🌙🎨 *CRIANDO FIGURINHA COLORIDA...*\n\n> _\"A lua brilha em várias cores.\"_" }, { quoted: msg })
+
+        try {
+          const sharp = require("sharp")
+          const ff = require("@ffmpeg-installer/ffmpeg").path
+          const os = require("os")
+          const T = 512
+          const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+          const F = t.length > 40 ? 40 : t.length > 20 ? 55 : 70
+          const pal = t.split(" ")
+          const lin = []
+          let la = "", mc = t.length > 40 ? 12 : t.length > 20 ? 10 : 8
+          for (const pa of pal) {
+            if ((la + " " + pa).trim().length <= mc) la = (la + " " + pa).trim()
+            else { if (la) lin.push(la); la = pa }
+          }
+          if (la) lin.push(la)
+          const aL = F + 15
+          const aT = lin.length * aL
+          const yI = (T - aT) / 2 + F
+          const totalFrames = 8
+          const frames = []
+          function cor() { const h = Math.floor(Math.random() * 360); return "hsl(" + h + ", 90%, 55%)" }
+          for (let f = 0; f < totalFrames; f++) {
+            const c1 = cor(), c2 = cor(), c3 = cor()
+            const gid = "g" + f
+            let tsp = ""
+            lin.forEach((l, i) => {
+              const y = yI + i * aL
+              tsp += `<text x="${T/2}" y="${y}" font-family="Arial" font-size="${F}" font-weight="900" fill="url(#${gid})" stroke="#000" stroke-width="3" text-anchor="middle" paint-order="stroke fill">${esc(l)}</text>`
+            })
+            const svg = `<svg width="${T}" height="${T}" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="${gid}" x1="${(f*12)%100}%" y1="0%" x2="${((f*12)+80)%100}%" y2="100%"><stop offset="0%" stop-color="${c1}"/><stop offset="50%" stop-color="${c2}"/><stop offset="100%" stop-color="${c3}"/></linearGradient></defs><rect width="${T}" height="${T}" fill="#FFF"/>${tsp}</svg>`
+            const pngBuf = await sharp(Buffer.from(svg)).png().toBuffer()
+            frames.push(pngBuf)
+          }
+          const tmpDir = os.tmpdir()
+          const tmpPrefix = path.join(tmpDir, "ttps_" + Date.now())
+          for (let i = 0; i < frames.length; i++) fs.writeFileSync(tmpPrefix + "_" + i + ".png", frames[i])
+          const outWebp = tmpPrefix + "_out.webp"
+          execSync(`"${ff}" -y -framerate 8 -i "${tmpPrefix}_%d.png" -vcodec libwebp -lossless 0 -compression_level 6 -q:v 70 -loop 0 -preset default -an -vsync 0 -s 512:512 "${outWebp}"`, { stdio: "ignore" })
+          const resultado = fs.readFileSync(outWebp)
+          try {
+            for (let i = 0; i < frames.length; i++) fs.unlinkSync(tmpPrefix + "_" + i + ".png")
+            fs.unlinkSync(outWebp)
+          } catch (_) {}
+          await sock.sendMessage(jid, { sticker: resultado }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+        }
+      }
+    },
+
+    // ============ S ============
+    s: {
+      aliases: ["sticker", "fig"],
+      async executar({ sock, msg, db, isDono, isSubDono, utils }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+
+        const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
+        const q = ctx.quotedMessage
+        const eImg = q && q.imageMessage
+        const eVid = q && q.videoMessage
+        if (!eImg && !eVid) return sock.sendMessage(jid, { text: "🌙🎨 Responda foto/vídeo!" }, { quoted: msg })
+
+        await sock.sendMessage(jid, { text: "🌙🎨 *PREPARANDO...*" }, { quoted: msg })
+
+        try {
+          const sharp = require("sharp")
+          const ff = require("@ffmpeg-installer/ffmpeg").path
+          const os = require("os")
+          const { execSync } = require("child_process")
+          const alvo = Object.assign({}, msg, { message: eImg ? { imageMessage: q.imageMessage } : { videoMessage: q.videoMessage } })
+          const buf = await utils.downloadMediaMessage(alvo, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
+          let wp
+          if (eImg) {
+            wp = await sharp(buf).resize(512, 512, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).webp({ quality: 90 }).toBuffer()
+          } else {
+            const tIn = path.join(os.tmpdir(), "s_" + Date.now() + ".mp4")
+            const tOut = path.join(os.tmpdir(), "s_" + Date.now() + ".webp")
+            fs.writeFileSync(tIn, buf)
+            execSync(`"${ff}" -y -i "${tIn}" -vcodec libwebp -filter:v "fps=15,scale=512:512:force_original_aspect_ratio=decrease" -lossless 0 -compression_level 6 -q:v 50 -loop 0 -preset default -an -vsync 0 -s 512:512 "${tOut}"`, { stdio: "ignore" })
+            wp = fs.readFileSync(tOut)
+            try { fs.unlinkSync(tIn) } catch (_) {}
+            try { fs.unlinkSync(tOut) } catch (_) {}
+          }
+          await sock.sendMessage(jid, { sticker: wp }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+        }
+      }
+    },
+
+    // ============ S3 ============
+    s3: {
+      aliases: ["esticar", "stretch", "s3fig", "gordo"],
+      async executar({ sock, msg, db, isDono, isSubDono, utils }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+
+        const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
+        const q = ctx.quotedMessage
+        if (!q) return sock.sendMessage(jid, { text: "🌙🎨 Responda figurinha, foto ou vídeo com `!s3`" }, { quoted: msg })
+
+        const eSti = q.stickerMessage
+        const eImg = q.imageMessage
+        const eVid = q.videoMessage
+        if (!eSti && !eImg && !eVid) return sock.sendMessage(jid, { text: "🌙🎨 Responda figurinha, foto ou vídeo!" }, { quoted: msg })
+
+        await sock.sendMessage(jid, { text: "🌙🎨 *ENGORDANDO 40%...*" }, { quoted: msg })
+
+        try {
+          const sharp = require("sharp")
+          const ff = require("@ffmpeg-installer/ffmpeg").path
+          const os = require("os")
+          const { execSync } = require("child_process")
+          let alvo
+          if (eSti) alvo = Object.assign({}, msg, { message: { stickerMessage: q.stickerMessage } })
+          else if (eImg) alvo = Object.assign({}, msg, { message: { imageMessage: q.imageMessage } })
+          else alvo = Object.assign({}, msg, { message: { videoMessage: q.videoMessage } })
+          const buf = await utils.downloadMediaMessage(alvo, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
+          const T = 512
+          const alturaFinal = Math.floor(T * 0.6)
+          const paddingVertical = Math.floor((T - alturaFinal) / 2)
+          let resultado
+          if (eVid) {
+            const tIn = path.join(os.tmpdir(), "s3_" + Date.now() + ".mp4")
+            const tOut = path.join(os.tmpdir(), "s3_" + Date.now() + ".webp")
+            fs.writeFileSync(tIn, buf)
+            execSync(`"${ff}" -y -i "${tIn}" -vcodec libwebp -filter:v "fps=15,scale=512:307:force_original_aspect_ratio=disable,pad=512:512:0:102:color=0x00000000" -lossless 0 -compression_level 6 -q:v 60 -loop 0 -preset default -an -vsync 0 -s 512:512 "${tOut}"`, { stdio: "ignore" })
+            resultado = fs.readFileSync(tOut)
+            try { fs.unlinkSync(tIn) } catch (_) {}
+            try { fs.unlinkSync(tOut) } catch (_) {}
+          } else {
+            resultado = await sharp(buf, { animated: false })
+              .resize(512, alturaFinal, { fit: "fill" })
+              .extend({ top: paddingVertical, bottom: paddingVertical, left: 0, right: 0, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+              .webp({ quality: 90 })
+              .toBuffer()
+          }
+          await sock.sendMessage(jid, { sticker: resultado }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+        }
+      }
+    },
+
+    // ============ TIKTOK ============
+    tiktok: {
+      aliases: ["tt", "ttk"],
+      async executar({ sock, msg, args, db, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+
+        const link = args[0]
+        if (!link || !/tiktok\.com|vm\.tiktok|vt\.tiktok/i.test(link)) return sock.sendMessage(jid, { text: "🌙📥 `!tiktok <link>`" }, { quoted: msg })
+
+        await sock.sendMessage(jid, { text: "🌙📥 *BAIXANDO...*" }, { quoted: msg })
+
+        try {
+          const url = await baixarTikTok(link)
+          const r = await fetch(url)
+          await sock.sendMessage(jid, { video: Buffer.from(await r.arrayBuffer()), mimetype: "video/mp4", fileName: "tiktok.mp4" }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+        }
+      }
+    },
+
+    // ============ SMEME ============
+    smeme: {
+      aliases: ["smem", "memefig"],
+      async executar({ sock, msg, args, db, isDono, isSubDono, utils }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+
+        const t = args.join(" ").trim()
+        if (!t) return sock.sendMessage(jid, { text: "🌙🎨 `!smeme <texto>`" }, { quoted: msg })
+
+        const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
+        const q = ctx.quotedMessage
+        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: "🌙🎨 Responda figurinha!" }, { quoted: msg })
+
+        await sock.sendMessage(jid, { text: "🌙🎨 *CRIANDO...*" }, { quoted: msg })
+
+        try {
+          const alvo = Object.assign({}, msg, { message: { stickerMessage: q.stickerMessage } })
+          const buf = await utils.downloadMediaMessage(alvo, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
+          await enviarFigTexto(sock, jid, buf, t, msg)
+        } catch (e) {
+          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+        }
+      }
+    },
+
+    // ============ PROCURADO ============
+    procurado: {
+      aliases: ["wanted", "procurase"],
+      async executar({ sock, msg, db, isDono, isSubDono, utils }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+
+        const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
+        const q = ctx.quotedMessage
+        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: "🌙🎨 Responda figurinha!" }, { quoted: msg })
+
+        await sock.sendMessage(jid, { text: "🌙🎨 *CRIANDO CARTAZ...*" }, { quoted: msg })
+
+        try {
+          const sharp = require("sharp")
+          const alvo = Object.assign({}, msg, { message: { stickerMessage: q.stickerMessage } })
+          const buf = await utils.downloadMediaMessage(alvo, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
+          const T = 512, FT = 340
+          const foto = await sharp(buf, { animated: false }).resize(FT, FT, { fit: "cover" }).grayscale().modulate({ brightness: 0.95 }).extend({ top: 6, bottom: 6, left: 6, right: 6, background: { r: 43, g: 24, b: 16, alpha: 1 } }).png().toBuffer()
+          const svg = `<svg width="${T}" height="${T}" xmlns="http://www.w3.org/2000/svg"><rect width="${T}" height="${T}" fill="#D4B483"/><rect x="6" y="6" width="${T-12}" height="${T-12}" fill="none" stroke="#2B1810" stroke-width="5"/><text x="${T/2}" y="80" font-family="Georgia, serif" font-size="76" font-weight="900" fill="#2B1810" text-anchor="middle">WANTED</text><text x="${T/2}" y="112" font-family="Georgia, serif" font-size="20" font-weight="bold" fill="#5C3D1E" text-anchor="middle">DEAD OR ALIVE</text><text x="${T/2}" y="${T-42}" font-family="Georgia, serif" font-size="26" font-weight="900" fill="#2B1810" text-anchor="middle">★ REWARD ★</text><text x="${T/2}" y="${T-14}" font-family="Georgia, serif" font-size="24" font-weight="bold" fill="#5C3D1E" text-anchor="middle">$ 999.999.999</text></svg>`
+          const cartaz = await sharp(Buffer.from(svg)).png().toBuffer()
+          const res = await sharp(cartaz).composite([{ input: foto, top: 138, left: Math.floor((T-(FT+12))/2) }]).webp({ quality: 92 }).toBuffer()
+          await sock.sendMessage(jid, { sticker: res }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+        }
+      }
+    },
+
+    // ============ WASTED ============
+    wasted: {
+      aliases: ["morto", "morreu"],
+      async executar({ sock, msg, db, isDono, isSubDono, utils }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+
+        const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
+        const q = ctx.quotedMessage
+        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: "🌙🎨 Responda figurinha!" }, { quoted: msg })
+
+        await sock.sendMessage(jid, { text: "🌙🎨 *APLICANDO WASTED...*" }, { quoted: msg })
+
+        try {
+          const sharp = require("sharp")
+          const alvo = Object.assign({}, msg, { message: { stickerMessage: q.stickerMessage } })
+          const buf = await utils.downloadMediaMessage(alvo, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
+          const T = 512
+          const base = await sharp(buf, { animated: false }).resize(T, T, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).modulate({ brightness: 0.55, saturation: 0.15 }).png().toBuffer()
+          const baseGray = await sharp(base).grayscale().toBuffer()
+          const svgW = `<svg width="${T}" height="${T}" xmlns="http://www.w3.org/2000/svg"><text x="${T/2}" y="${T/2+25}" font-family="Impact, 'Arial Black', sans-serif" font-size="95" font-weight="900" fill="#CC0000" stroke="#000000" stroke-width="4" text-anchor="middle" transform="rotate(-12 ${T/2} ${T/2})">WASTED</text></svg>`
+          const ov = await sharp(Buffer.from(svgW)).png().toBuffer()
+          const res = await sharp(baseGray).composite([{ input: ov, top: 0, left: 0 }]).webp({ quality: 92 }).toBuffer()
+          await sock.sendMessage(jid, { sticker: res }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+        }
+      }
+    },
+
+    // ============ RENAME ============
+    rename: {
+      aliases: ["renomear", "nomefig", "setnome"],
+      async executar({ sock, msg, args, db, isDono, isSubDono, utils }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+
+        const t = args.join(" ").trim()
+        if (!t) return sock.sendMessage(jid, { text: "🌙🎨 `!rename <texto>` (responda figurinha)" }, { quoted: msg })
+
+        const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
+        const q = ctx.quotedMessage
+        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: "🌙🎨 Responda figurinha!" }, { quoted: msg })
+
+        await sock.sendMessage(jid, { text: "🌙🎨 *RENOMEANDO...*" }, { quoted: msg })
+
+        try {
+          const alvo = Object.assign({}, msg, { message: { stickerMessage: q.stickerMessage } })
+          const buf = await utils.downloadMediaMessage(alvo, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
+          let outBuf = buf
+          try {
+            const { Image } = require("node-webpmux")
+            const img = new Image()
+            await img.load(buf)
+            const json = { "sticker-pack-id": "com.kokushibo." + Date.now(), "sticker-pack-name": t, "sticker-pack-publisher": t, "emojis": ["🌙"] }
+            const exifAttr = Buffer.from([0x49,0x49,0x2A,0x00,0x08,0x00,0x00,0x00,0x01,0x00,0x41,0x57,0x07,0x00,0x00,0x00,0x00,0x00,0x16,0x00,0x00,0x00])
+            const jsonBuf = Buffer.from(JSON.stringify(json), "utf8")
+            const exif = Buffer.concat([exifAttr, jsonBuf])
+            exif.writeUIntLE(jsonBuf.length, 14, 4)
+            img.exif = exif
+            outBuf = await img.save(null)
+          } catch (e) { console.log("Aviso exif:", e.message) }
+          await sock.sendMessage(jid, { sticker: outBuf, packname: t, author: t }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+        }
+      }
+    },
+
+    // ============ MEU VIP ============
+    meuvip: {
+      aliases: ["vipinfo"],
+      async executar({ sock, msg, db, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        const vips = (db.vips() || {}).vips || {}
+
+        let info = null
+        for (const j of sJ) {
+          const num = String(j).split("@")[0].split(":")[0].replace(/\D/g, "")
+          for (const [jV, i] of Object.entries(vips)) {
+            if (String(jV).split("@")[0].split(":")[0].replace(/\D/g, "") === num) {
+              if (i.expira === "inf" || i.expira > Date.now()) { info = i; break }
+            }
+          }
+          if (info) break
+        }
+
+        if (isDono || isSubDono) return sock.sendMessage(jid, { text: "🌙💜 *MEU VIP*\n\n👑 " + (isDono ? "IMPERADOR" : "LUA SUPERIOR") }, { quoted: msg })
+        if (!info) return sock.sendMessage(jid, { text: "🌙 Você não é nobre!" }, { quoted: msg })
+
+        await sock.sendMessage(jid, { text: "🌙💜 *MEU VIP*\n\n👤 " + (info.expira === "inf" ? "INFINITO ♾️" : "expira em " + new Date(info.expira).toLocaleString("pt-BR")) }, { quoted: msg })
+      }
+    }
+
+  }
+}
