@@ -146,38 +146,87 @@ function baixarInstagram(link) {
 }
 
 // ============================================================
-// 📌 SCRAPING DO PINTEREST (sem lib)
+// 📌 BUSCAR PINTEREST (endpoint interno JSON)
 // ============================================================
 async function buscarPinterest(busca, limite = 20) {
   try {
-    const url = "https://br.pinterest.com/search/pins/?q=" + encodeURIComponent(busca)
+    // Endpoint interno do Pinterest que retorna JSON com os pins
+    const dados = {
+      options: {
+        query: busca,
+        scope: "pins",
+        page_size: limite,
+        bookmarks: []
+      },
+      context: {}
+    }
+
+    const url = "https://br.pinterest.com/resource/BaseSearchResource/get/?data=" + encodeURIComponent(JSON.stringify(dados)) + "&source_url=/search/pins/?q=" + encodeURIComponent(busca)
+
     const r = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept": "application/json, text/javascript, */*; q=0.01",
         "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
-        "Referer": "https://br.pinterest.com/"
+        "X-Requested-With": "XMLHttpRequest",
+        "X-APP-VERSION": "cb1b57f",
+        "X-Pinterest-AppState": "active",
+        "Referer": "https://br.pinterest.com/search/pins/?q=" + encodeURIComponent(busca)
       }
     })
 
-    if (!r.ok) throw new Error("Pinterest respondeu " + r.status)
-    const html = await r.text()
+    if (!r.ok) throw new Error("Pinterest respondeu HTTP " + r.status)
 
-    // Extrai URLs das imagens do Pinterest
-    const regex = /https:\/\/i\.pinimg\.com\/[^"'\s\\]+\.(?:jpg|jpeg|png|webp)/gi
-    const matches = html.match(regex) || []
+    const json = await r.json()
 
-    // Filtra imagens grandes (que tenham /originals/ ou /736x/ pra melhor qualidade)
-    const filtradas = matches.filter(u => 
-      u.includes("/originals/") || 
-      u.includes("/736x/") || 
-      u.includes("/564x/")
-    )
+    // Extrai os resultados (formato varia)
+    let pins = []
+    if (json && json.resource_response && json.resource_response.data && Array.isArray(json.resource_response.data.results)) {
+      pins = json.resource_response.data.results
+    } else if (json && json.resource_response && json.resource_response.data && Array.isArray(json.resource_response.data)) {
+      pins = json.resource_response.data
+    } else if (json && Array.isArray(json.data)) {
+      pins = json.data
+    } else if (json && Array.isArray(json.results)) {
+      pins = json.results
+    }
 
-    const lista = filtradas.length >= 5 ? filtradas : matches
-    const unicas = [...new Set(lista)].slice(0, limite)
+    if (!pins.length) {
+      // Fallback: tenta o formato antigo
+      const matches = JSON.stringify(json).match(/https:\/\/i\.pinimg\.com\/originals\/[^"'\s\\]+\.(?:jpg|jpeg|png|webp)/gi) || []
+      const unicas = [...new Set(matches)].slice(0, limite)
+      if (unicas.length) return { ok: true, urls: unicas }
+      throw new Error("Pinterest retornou 0 pins. Tente outra busca.")
+    }
+
+    // Extrai URLs das imagens de cada pin
+    const urls = []
+    for (const p of pins) {
+      let imgUrl = null
+
+      // Formato 1: pin.images.orig.url
+      if (p.images && p.images.orig && p.images.orig.url) imgUrl = p.images.orig.url
+      // Formato 2: pin.images["736x"].url
+      else if (p.images && p.images["736x"] && p.images["736x"].url) imgUrl = p.images["736x"].url
+      // Formato 3: pin.image
+      else if (p.image) imgUrl = p.image
+      // Formato 4: pin.image_url
+      else if (p.image_url) imgUrl = p.image_url
+      // Formato 5: pin.url direto
+      else if (typeof p.url === "string" && p.url.includes("pinimg")) imgUrl = p.url
+      // Formato 6: pin.media.images.orig.url (formato novo)
+      else if (p.media && p.media.images && p.media.images.orig && p.media.images.orig.url) imgUrl = p.media.images.orig.url
+      else if (p.media && p.media.images && p.media.images["736x"] && p.media.images["736x"].url) imgUrl = p.media.images["736x"].url
+
+      if (imgUrl && imgUrl.includes("pinimg")) urls.push(imgUrl)
+    }
+
+    const unicas = [...new Set(urls)].slice(0, limite)
+
+    if (!unicas.length) throw new Error("Nenhuma imagem válida nos pins. Pinterest pode ter bloqueado.")
 
     return { ok: true, urls: unicas }
+
   } catch (e) {
     return { ok: false, erro: e.message }
   }
@@ -336,7 +385,7 @@ module.exports = {
       }
     },
 
-    // ============ PLAY (YouTube) ============
+    // ============ PLAY ============
     play: {
       aliases: ["tocar", "musica", "music"],
       async executar({ sock, msg, args, db, isDono, isSubDono }) {
@@ -350,82 +399,52 @@ module.exports = {
         const busca = args.join(" ").trim()
         if (!busca) {
           return sock.sendMessage(jid, {
-            text: "🌙🎵 *PLAY*\n\n" +
-              "> _\"Me diga o que quer ouvir.\"_\n\n" +
-              "💡 `!play <nome da música>`\n" +
-              "💡 `!play <link do YouTube>` _(vídeo)_\n\n" +
-              "⚠️ _Limite: 20 minutos_"
+            text: "🌙🎵 *PLAY*\n\n> _\"Me diga o que quer ouvir.\"_\n\n💡 `!play <nome>`\n💡 `!play <link yt>` _(vídeo)_\n\n⚠️ _Limite: 20 min_"
           }, { quoted: msg })
         }
 
         const ehLinkVideo = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch|youtu\.be\/)/i.test(busca)
 
         if (ehLinkVideo) {
-          await sock.sendMessage(jid, {
-            text: "🌙🎥 *BAIXANDO VÍDEO...*\n\n> _\"Meus 6 olhos veem o vídeo...\"_\n\n📥 _Aguarde._"
-          }, { quoted: msg })
-
+          await sock.sendMessage(jid, { text: "🌙🎥 *BAIXANDO VÍDEO...*\n\n📥 _Aguarde._" }, { quoted: msg })
           try {
             const res = baixarVideoYoutube(busca)
             if (!res.ok) throw new Error(res.erro)
-
             const buffer = res.buffer
             const tamanhoMB = (buffer.length / 1024 / 1024).toFixed(2)
-
             if (buffer.length > 16 * 1024 * 1024) {
-              return sock.sendMessage(jid, {
-                text: "🌙💢 *VÍDEO MUITO GRANDE*\n\n> _\"" + tamanhoMB + "MB é muito.\"_\n> _\"Limite: 16MB\"_"
-              }, { quoted: msg })
+              return sock.sendMessage(jid, { text: "🌙💢 *MUITO GRANDE*\n\n⚠️ " + tamanhoMB + "MB" }, { quoted: msg })
             }
-
             await sock.sendMessage(jid, { video: buffer, mimetype: "video/mp4", fileName: "youtube.mp4" }, { quoted: msg })
-            console.log("🎥 Vídeo enviado (" + tamanhoMB + "MB)")
-
           } catch (e) {
             await sock.sendMessage(jid, { text: "🌙💥 *ERRO*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
           }
           return
         }
 
-        await sock.sendMessage(jid, {
-          text: "🌙🎵 *BUSCANDO...*\n\n> _\"Meus 6 olhos procuram " + busca + "...\"_\n\n📥 _Baixando... aguarde._"
-        }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "🌙🎵 *BUSCANDO...*\n\n📥 _Aguarde._" }, { quoted: msg })
 
         try {
           let res = baixarMusica(busca, 64)
-
           if (res.ok && res.buffer.length > 16 * 1024 * 1024) {
-            await sock.sendMessage(jid, { text: "🌙💢 *MÚSICA MUITO GRANDE*\n\n> _\"Tentando reduzir qualidade...\"_" }, { quoted: msg })
+            await sock.sendMessage(jid, { text: "🌙💢 *MUITO GRANDE*\n\n> _\"Tentando reduzir qualidade...\"_" }, { quoted: msg })
             res = baixarMusica(busca, 32)
           }
-
           if (!res.ok) {
-            return sock.sendMessage(jid, {
-              text: "🌙💥 *ERRO*\n\n> _\"Não consegui baixar...\"_\n\n⚠️ _Verifique se yt-dlp e ffmpeg estão instalados._"
-            }, { quoted: msg })
+            return sock.sendMessage(jid, { text: "🌙💥 *ERRO*\n\n⚠️ _Verifique yt-dlp/ffmpeg._" }, { quoted: msg })
           }
-
           const buffer = res.buffer
-          const tamanhoMB = (buffer.length / 1024 / 1024).toFixed(2)
-
           if (buffer.length > 16 * 1024 * 1024) {
-            return sock.sendMessage(jid, {
-              text: "🌙💢 *MÚSICA MUITO GRANDE*\n\n> _\"Não consigo enviar " + tamanhoMB + "MB.\"_\n> _\"Limite: 16MB\"_"
-            }, { quoted: msg })
+            return sock.sendMessage(jid, { text: "🌙💢 *MUITO GRANDE*\n\n⚠️ Limite: 16MB" }, { quoted: msg })
           }
-
           await sock.sendMessage(jid, {
             audio: buffer,
             mimetype: "audio/mp4",
             ptt: false,
             fileName: (busca.length > 30 ? busca.slice(0, 30) : busca) + ".mp3"
           }, { quoted: msg })
-
-          console.log("🎵 Música enviada:", busca, "(" + tamanhoMB + "MB)")
-
         } catch (e) {
-          console.log("Erro play:", e.message)
-          await sock.sendMessage(jid, { text: "🌙💥 *ERRO AO BAIXAR*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "🌙💥 *ERRO*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
         }
       }
     },
@@ -444,14 +463,7 @@ module.exports = {
         const busca = args.join(" ").trim()
         if (!busca) {
           return sock.sendMessage(jid, {
-            text: "🌙🎨 *PACKFIG*\n\n" +
-              "> _\"Me diga o que buscar.\"_\n\n" +
-              "💡 `!packfig <nome>`\n\n" +
-              "📌 *Exemplos:*\n" +
-              "▸ `!packfig goku`\n" +
-              "▸ `!packfig kokushibo`\n" +
-              "▸ `!packfig paisagem`\n\n" +
-              "⚠️ _20 figurinhas por pack_"
+            text: "🌙🎨 *PACKFIG*\n\n> _\"Me diga o que buscar.\"_\n\n💡 `!packfig <nome>`\n\n📌 Ex: `!packfig goku`\n\n⚠️ _20 figurinhas por pack_"
           }, { quoted: msg })
         }
 
@@ -471,10 +483,7 @@ module.exports = {
           }
 
           await sock.sendMessage(jid, {
-            text: "🌙🎨 *CRIANDO PACK...*\n\n" +
-              "> _\"Encontrei " + res.urls.length + " imagens.\"_\n" +
-              "> _\"Convertendo em figurinhas...\"_\n\n" +
-              "⚠️ _Aguarde._"
+            text: "🌙🎨 *CRIANDO PACK...*\n\n> _\"Encontrei " + res.urls.length + " imagens.\"_\n> _\"Convertendo...\"_\n\n⚠️ _Aguarde._"
           }, { quoted: msg })
 
           const packId = "com.kokushibo.pack." + Date.now() + "." + num
@@ -493,10 +502,8 @@ module.exports = {
                 }
               })
               if (!imgRes.ok) { falhas++; continue }
-
               const imgBuf = Buffer.from(await imgRes.arrayBuffer())
               const fig = await imagemParaFigurinha(imgBuf, packId, packName, autor)
-
               if (fig) {
                 await sock.sendMessage(jid, { sticker: fig }, { quoted: msg })
                 enviados++
@@ -507,7 +514,6 @@ module.exports = {
               falhas++
               console.log("Erro figurinha " + i + ":", e.message)
             }
-
             await new Promise(r => setTimeout(r, 300))
           }
 
@@ -527,7 +533,7 @@ module.exports = {
         } catch (e) {
           console.log("Erro packfig:", e.message)
           await sock.sendMessage(jid, {
-            text: "🌙💥 *ERRO NO PACK*\n\n> _\"Não consegui criar o pack...\"_\n\n⚠️ `" + e.message + "`"
+            text: "🌙💥 *ERRO NO PACK*\n\n⚠️ `" + e.message + "`"
           }, { quoted: msg })
         }
       }
@@ -539,10 +545,7 @@ module.exports = {
       async executar({ sock, msg, args, db, isDono, isSubDono }) {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-
-        if (!checarVip(db, sJ, isDono, isSubDono)) {
-          return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
-        }
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
 
         const link = args[0]
         if (!link || !/open\.spotify\.com/i.test(link)) {
@@ -556,7 +559,6 @@ module.exports = {
           const tmpDir = os.tmpdir()
           const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
           const pastaTemp = path.join(tmpDir, "kokushibo_spot_" + id)
-
           if (!fs.existsSync(pastaTemp)) fs.mkdirSync(pastaTemp, { recursive: true })
 
           const trackInfo = await SpottyDL.getTrack(link)
@@ -584,7 +586,6 @@ module.exports = {
             ptt: false,
             fileName: trackInfo.title + " - " + (trackInfo.artist || "?") + ".mp3"
           }, { quoted: msg })
-
         } catch (e) {
           await sock.sendMessage(jid, { text: "🌙💥 *ERRO NO SPOTIFY*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
         }
@@ -597,38 +598,25 @@ module.exports = {
       async executar({ sock, msg, args, db, isDono, isSubDono }) {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-
         if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
 
         const link = args[0]
         if (!link || !/instagram\.com|instagr\.am/i.test(link)) {
-          return sock.sendMessage(jid, { text: "🌙📥 `!insta <link do Instagram>`" }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "🌙📥 `!insta <link>`" }, { quoted: msg })
         }
 
         await sock.sendMessage(jid, { text: "🌙📥 *BAIXANDO DO INSTAGRAM...*\n\n📥 _Aguarde..._" }, { quoted: msg })
 
         try {
           const res = baixarInstagram(link)
-
-          if (!res.ok) {
-            return sock.sendMessage(jid, {
-              text: "🌙💥 *ERRO*\n\n⚠️ `" + res.erro + "`\n\n💡 Post privado? Apagado? Link inválido?"
-            }, { quoted: msg })
-          }
-
+          if (!res.ok) return sock.sendMessage(jid, { text: "🌙💥 *ERRO*\n\n⚠️ `" + res.erro + "`" }, { quoted: msg })
           const buffer = res.buffer
-          const tamanhoMB = (buffer.length / 1024 / 1024).toFixed(2)
-
-          if (buffer.length > 16 * 1024 * 1024) {
-            return sock.sendMessage(jid, { text: "🌙💢 *MÍDIA MUITO GRANDE*\n\n⚠️ " + tamanhoMB + "MB" }, { quoted: msg })
-          }
-
+          if (buffer.length > 16 * 1024 * 1024) return sock.sendMessage(jid, { text: "🌙💢 *MUITO GRANDE*" }, { quoted: msg })
           if (res.ehVideo) {
             await sock.sendMessage(jid, { video: buffer, mimetype: "video/mp4", fileName: "instagram.mp4" }, { quoted: msg })
           } else {
             await sock.sendMessage(jid, { image: buffer, caption: "🌙📸 *INSTAGRAM*" }, { quoted: msg })
           }
-
         } catch (e) {
           await sock.sendMessage(jid, { text: "🌙💥 *ERRO*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
         }
@@ -648,12 +636,10 @@ module.exports = {
         const ac = dbLer("autocfg.json", { grupos: {} })
         ac.grupos = ac.grupos || {}
         ac.grupos[jid] = ac.grupos[jid] || {}
-
         if (!["on", "off"].includes(op)) {
           const s = ac.grupos[jid].autofig ? "ON ✅" : "OFF ❌"
           return sock.sendMessage(jid, { text: "🌙 *AUTOFIX*\n\n📊 Status: *" + s + "*\n\n💡 `!autofig on/off`" }, { quoted: msg })
         }
-
         ac.grupos[jid].autofig = op === "on"
         dbSalvar("autocfg.json", ac)
         await sock.sendMessage(jid, { text: "🌙 Autofig: *" + op.toUpperCase() + "*" }, { quoted: msg })
@@ -672,12 +658,10 @@ module.exports = {
         const ac = dbLer("autocfg.json", { grupos: {} })
         ac.grupos = ac.grupos || {}
         ac.grupos[jid] = ac.grupos[jid] || {}
-
         if (!["on", "off"].includes(op)) {
           const s = ac.grupos[jid].autottk ? "ON ✅" : "OFF ❌"
           return sock.sendMessage(jid, { text: "🌙 *AUTOTTK*\n\n📊 Status: *" + s + "*\n\n💡 `!autottk on/off`" }, { quoted: msg })
         }
-
         ac.grupos[jid].autottk = op === "on"
         dbSalvar("autocfg.json", ac)
         await sock.sendMessage(jid, { text: "🌙 Autottk: *" + op.toUpperCase() + "*" }, { quoted: msg })
@@ -736,7 +720,6 @@ module.exports = {
           const tipo = img ? "image" : vid ? "video" : "audio"
           const alvo = Object.assign({}, msg, { message: tipo === "image" ? { imageMessage: img } : tipo === "video" ? { videoMessage: vid } : { audioMessage: aud } })
           const buf = await utils.downloadMediaMessage(alvo, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
-
           if (tipo === "image") await sock.sendMessage(jid, { image: buf, caption: "🌙👁️ *REVELADO*" }, { quoted: msg })
           else if (tipo === "video") await sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", caption: "🌙👁️ *REVELADO*" }, { quoted: msg })
           else await sock.sendMessage(jid, { audio: buf, mimetype: "audio/mp4", ptt: false }, { quoted: msg })
