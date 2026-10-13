@@ -77,55 +77,37 @@ function baixarMusica(busca, qualidade = 64) {
 }
 
 // ============================================================
-// 🎵 BAIXAR SPOTIFY (via spottydl)
+// 🎥 BAIXAR VÍDEO DO YOUTUBE
 // ============================================================
-async function baixarSpotify(link) {
+function baixarVideoYoutube(link) {
   const tmpDir = os.tmpdir()
   const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
-  const pastaTemp = path.join(tmpDir, "kokushibo_spot_" + id)
+  const outTpl = path.join(tmpDir, "kokushibo_vid_" + id + ".%(ext)s")
 
-  if (!fs.existsSync(pastaTemp)) fs.mkdirSync(pastaTemp, { recursive: true })
+  const cmds = [
+    `yt-dlp -f "best[ext=mp4][filesize<16M]/best[filesize<16M]" -o "${outTpl}" --no-playlist --max-filesize 16M "${link}"`,
+    `python3 -m yt_dlp -f "best[ext=mp4][filesize<16M]/best[filesize<16M]" -o "${outTpl}" --no-playlist --max-filesize 16M "${link}"`,
+    `python -m yt_dlp -f "best[ext=mp4][filesize<16M]/best[filesize<16M]" -o "${outTpl}" --no-playlist --max-filesize 16M "${link}"`
+  ]
 
-  try {
-    const SpottyDL = require("spottydl")
-
-    // Pega info da música
-    let trackInfo
+  let ultimoErro = "yt-dlp não encontrado"
+  for (const cmd of cmds) {
     try {
-      trackInfo = await SpottyDL.getTrack(link)
+      execSync(cmd, { stdio: "ignore", timeout: 120000 })
+      const prefixo = "kokushibo_vid_" + id
+      const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && f.endsWith(".mp4"))
+      if (arquivos.length > 0) {
+        const caminho = path.join(tmpDir, arquivos[0])
+        const buffer = fs.readFileSync(caminho)
+        try { fs.unlinkSync(caminho) } catch (_) {}
+        return { ok: true, buffer }
+      }
     } catch (e) {
-      throw new Error("Link inválido ou música não encontrada")
+      ultimoErro = e.message
     }
-
-    if (!trackInfo || !trackInfo.title) {
-      throw new Error("Não consegui pegar info da música")
-    }
-
-    // Baixa
-    const resultado = await SpottyDL.downloadTrack(trackInfo, pastaTemp)
-
-    if (!resultado || !resultado[0] || resultado[0].status !== "Success") {
-      throw new Error("Falha ao baixar a música")
-    }
-
-    const arquivoBaixado = resultado[0].filename
-
-    if (!fs.existsSync(arquivoBaixado)) {
-      throw new Error("Arquivo não encontrado após download")
-    }
-
-    const buffer = fs.readFileSync(arquivoBaixado)
-
-    // Limpa
-    try { fs.unlinkSync(arquivoBaixado) } catch (_) {}
-    try { fs.rmSync(pastaTemp, { recursive: true, force: true }) } catch (_) {}
-
-    return { ok: true, buffer, titulo: trackInfo.title, artista: trackInfo.artist || "?" }
-
-  } catch (e) {
-    try { fs.rmSync(pastaTemp, { recursive: true, force: true }) } catch (_) {}
-    return { ok: false, erro: e.message }
   }
+
+  return { ok: false, erro: ultimoErro }
 }
 
 // ============================================================
@@ -161,6 +143,60 @@ function baixarInstagram(link) {
   }
 
   return { ok: false, erro: ultimoErro }
+}
+
+// ============================================================
+// 📌 BAIXAR PINTEREST (via @lmna22/aio-downloader)
+// ============================================================
+async function baixarPinterest(busca, quantidade) {
+  const tmpDir = os.tmpdir()
+  const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
+  const pastaTemp = path.join(tmpDir, "kokushibo_pin_" + id)
+  if (!fs.existsSync(pastaTemp)) fs.mkdirSync(pastaTemp, { recursive: true })
+
+  try {
+    const { lmna } = require("@lmna22/aio-downloader")
+    const resultados = []
+
+    // Se for URL direta, baixa o pin
+    if (/pinterest\.com\/pin/i.test(busca)) {
+      const res = await lmna.pinterest(busca)
+      if (res && res.data) {
+        const imagens = Array.isArray(res.data) ? res.data : [res.data]
+        for (const img of imagens) {
+          if (img.url || img.image) {
+            const imgRes = await fetch(img.url || img.image)
+            if (imgRes.ok) {
+              const buf = Buffer.from(await imgRes.arrayBuffer())
+              resultados.push(buf)
+            }
+          }
+        }
+      }
+    } else {
+      // Busca por keyword
+      const res = await lmna.pinterest.search(busca, { limit: quantidade })
+      const pins = res && res.data ? res.data : []
+      for (const pin of pins) {
+        const url = pin.image || pin.url
+        if (!url) continue
+        try {
+          const imgRes = await fetch(url)
+          if (imgRes.ok) {
+            const buf = Buffer.from(await imgRes.arrayBuffer())
+            resultados.push(buf)
+          }
+        } catch (_) {}
+      }
+    }
+
+    try { fs.rmSync(pastaTemp, { recursive: true, force: true }) } catch (_) {}
+    return { ok: true, imagens: resultados }
+
+  } catch (e) {
+    try { fs.rmSync(pastaTemp, { recursive: true, force: true }) } catch (_) {}
+    return { ok: false, erro: e.message }
+  }
 }
 
 const VERDADES = ["Qual é o seu maior sonho?","Qual foi o momento mais feliz da sua vida?","Qual é o seu maior medo?","Quem é a pessoa que você mais admira?","Qual foi a coisa mais engraçada que já te aconteceu?","Qual é a sua comida favorita?","Qual a música que mais te marca?","Qual foi o melhor presente que você já ganhou?","Se você pudesse viajar pra qualquer lugar agora, pra onde iria?","Qual é o seu hobby favorito?","Qual filme você já assistiu mais de 10 vezes?","O que te faz rir muito?","Qual é a sua maior qualidade?","E o seu maior defeito?","Se você pudesse ter um superpoder, qual seria?","Qual foi a última vez que você riu até chorar?","Qual é o seu desenho ou anime favorito?","Qual é a coisa mais aleatória que você já pesquisou?","Qual animal você seria se pudesse escolher?","Qual foi a melhor fase da sua vida até agora?"]
@@ -203,6 +239,50 @@ async function enviarFigTexto(sock, jid, buf, texto, quoted) {
   } catch (e) { await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted }) }
 }
 
+// ============================================================
+// 🌙 CONVERTER IMAGEM EM FIGURINHA COM EXIF DE PACK
+// ============================================================
+async function imagemParaFigurinha(buffer, packId, packName, autor) {
+  try {
+    const sharp = require("sharp")
+    const { Image } = require("node-webpmux")
+
+    // Redimensiona pra 512x512
+    let webpBuf = await sharp(buffer)
+      .resize(512, 512, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .webp({ quality: 85 })
+      .toBuffer()
+
+    // Adiciona EXIF do pack
+    const img = new Image()
+    await img.load(webpBuf)
+
+    const json = {
+      "sticker-pack-id": packId,
+      "sticker-pack-name": packName,
+      "sticker-pack-publisher": autor,
+      "emojis": ["🌙"]
+    }
+
+    const exifAttr = Buffer.from([
+      0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00,
+      0x01, 0x00, 0x41, 0x57, 0x07, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x16, 0x00, 0x00, 0x00
+    ])
+    const jsonBuf = Buffer.from(JSON.stringify(json), "utf8")
+    const exif = Buffer.concat([exifAttr, jsonBuf])
+    exif.writeUIntLE(jsonBuf.length, 14, 4)
+
+    img.exif = exif
+    const outBuf = await img.save(null)
+
+    return outBuf
+  } catch (e) {
+    console.log("Erro converter figurinha:", e.message)
+    return null
+  }
+}
+
 module.exports = {
   menu: "menu-vip",
   grupoOnly: false,
@@ -239,16 +319,13 @@ module.exports = {
           "> _\"Apenas nobres podem ver esses segredos.\"_\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
           "🎵 *MÚSICA*\n" +
-          "▸ `" + p + "play <nome ou link>` (YouTube)\n" +
-          "▸ `" + p + "spot <link>` (Spotify)\n\n" +
+          "▸ `" + p + "play <nome ou link>`\n" +
+          "▸ `" + p + "spot <link>`\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
           "📥 *DOWNLOADS*\n" +
-          "▸ `" + p + "insta <link>` (Instagram)\n" +
-          "▸ `" + p + "tiktok <link>` (TikTok)\n\n" +
-          "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "🤖 *AUTOMAÇÃO*\n" +
-          "▸ `" + p + "autofig on/off`\n" +
-          "▸ `" + p + "autottk on/off`\n\n" +
+          "▸ `" + p + "insta <link>`\n" +
+          "▸ `" + p + "tiktok <link>`\n" +
+          "▸ `" + p + "packfig <busca>`\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
           "🎨 *FIGURINHAS*\n" +
           "▸ `" + p + "brat / " + p + "ttps / " + p + "s`\n" +
@@ -294,11 +371,53 @@ module.exports = {
             text: "🌙🎵 *PLAY*\n\n" +
               "> _\"Me diga o que quer ouvir.\"_\n\n" +
               "💡 `!play <nome da música>`\n" +
-              "💡 `!play <link do YouTube>`\n\n" +
+              "💡 `!play <link do YouTube>`\n" +
+              "   _(vídeo)_\n\n" +
               "⚠️ _Limite: 20 minutos_"
           }, { quoted: msg })
         }
 
+        // Se for link de VÍDEO do YouTube, manda vídeo
+        const ehLinkVideo = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch|youtu\.be\/)/i.test(busca)
+
+        if (ehLinkVideo) {
+          await sock.sendMessage(jid, {
+            text: "🌙🎥 *BAIXANDO VÍDEO...*\n\n" +
+              "> _\"Meus 6 olhos veem o vídeo...\"_\n\n" +
+              "📥 _Aguarde._"
+          }, { quoted: msg })
+
+          try {
+            const res = baixarVideoYoutube(busca)
+            if (!res.ok) throw new Error(res.erro)
+
+            const buffer = res.buffer
+            const tamanhoMB = (buffer.length / 1024 / 1024).toFixed(2)
+
+            if (buffer.length > 16 * 1024 * 1024) {
+              return sock.sendMessage(jid, {
+                text: "🌙💢 *VÍDEO MUITO GRANDE*\n\n" +
+                  "> _\"" + tamanhoMB + "MB é muito.\"_\n" +
+                  "> _\"Limite: 16MB\"_\n\n" +
+                  "💡 Use `!play` com link de música."
+              }, { quoted: msg })
+            }
+
+            await sock.sendMessage(jid, {
+              video: buffer,
+              mimetype: "video/mp4",
+              fileName: "youtube.mp4"
+            }, { quoted: msg })
+
+            console.log("🎥 Vídeo enviado (" + tamanhoMB + "MB)")
+
+          } catch (e) {
+            await sock.sendMessage(jid, { text: "🌙💥 *ERRO*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
+          }
+          return
+        }
+
+        // Senão, busca áudio normal
         await sock.sendMessage(jid, {
           text: "🌙🎵 *BUSCANDO...*\n\n" +
             "> _\"Meus 6 olhos procuram " + busca + "...\"_\n\n" +
@@ -317,10 +436,7 @@ module.exports = {
             return sock.sendMessage(jid, {
               text: "🌙💥 *ERRO*\n\n" +
                 "> _\"Não consegui baixar...\"_\n\n" +
-                "⚠️ _Verifique se yt-dlp e ffmpeg estão instalados._\n\n" +
-                "💡 *Instalar:*\n" +
-                "▸ `pip install yt-dlp`\n" +
-                "▸ `apt install ffmpeg -y`"
+                "⚠️ _Verifique se yt-dlp e ffmpeg estão instalados._"
             }, { quoted: msg })
           }
 
@@ -331,8 +447,7 @@ module.exports = {
             return sock.sendMessage(jid, {
               text: "🌙💢 *MÚSICA MUITO GRANDE*\n\n" +
                 "> _\"Não consigo enviar " + tamanhoMB + "MB.\"_\n" +
-                "> _\"O WhatsApp tem limite de 16MB.\"_\n\n" +
-                "💡 Tente uma música mais curta."
+                "> _\"Limite: 16MB\"_"
             }, { quoted: msg })
           }
 
@@ -354,6 +469,105 @@ module.exports = {
       }
     },
 
+    // ============ PACKFIG ============
+    packfig: {
+      aliases: ["pack", "figpack", "stickerpack"],
+      async executar({ sock, msg, args, db, isDono, isSubDono, sender, utils }) {
+        const jid = msg.key.remoteJid
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+
+        if (!checarVip(db, sJ, isDono, isSubDono)) {
+          return sock.sendMessage(jid, { text: "🌙💜 *SÓ VIP*\n\n> _\"Packs de figurinha são privilégio dos nobres.\"_\n\n_\"Vá embora, mortal.\"_" }, { quoted: msg })
+        }
+
+        const busca = args.join(" ").trim()
+        if (!busca) {
+          return sock.sendMessage(jid, {
+            text: "🌙🎨 *PACKFIG*\n\n" +
+              "> _\"Me diga o que quer buscar.\"_\n\n" +
+              "💡 `!packfig <nome ou busca>`\n\n" +
+              "⚠️ _20 figurinhas por pack_"
+          }, { quoted: msg })
+        }
+
+        const num = utils.soNumero(sender)
+
+        await sock.sendMessage(jid, {
+          text: "🌙🎨 *BUSCANDO NO PINTEREST...*\n\n" +
+            "> _\"Meus 6 olhos procuram " + busca + "...\"_\n\n" +
+            "📥 _Baixando 20 imagens..._"
+        }, { quoted: msg })
+
+        try {
+          const res = await baixarPinterest(busca, 20)
+
+          if (!res.ok || res.imagens.length === 0) {
+            return sock.sendMessage(jid, {
+              text: "🌙💥 *ERRO*\n\n" +
+                "> _\"Não encontrei imagens...\"_\n\n" +
+                "⚠️ `" + (res.erro || "Sem resultados") + "`"
+            }, { quoted: msg })
+          }
+
+          const packId = "com.kokushibo.pack." + Date.now() + "." + num
+          const packName = busca
+          const autor = "Kokushibo Bot"
+
+          await sock.sendMessage(jid, {
+            text: "🌙🎨 *CRIANDO PACK...*\n\n" +
+              "> _\"Encontrei " + res.imagens.length + " imagens.\"_\n" +
+              "> _\"Convertendo em figurinhas...\"_\n\n" +
+              "⚠️ _Aguarde, pode demorar um pouco._"
+          }, { quoted: msg })
+
+          let enviados = 0
+          let falhas = 0
+
+          for (let i = 0; i < res.imagens.length; i++) {
+            try {
+              const fig = await imagemParaFigurinha(res.imagens[i], packId, packName, autor)
+              if (fig) {
+                await sock.sendMessage(jid, { sticker: fig }, { quoted: msg })
+                enviados++
+              } else {
+                falhas++
+              }
+            } catch (e) {
+              falhas++
+              console.log("Erro figurinha " + i + ":", e.message)
+            }
+
+            // Pequena pausa pra não sobrecarregar
+            await new Promise(r => setTimeout(r, 300))
+          }
+
+          await sock.sendMessage(jid, {
+            text: "🌙✅ *PACK ENVIADO!*\n\n" +
+              "> 👁️ _\"Meus 6 olhos criaram " + enviados + " figurinhas.\"_\n" +
+              "> _\"" + falhas + " falharam.\"_\n\n" +
+              "━━━━━━━━━━━━━━━━━━━━━━\n" +
+              "📦 *Pack:* " + packName + "\n" +
+              "🎨 *Autor:* " + autor + "\n" +
+              "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
+              "> 💜 _\"Todas as imagens foram apagadas.\"_"
+          }, { quoted: msg })
+
+          console.log("🎨 Pack criado:", enviados, "figurinhas enviadas")
+
+        } catch (e) {
+          console.log("Erro packfig:", e.message)
+          await sock.sendMessage(jid, {
+            text: "🌙💥 *ERRO NO PACK*\n\n" +
+              "> _\"Não consegui criar o pack...\"_\n\n" +
+              "⚠️ `" + e.message + "`\n\n" +
+              "💡 *Verifique:*\n" +
+              "▸ `npm install @lmna22/aio-downloader`\n" +
+              "▸ Internet do servidor"
+          }, { quoted: msg })
+        }
+      }
+    },
+
     // ============ SPOT (Spotify) ============
     spot: {
       aliases: ["spotify", "musicaspot", "spotdl"],
@@ -370,8 +584,7 @@ module.exports = {
           return sock.sendMessage(jid, {
             text: "🌙🎵 *SPOTIFY*\n\n" +
               "> _\"Me diga o link da música.\"_\n\n" +
-              "💡 `!spot <link do Spotify>`\n\n" +
-              "⚠️ _Aceita música, álbum ou playlist_"
+              "💡 `!spot <link do Spotify>`"
           }, { quoted: msg })
         }
 
@@ -382,28 +595,31 @@ module.exports = {
         }, { quoted: msg })
 
         try {
-          const res = await baixarSpotify(link)
+          const SpottyDL = require("spottydl")
+          const tmpDir = os.tmpdir()
+          const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
+          const pastaTemp = path.join(tmpDir, "kokushibo_spot_" + id)
 
-          if (!res.ok) {
-            return sock.sendMessage(jid, {
-              text: "🌙💥 *ERRO NO SPOTIFY*\n\n" +
-                "> _\"Não consegui baixar...\"_\n\n" +
-                "⚠️ `" + res.erro + "`\n\n" +
-                "💡 *Verifique se:*\n" +
-                "▸ O link é do Spotify\n" +
-                "▸ O `npm install spottydl` foi feito\n" +
-                "▸ O `ffmpeg` tá instalado"
-            }, { quoted: msg })
-          }
+          if (!fs.existsSync(pastaTemp)) fs.mkdirSync(pastaTemp, { recursive: true })
 
-          const buffer = res.buffer
+          const trackInfo = await SpottyDL.getTrack(link)
+          if (!trackInfo || !trackInfo.title) throw new Error("Link inválido")
+
+          const resultado = await SpottyDL.downloadTrack(trackInfo, pastaTemp)
+          if (!resultado || !resultado[0] || resultado[0].status !== "Success") throw new Error("Falha ao baixar")
+
+          const arquivoBaixado = resultado[0].filename
+          if (!fs.existsSync(arquivoBaixado)) throw new Error("Arquivo não encontrado")
+
+          const buffer = fs.readFileSync(arquivoBaixado)
           const tamanhoMB = (buffer.length / 1024 / 1024).toFixed(2)
+
+          try { fs.unlinkSync(arquivoBaixado) } catch (_) {}
+          try { fs.rmSync(pastaTemp, { recursive: true, force: true }) } catch (_) {}
 
           if (buffer.length > 16 * 1024 * 1024) {
             return sock.sendMessage(jid, {
-              text: "🌙💢 *MÚSICA MUITO GRANDE*\n\n" +
-                "> _\"" + tamanhoMB + "MB é muito pro WhatsApp.\"_\n" +
-                "> _\"Limite: 16MB\"_"
+              text: "🌙💢 *MÚSICA MUITO GRANDE*\n\n> _\"" + tamanhoMB + "MB é muito.\"_\n> _\"Limite: 16MB\"_"
             }, { quoted: msg })
           }
 
@@ -411,17 +627,15 @@ module.exports = {
             audio: buffer,
             mimetype: "audio/mp4",
             ptt: false,
-            fileName: res.titulo + " - " + res.artista + ".mp3"
+            fileName: trackInfo.title + " - " + (trackInfo.artist || "?") + ".mp3"
           }, { quoted: msg })
 
-          console.log("🎵 Spotify enviado:", res.titulo, "(" + tamanhoMB + "MB)")
+          console.log("🎵 Spotify enviado:", trackInfo.title, "(" + tamanhoMB + "MB)")
 
         } catch (e) {
           console.log("Erro spot:", e.message)
           await sock.sendMessage(jid, {
-            text: "🌙💥 *ERRO NO SPOTIFY*\n\n" +
-              "> _\"Não consegui baixar...\"_\n\n" +
-              "⚠️ `" + e.message + "`"
+            text: "🌙💥 *ERRO NO SPOTIFY*\n\n⚠️ `" + e.message + "`"
           }, { quoted: msg })
         }
       }
@@ -443,8 +657,7 @@ module.exports = {
           return sock.sendMessage(jid, {
             text: "🌙📥 *INSTAGRAM*\n\n" +
               "> _\"Me diga o link.\"_\n\n" +
-              "💡 `!insta <link do Instagram>`\n\n" +
-              "⚠️ _Aceita foto, vídeo, reels e stories_"
+              "💡 `!insta <link do Instagram>`"
           }, { quoted: msg })
         }
 
@@ -463,7 +676,7 @@ module.exports = {
                 "> _\"Não consegui baixar...\"_\n\n" +
                 "⚠️ `" + res.erro + "`\n\n" +
                 "💡 *Possíveis motivos:*\n" +
-                "▸ Post privado (precisa de cookies)\n" +
+                "▸ Post privado\n" +
                 "▸ Post apagado\n" +
                 "▸ Link inválido"
             }, { quoted: msg })
@@ -474,32 +687,21 @@ module.exports = {
 
           if (buffer.length > 16 * 1024 * 1024) {
             return sock.sendMessage(jid, {
-              text: "🌙💢 *MÍDIA MUITO GRANDE*\n\n" +
-                "> _\"" + tamanhoMB + "MB é muito.\"_\n" +
-                "> _\"Limite: 16MB\"_"
+              text: "🌙💢 *MÍDIA MUITO GRANDE*\n\n> _\"" + tamanhoMB + "MB é muito.\"_\n> _\"Limite: 16MB\"_"
             }, { quoted: msg })
           }
 
           if (res.ehVideo) {
-            await sock.sendMessage(jid, {
-              video: buffer,
-              mimetype: "video/mp4",
-              fileName: "instagram.mp4"
-            }, { quoted: msg })
+            await sock.sendMessage(jid, { video: buffer, mimetype: "video/mp4", fileName: "instagram.mp4" }, { quoted: msg })
           } else {
-            await sock.sendMessage(jid, {
-              image: buffer,
-              caption: "🌙📸 *INSTAGRAM*\n\n> _\"Meus 6 olhos capturaram.\"_"
-            }, { quoted: msg })
+            await sock.sendMessage(jid, { image: buffer, caption: "🌙📸 *INSTAGRAM*\n\n> _\"Meus 6 olhos capturaram.\"_" }, { quoted: msg })
           }
 
           console.log("📸 Instagram enviado (" + tamanhoMB + "MB)")
 
         } catch (e) {
           console.log("Erro insta:", e.message)
-          await sock.sendMessage(jid, {
-            text: "🌙💥 *ERRO*\n\n⚠️ `" + e.message + "`"
-          }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "🌙💥 *ERRO*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
         }
       }
     },
@@ -529,7 +731,7 @@ module.exports = {
 
         await sock.sendMessage(jid, {
           text: op === "on"
-            ? "🌙✅ *AUTOFIX LIGADO*\n\n> _\"Toda imagem/vídeo virará figurinha.\"_\n> _\"Meus 6 olhos cuidam disso.\"_"
+            ? "🌙✅ *AUTOFIX LIGADO*\n\n> _\"Toda imagem/vídeo virará figurinha.\"_"
             : "🌙💤 *AUTOFIX DESLIGADO*\n\n> _\"Chega de figurinhas.\"_"
         }, { quoted: msg })
       }
@@ -559,7 +761,7 @@ module.exports = {
 
         await sock.sendMessage(jid, {
           text: op === "on"
-            ? "🌙✅ *AUTOTTK LIGADO*\n\n> _\"Todo link do TikTok será baixado.\"_\n> _\"Meus 6 olhos observam.\"_"
+            ? "🌙✅ *AUTOTTK LIGADO*\n\n> _\"Todo link do TikTok será baixado.\"_"
             : "🌙💤 *AUTOTTK DESLIGADO*\n\n> _\"Chega de TikTok.\"_"
         }, { quoted: msg })
       }
@@ -638,7 +840,7 @@ module.exports = {
         const t = args.join(" ").trim()
         if (!t) return sock.sendMessage(jid, { text: "🌙🎨 `!brat <texto>`" }, { quoted: msg })
 
-        await sock.sendMessage(jid, { text: "🌙🎨 *CRIANDO...*\n\n> _\"A lua molda as palavras.\"_" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "🌙🎨 *CRIANDO...*" }, { quoted: msg })
 
         try {
           const sharp = require("sharp")
@@ -664,69 +866,6 @@ module.exports = {
           const svg = `<svg width="${T}" height="${T}" xmlns="http://www.w3.org/2000/svg"><rect width="${T}" height="${T}" fill="#FFF"/>${tsp}</svg>`
           const buf = await sharp(Buffer.from(svg)).webp({ quality: 90 }).toBuffer()
           await sock.sendMessage(jid, { sticker: buf }, { quoted: msg })
-        } catch (e) {
-          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
-        }
-      }
-    },
-
-    // ============ TTPS ============
-    ttps: {
-      aliases: ["ttpsfig", "colorido", "glow"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid
-        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
-
-        const t = args.join(" ").trim()
-        if (!t) return sock.sendMessage(jid, { text: "🌙🎨 `!ttps <texto>`" }, { quoted: msg })
-
-        await sock.sendMessage(jid, { text: "🌙🎨 *CRIANDO FIGURINHA COLORIDA...*\n\n> _\"A lua brilha em várias cores.\"_" }, { quoted: msg })
-
-        try {
-          const sharp = require("sharp")
-          const ff = require("@ffmpeg-installer/ffmpeg").path
-          const os = require("os")
-          const T = 512
-          const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-          const F = t.length > 40 ? 40 : t.length > 20 ? 55 : 70
-          const pal = t.split(" ")
-          const lin = []
-          let la = "", mc = t.length > 40 ? 12 : t.length > 20 ? 10 : 8
-          for (const pa of pal) {
-            if ((la + " " + pa).trim().length <= mc) la = (la + " " + pa).trim()
-            else { if (la) lin.push(la); la = pa }
-          }
-          if (la) lin.push(la)
-          const aL = F + 15
-          const aT = lin.length * aL
-          const yI = (T - aT) / 2 + F
-          const totalFrames = 8
-          const frames = []
-          function cor() { const h = Math.floor(Math.random() * 360); return "hsl(" + h + ", 90%, 55%)" }
-          for (let f = 0; f < totalFrames; f++) {
-            const c1 = cor(), c2 = cor(), c3 = cor()
-            const gid = "g" + f
-            let tsp = ""
-            lin.forEach((l, i) => {
-              const y = yI + i * aL
-              tsp += `<text x="${T/2}" y="${y}" font-family="Arial" font-size="${F}" font-weight="900" fill="url(#${gid})" stroke="#000" stroke-width="3" text-anchor="middle" paint-order="stroke fill">${esc(l)}</text>`
-            })
-            const svg = `<svg width="${T}" height="${T}" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="${gid}" x1="${(f*12)%100}%" y1="0%" x2="${((f*12)+80)%100}%" y2="100%"><stop offset="0%" stop-color="${c1}"/><stop offset="50%" stop-color="${c2}"/><stop offset="100%" stop-color="${c3}"/></linearGradient></defs><rect width="${T}" height="${T}" fill="#FFF"/>${tsp}</svg>`
-            const pngBuf = await sharp(Buffer.from(svg)).png().toBuffer()
-            frames.push(pngBuf)
-          }
-          const tmpDir = os.tmpdir()
-          const tmpPrefix = path.join(tmpDir, "ttps_" + Date.now())
-          for (let i = 0; i < frames.length; i++) fs.writeFileSync(tmpPrefix + "_" + i + ".png", frames[i])
-          const outWebp = tmpPrefix + "_out.webp"
-          execSync(`"${ff}" -y -framerate 8 -i "${tmpPrefix}_%d.png" -vcodec libwebp -lossless 0 -compression_level 6 -q:v 70 -loop 0 -preset default -an -vsync 0 -s 512:512 "${outWebp}"`, { stdio: "ignore" })
-          const resultado = fs.readFileSync(outWebp)
-          try {
-            for (let i = 0; i < frames.length; i++) fs.unlinkSync(tmpPrefix + "_" + i + ".png")
-            fs.unlinkSync(outWebp)
-          } catch (_) {}
-          await sock.sendMessage(jid, { sticker: resultado }, { quoted: msg })
         } catch (e) {
           await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
         }
