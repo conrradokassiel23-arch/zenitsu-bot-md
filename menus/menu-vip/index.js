@@ -146,45 +146,52 @@ function baixarInstagram(link) {
 }
 
 // ============================================================
-// 📌 BUSCAR PINTEREST (via pinterest-scraper-api)
+// 📌 BUSCAR PINTEREST (scraping direto, sem API)
 // ============================================================
 async function buscarPinterest(busca, limite = 20) {
   try {
-    const pinterestScraper = require("pinterest-scraper-api")
+    const cheerio = require("cheerio")
 
-    let resultados
+    const url = "https://br.pinterest.com/search/pins/?q=" + encodeURIComponent(busca)
 
-    // Tenta diferentes métodos da lib
-    if (typeof pinterestScraper.searchPinterest === "function") {
-      resultados = await pinterestScraper.searchPinterest(busca, limite)
-    } else if (typeof pinterestScraper.search === "function") {
-      resultados = await pinterestScraper.search(busca, limite)
-    } else if (typeof pinterestScraper === "function") {
-      resultados = await pinterestScraper(busca, limite)
-    } else {
-      throw new Error("Função de busca não encontrada na lib")
-    }
+    const r = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8"
+      }
+    })
 
-    if (!resultados) throw new Error("Lib não retornou dados")
+    if (!r.ok) throw new Error("Pinterest respondeu HTTP " + r.status)
 
-    // Normaliza
-    const lista = Array.isArray(resultados) ? resultados : (resultados.data || resultados.results || resultados.pins || [])
+    const html = await r.text()
+    const $ = cheerio.load(html)
 
-    if (!lista.length) throw new Error("Nenhum resultado encontrado")
-
-    // Extrai URLs das imagens
     const urls = []
-    for (const item of lista) {
-      let url = null
-      if (typeof item === "string") url = item
-      else url = item.imageUrl || item.url || item.image || item.images?.orig?.url || item.images?.["736x"]?.url || item.media || null
 
-      if (url && typeof url === "string") urls.push(url)
+    // Método 1: pega todas as tags <img>
+    $("img").each((i, el) => {
+      const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-lazy-src")
+      if (src && /i\.pinimg\.com/i.test(src)) {
+        const maior = src.replace(/\/\d+x\d*\//, "/736x/").replace(/\/\d+x\//, "/736x/")
+        urls.push(maior)
+      }
+    })
+
+    // Método 2 (fallback): regex direto no HTML
+    if (urls.length < 5) {
+      const matches = html.match(/https:\/\/i\.pinimg\.com\/[^"'\s)]+/g) || []
+      for (const m of matches) {
+        const maior = m.replace(/\/\d+x\d*\//, "/736x/").replace(/\/\d+x\//, "/736x/")
+        urls.push(maior)
+      }
     }
 
-    const unicas = [...new Set(urls)].slice(0, limite)
+    const unicas = [...new Set(urls)]
+      .filter(u => u && u.length > 20)
+      .slice(0, limite)
 
-    if (!unicas.length) throw new Error("Nenhuma URL válida")
+    if (!unicas.length) throw new Error("Nenhuma imagem encontrada")
 
     return { ok: true, urls: unicas }
 
@@ -354,7 +361,7 @@ module.exports = {
           }, { quoted: msg })
         }
 
-        const ehLinkVideo = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch|youtu\.be\/)/i.test(busca)
+        const ehLinkVideo = /(youtube\.com\/(watch|shorts|live)|youtu\.be\/|music\.youtube\.com)/i.test(busca)
 
         if (ehLinkVideo) {
           await sock.sendMessage(jid, { text: "🌙🎥 *BAIXANDO VÍDEO...*\n\n📥 _Aguarde._" }, { quoted: msg })
@@ -424,7 +431,11 @@ module.exports = {
           text: "🌙🎨 *BUSCANDO NO PINTEREST...*\n\n> _\"Meus 6 olhos procuram " + busca + "...\"_\n\n📥 _Aguarde..._"
         }, { quoted: msg })
 
+        const pastaTemp = path.join(os.tmpdir(), "kokushibo_pack_" + Date.now() + "_" + num)
+
         try {
+          fs.mkdirSync(pastaTemp, { recursive: true })
+
           const res = await buscarPinterest(busca, 20)
 
           if (!res.ok || !res.urls.length) {
@@ -445,6 +456,9 @@ module.exports = {
           let falhas = 0
 
           for (let i = 0; i < res.urls.length; i++) {
+            const caminhoBruto = path.join(pastaTemp, "img_" + i + ".bin")
+            const caminhoFig = path.join(pastaTemp, "fig_" + i + ".webp")
+
             try {
               const imgRes = await fetch(res.urls[i], {
                 headers: {
@@ -454,16 +468,25 @@ module.exports = {
               })
               if (!imgRes.ok) { falhas++; continue }
               const imgBuf = Buffer.from(await imgRes.arrayBuffer())
-              const fig = await imagemParaFigurinha(imgBuf, packId, packName, autor)
+              fs.writeFileSync(caminhoBruto, imgBuf)
+
+              const fig = await imagemParaFigurinha(fs.readFileSync(caminhoBruto), packId, packName, autor)
               if (fig) {
-                await sock.sendMessage(jid, { sticker: fig }, { quoted: msg })
+                fs.writeFileSync(caminhoFig, fig)
+                await sock.sendMessage(jid, { sticker: fs.readFileSync(caminhoFig) }, { quoted: msg })
                 enviados++
               } else {
                 falhas++
               }
+
+              try { fs.unlinkSync(caminhoBruto) } catch (_) {}
+              try { fs.unlinkSync(caminhoFig) } catch (_) {}
+
             } catch (e) {
               falhas++
               console.log("Erro figurinha " + i + ":", e.message)
+              try { fs.unlinkSync(caminhoBruto) } catch (_) {}
+              try { fs.unlinkSync(caminhoFig) } catch (_) {}
             }
             await new Promise(r => setTimeout(r, 300))
           }
@@ -476,7 +499,7 @@ module.exports = {
               "📦 *Pack:* " + packName + "\n" +
               "🎨 *Autor:* " + autor + "\n" +
               "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
-              "> 💜 _\"Todas as imagens foram apagadas.\"_"
+              "> 💜 _\"Todas as imagens foram apagadas do servidor.\"_"
           }, { quoted: msg })
 
           console.log("🎨 Pack criado:", enviados, "figurinhas de", busca)
@@ -486,6 +509,16 @@ module.exports = {
           await sock.sendMessage(jid, {
             text: "🌙💥 *ERRO NO PACK*\n\n⚠️ `" + e.message + "`"
           }, { quoted: msg })
+
+        } finally {
+          try {
+            if (fs.existsSync(pastaTemp)) {
+              fs.rmSync(pastaTemp, { recursive: true, force: true })
+              console.log("🧹 Pasta temp limpa:", pastaTemp)
+            }
+          } catch (e) {
+            console.log("Aviso limpeza:", e.message)
+          }
         }
       }
     },
@@ -742,7 +775,6 @@ module.exports = {
         try {
           const sharp = require("sharp")
           const ff = require("@ffmpeg-installer/ffmpeg").path
-          const os = require("os")
           const { execSync } = require("child_process")
           const alvo = Object.assign({}, msg, { message: eImg ? { imageMessage: q.imageMessage } : { videoMessage: q.videoMessage } })
           const buf = await utils.downloadMediaMessage(alvo, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
@@ -787,7 +819,6 @@ module.exports = {
         try {
           const sharp = require("sharp")
           const ff = require("@ffmpeg-installer/ffmpeg").path
-          const os = require("os")
           const { execSync } = require("child_process")
           let alvo
           if (eSti) alvo = Object.assign({}, msg, { message: { stickerMessage: q.stickerMessage } })
