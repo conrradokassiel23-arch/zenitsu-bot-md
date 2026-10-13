@@ -146,84 +146,45 @@ function baixarInstagram(link) {
 }
 
 // ============================================================
-// 📌 BUSCAR PINTEREST (endpoint interno JSON)
+// 📌 BUSCAR PINTEREST (via pinterest-scraper-api)
 // ============================================================
 async function buscarPinterest(busca, limite = 20) {
   try {
-    // Endpoint interno do Pinterest que retorna JSON com os pins
-    const dados = {
-      options: {
-        query: busca,
-        scope: "pins",
-        page_size: limite,
-        bookmarks: []
-      },
-      context: {}
+    const pinterestScraper = require("pinterest-scraper-api")
+
+    let resultados
+
+    // Tenta diferentes métodos da lib
+    if (typeof pinterestScraper.searchPinterest === "function") {
+      resultados = await pinterestScraper.searchPinterest(busca, limite)
+    } else if (typeof pinterestScraper.search === "function") {
+      resultados = await pinterestScraper.search(busca, limite)
+    } else if (typeof pinterestScraper === "function") {
+      resultados = await pinterestScraper(busca, limite)
+    } else {
+      throw new Error("Função de busca não encontrada na lib")
     }
 
-    const url = "https://br.pinterest.com/resource/BaseSearchResource/get/?data=" + encodeURIComponent(JSON.stringify(dados)) + "&source_url=/search/pins/?q=" + encodeURIComponent(busca)
+    if (!resultados) throw new Error("Lib não retornou dados")
 
-    const r = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/javascript, */*; q=0.01",
-        "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
-        "X-Requested-With": "XMLHttpRequest",
-        "X-APP-VERSION": "cb1b57f",
-        "X-Pinterest-AppState": "active",
-        "Referer": "https://br.pinterest.com/search/pins/?q=" + encodeURIComponent(busca)
-      }
-    })
+    // Normaliza
+    const lista = Array.isArray(resultados) ? resultados : (resultados.data || resultados.results || resultados.pins || [])
 
-    if (!r.ok) throw new Error("Pinterest respondeu HTTP " + r.status)
+    if (!lista.length) throw new Error("Nenhum resultado encontrado")
 
-    const json = await r.json()
-
-    // Extrai os resultados (formato varia)
-    let pins = []
-    if (json && json.resource_response && json.resource_response.data && Array.isArray(json.resource_response.data.results)) {
-      pins = json.resource_response.data.results
-    } else if (json && json.resource_response && json.resource_response.data && Array.isArray(json.resource_response.data)) {
-      pins = json.resource_response.data
-    } else if (json && Array.isArray(json.data)) {
-      pins = json.data
-    } else if (json && Array.isArray(json.results)) {
-      pins = json.results
-    }
-
-    if (!pins.length) {
-      // Fallback: tenta o formato antigo
-      const matches = JSON.stringify(json).match(/https:\/\/i\.pinimg\.com\/originals\/[^"'\s\\]+\.(?:jpg|jpeg|png|webp)/gi) || []
-      const unicas = [...new Set(matches)].slice(0, limite)
-      if (unicas.length) return { ok: true, urls: unicas }
-      throw new Error("Pinterest retornou 0 pins. Tente outra busca.")
-    }
-
-    // Extrai URLs das imagens de cada pin
+    // Extrai URLs das imagens
     const urls = []
-    for (const p of pins) {
-      let imgUrl = null
+    for (const item of lista) {
+      let url = null
+      if (typeof item === "string") url = item
+      else url = item.imageUrl || item.url || item.image || item.images?.orig?.url || item.images?.["736x"]?.url || item.media || null
 
-      // Formato 1: pin.images.orig.url
-      if (p.images && p.images.orig && p.images.orig.url) imgUrl = p.images.orig.url
-      // Formato 2: pin.images["736x"].url
-      else if (p.images && p.images["736x"] && p.images["736x"].url) imgUrl = p.images["736x"].url
-      // Formato 3: pin.image
-      else if (p.image) imgUrl = p.image
-      // Formato 4: pin.image_url
-      else if (p.image_url) imgUrl = p.image_url
-      // Formato 5: pin.url direto
-      else if (typeof p.url === "string" && p.url.includes("pinimg")) imgUrl = p.url
-      // Formato 6: pin.media.images.orig.url (formato novo)
-      else if (p.media && p.media.images && p.media.images.orig && p.media.images.orig.url) imgUrl = p.media.images.orig.url
-      else if (p.media && p.media.images && p.media.images["736x"] && p.media.images["736x"].url) imgUrl = p.media.images["736x"].url
-
-      if (imgUrl && imgUrl.includes("pinimg")) urls.push(imgUrl)
+      if (url && typeof url === "string") urls.push(url)
     }
 
     const unicas = [...new Set(urls)].slice(0, limite)
 
-    if (!unicas.length) throw new Error("Nenhuma imagem válida nos pins. Pinterest pode ter bloqueado.")
+    if (!unicas.length) throw new Error("Nenhuma URL válida")
 
     return { ok: true, urls: unicas }
 
@@ -247,16 +208,6 @@ const BOLAS = [
   { id: "dourada", nome: "Dourada", emoji: "🌟", dano: 19, ch: 0.35, ef: "brilho", desc: "35% Brilho x1.8" },
   { id: "diamante", nome: "Diamante", emoji: "💎", dano: 22, ch: 0.35, ef: "perfurar", desc: "35% Golpe x3" }
 ]
-
-function sortear3Bolas() {
-  const pool = [...BOLAS]
-  const r = []
-  for (let i = 0; i < 3; i++) {
-    const idx = Math.floor(Math.random() * pool.length)
-    r.push(pool.splice(idx, 1)[0])
-  }
-  return r
-}
 
 async function enviarFigTexto(sock, jid, buf, texto, quoted) {
   try {
