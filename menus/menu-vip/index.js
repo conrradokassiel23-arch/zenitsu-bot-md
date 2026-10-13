@@ -146,52 +146,96 @@ function baixarInstagram(link) {
 }
 
 // ============================================================
-// 📌 BUSCAR PINTEREST (scraping direto, sem API)
+// 📌 BUSCAR PINTEREST (scraping melhorado com cookies)
 // ============================================================
 async function buscarPinterest(busca, limite = 20) {
   try {
     const cheerio = require("cheerio")
 
+    // 1️⃣ Primeiro: pega cookies da home do Pinterest
+    const homeUrl = "https://br.pinterest.com/"
+    const rHome = await fetch(homeUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7"
+      }
+    })
+
+    // Extrai cookies da resposta
+    let cookieHeader = ""
+    const setCookies = rHome.headers.raw && rHome.headers.raw()["set-cookie"]
+    if (setCookies && setCookies.length) {
+      cookieHeader = setCookies.map(c => c.split(";")[0]).join("; ")
+    } else if (rHome.headers.get("set-cookie")) {
+      cookieHeader = rHome.headers.get("set-cookie").split(";")[0]
+    }
+
+    // 2️⃣ Agora busca com os cookies
     const url = "https://br.pinterest.com/search/pins/?q=" + encodeURIComponent(busca)
 
     const r = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml",
-        "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8"
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Referer": "https://br.pinterest.com/",
+        "Cookie": cookieHeader,
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "same-origin",
+        "Upgrade-Insecure-Requests": "1"
       }
     })
 
     if (!r.ok) throw new Error("Pinterest respondeu HTTP " + r.status)
 
     const html = await r.text()
-    const $ = cheerio.load(html)
 
     const urls = []
 
-    // Método 1: pega todas as tags <img>
-    $("img").each((i, el) => {
-      const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-lazy-src")
-      if (src && /i\.pinimg\.com/i.test(src)) {
-        const maior = src.replace(/\/\d+x\d*\//, "/736x/").replace(/\/\d+x\//, "/736x/")
-        urls.push(maior)
+    // Método 1: JSON embutido no <script id="__PWS_INITIAL_PROPS__">
+    try {
+      const match = html.match(/<script id="__PWS_INITIAL_PROPS__"[^>]*>([\s\S]*?)<\/script>/)
+      if (match && match[1]) {
+        const jsonStr = match[1].replace(/&quot;/g, '"').replace(/&amp;/g, "&")
+        const json = JSON.parse(jsonStr)
+        const pins = json?.initialReduxState?.pins || {}
+        for (const pinId of Object.keys(pins)) {
+          const pin = pins[pinId]
+          const img = pin?.images?.["736x"]?.url || pin?.images?.orig?.url || pin?.image
+          if (img && /i\.pinimg\.com/.test(img)) urls.push(img)
+        }
       }
-    })
+    } catch (_) {}
 
-    // Método 2 (fallback): regex direto no HTML
+    // Método 2: fallback com cheerio
     if (urls.length < 5) {
-      const matches = html.match(/https:\/\/i\.pinimg\.com\/[^"'\s)]+/g) || []
+      const $ = cheerio.load(html)
+      $("img").each((i, el) => {
+        const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-lazy-src")
+        if (src && /i\.pinimg\.com/i.test(src) && !/avatar|icon|logo|badge|favicon|placeholder/i.test(src)) {
+          const maior = src.replace(/\/\d+x\d*\//, "/736x/").replace(/\/\d+x\//, "/736x/")
+          urls.push(maior)
+        }
+      })
+    }
+
+    // Método 3: fallback com regex no HTML
+    if (urls.length < 5) {
+      const matches = html.match(/https:\/\/i\.pinimg\.com\/[^"'\s\\]+\.(jpg|jpeg|png|webp)/gi) || []
       for (const m of matches) {
-        const maior = m.replace(/\/\d+x\d*\//, "/736x/").replace(/\/\d+x\//, "/736x/")
-        urls.push(maior)
+        const limpa = m.replace(/\\u002F/g, "/").replace(/\\/g, "")
+        if (/avatar|icon|logo|badge|favicon|placeholder/i.test(limpa)) continue
+        urls.push(limpa)
       }
     }
 
     const unicas = [...new Set(urls)]
-      .filter(u => u && u.length > 20)
+      .filter(u => u && u.length > 30)
       .slice(0, limite)
 
-    if (!unicas.length) throw new Error("Nenhuma imagem encontrada")
+    if (!unicas.length) throw new Error("Pinterest não retornou resultados (possível bloqueio)")
 
     return { ok: true, urls: unicas }
 
