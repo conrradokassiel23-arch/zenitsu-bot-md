@@ -1,8 +1,23 @@
 {
+  "name": "akaza-bot-md",
+  "version": "1.0.0",
+  "description": "Akaza Bot MD - WhatsApp Bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "while true; do node index.js; code=$?; if [ $code -eq 2 ]; then echo '🛑 Bot desligado pelo dono.'; break; fi; echo '🔥 Reiniciando em 2s...'; sleep 2; done",
+    "bot": "node index.js"
+  },
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@hapi/boom": "^10.0.1",
     "@itsliaaa/baileys": "^0.3.18-final",
+    "@zanixongroup/pinterest-scraper": "^1.0.0",
+    "cheerio": "^1.0.0",
     "node-webpmux": "^3.2.1",
-    "simple-audio-downloader": "^1.2.4"
+    "pino": "^9.0.0",
+    "sharp": "^0.33.0",
+    "simple-audio-downloader": "^1.2.4",
+    "spottydl": "^1.1.0",
+    "youtube-dl-exec": "^3.0.0"
   }
 }
