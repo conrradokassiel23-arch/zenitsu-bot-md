@@ -146,55 +146,39 @@ function baixarInstagram(link) {
 }
 
 // ============================================================
-// 📌 BAIXAR PINTEREST (via @lmna22/aio-downloader)
+// 📌 SCRAPING DO PINTEREST (sem lib)
 // ============================================================
-async function baixarPinterest(busca, quantidade) {
-  const tmpDir = os.tmpdir()
-  const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
-  const pastaTemp = path.join(tmpDir, "kokushibo_pin_" + id)
-  if (!fs.existsSync(pastaTemp)) fs.mkdirSync(pastaTemp, { recursive: true })
-
+async function buscarPinterest(busca, limite = 20) {
   try {
-    const { lmna } = require("@lmna22/aio-downloader")
-    const resultados = []
-
-    // Se for URL direta, baixa o pin
-    if (/pinterest\.com\/pin/i.test(busca)) {
-      const res = await lmna.pinterest(busca)
-      if (res && res.data) {
-        const imagens = Array.isArray(res.data) ? res.data : [res.data]
-        for (const img of imagens) {
-          if (img.url || img.image) {
-            const imgRes = await fetch(img.url || img.image)
-            if (imgRes.ok) {
-              const buf = Buffer.from(await imgRes.arrayBuffer())
-              resultados.push(buf)
-            }
-          }
-        }
+    const url = "https://br.pinterest.com/search/pins/?q=" + encodeURIComponent(busca)
+    const r = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+        "Referer": "https://br.pinterest.com/"
       }
-    } else {
-      // Busca por keyword
-      const res = await lmna.pinterest.search(busca, { limit: quantidade })
-      const pins = res && res.data ? res.data : []
-      for (const pin of pins) {
-        const url = pin.image || pin.url
-        if (!url) continue
-        try {
-          const imgRes = await fetch(url)
-          if (imgRes.ok) {
-            const buf = Buffer.from(await imgRes.arrayBuffer())
-            resultados.push(buf)
-          }
-        } catch (_) {}
-      }
-    }
+    })
 
-    try { fs.rmSync(pastaTemp, { recursive: true, force: true }) } catch (_) {}
-    return { ok: true, imagens: resultados }
+    if (!r.ok) throw new Error("Pinterest respondeu " + r.status)
+    const html = await r.text()
 
+    // Extrai URLs das imagens do Pinterest
+    const regex = /https:\/\/i\.pinimg\.com\/[^"'\s\\]+\.(?:jpg|jpeg|png|webp)/gi
+    const matches = html.match(regex) || []
+
+    // Filtra imagens grandes (que tenham /originals/ ou /736x/ pra melhor qualidade)
+    const filtradas = matches.filter(u => 
+      u.includes("/originals/") || 
+      u.includes("/736x/") || 
+      u.includes("/564x/")
+    )
+
+    const lista = filtradas.length >= 5 ? filtradas : matches
+    const unicas = [...new Set(lista)].slice(0, limite)
+
+    return { ok: true, urls: unicas }
   } catch (e) {
-    try { fs.rmSync(pastaTemp, { recursive: true, force: true }) } catch (_) {}
     return { ok: false, erro: e.message }
   }
 }
@@ -247,13 +231,11 @@ async function imagemParaFigurinha(buffer, packId, packName, autor) {
     const sharp = require("sharp")
     const { Image } = require("node-webpmux")
 
-    // Redimensiona pra 512x512
     let webpBuf = await sharp(buffer)
       .resize(512, 512, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .webp({ quality: 85 })
       .toBuffer()
 
-    // Adiciona EXIF do pack
     const img = new Image()
     await img.load(webpBuf)
 
@@ -371,20 +353,16 @@ module.exports = {
             text: "🌙🎵 *PLAY*\n\n" +
               "> _\"Me diga o que quer ouvir.\"_\n\n" +
               "💡 `!play <nome da música>`\n" +
-              "💡 `!play <link do YouTube>`\n" +
-              "   _(vídeo)_\n\n" +
+              "💡 `!play <link do YouTube>` _(vídeo)_\n\n" +
               "⚠️ _Limite: 20 minutos_"
           }, { quoted: msg })
         }
 
-        // Se for link de VÍDEO do YouTube, manda vídeo
         const ehLinkVideo = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch|youtu\.be\/)/i.test(busca)
 
         if (ehLinkVideo) {
           await sock.sendMessage(jid, {
-            text: "🌙🎥 *BAIXANDO VÍDEO...*\n\n" +
-              "> _\"Meus 6 olhos veem o vídeo...\"_\n\n" +
-              "📥 _Aguarde._"
+            text: "🌙🎥 *BAIXANDO VÍDEO...*\n\n> _\"Meus 6 olhos veem o vídeo...\"_\n\n📥 _Aguarde._"
           }, { quoted: msg })
 
           try {
@@ -396,19 +374,11 @@ module.exports = {
 
             if (buffer.length > 16 * 1024 * 1024) {
               return sock.sendMessage(jid, {
-                text: "🌙💢 *VÍDEO MUITO GRANDE*\n\n" +
-                  "> _\"" + tamanhoMB + "MB é muito.\"_\n" +
-                  "> _\"Limite: 16MB\"_\n\n" +
-                  "💡 Use `!play` com link de música."
+                text: "🌙💢 *VÍDEO MUITO GRANDE*\n\n> _\"" + tamanhoMB + "MB é muito.\"_\n> _\"Limite: 16MB\"_"
               }, { quoted: msg })
             }
 
-            await sock.sendMessage(jid, {
-              video: buffer,
-              mimetype: "video/mp4",
-              fileName: "youtube.mp4"
-            }, { quoted: msg })
-
+            await sock.sendMessage(jid, { video: buffer, mimetype: "video/mp4", fileName: "youtube.mp4" }, { quoted: msg })
             console.log("🎥 Vídeo enviado (" + tamanhoMB + "MB)")
 
           } catch (e) {
@@ -417,11 +387,8 @@ module.exports = {
           return
         }
 
-        // Senão, busca áudio normal
         await sock.sendMessage(jid, {
-          text: "🌙🎵 *BUSCANDO...*\n\n" +
-            "> _\"Meus 6 olhos procuram " + busca + "...\"_\n\n" +
-            "📥 _Baixando... aguarde._"
+          text: "🌙🎵 *BUSCANDO...*\n\n> _\"Meus 6 olhos procuram " + busca + "...\"_\n\n📥 _Baixando... aguarde._"
         }, { quoted: msg })
 
         try {
@@ -434,9 +401,7 @@ module.exports = {
 
           if (!res.ok) {
             return sock.sendMessage(jid, {
-              text: "🌙💥 *ERRO*\n\n" +
-                "> _\"Não consegui baixar...\"_\n\n" +
-                "⚠️ _Verifique se yt-dlp e ffmpeg estão instalados._"
+              text: "🌙💥 *ERRO*\n\n> _\"Não consegui baixar...\"_\n\n⚠️ _Verifique se yt-dlp e ffmpeg estão instalados._"
             }, { quoted: msg })
           }
 
@@ -445,9 +410,7 @@ module.exports = {
 
           if (buffer.length > 16 * 1024 * 1024) {
             return sock.sendMessage(jid, {
-              text: "🌙💢 *MÚSICA MUITO GRANDE*\n\n" +
-                "> _\"Não consigo enviar " + tamanhoMB + "MB.\"_\n" +
-                "> _\"Limite: 16MB\"_"
+              text: "🌙💢 *MÚSICA MUITO GRANDE*\n\n> _\"Não consigo enviar " + tamanhoMB + "MB.\"_\n> _\"Limite: 16MB\"_"
             }, { quoted: msg })
           }
 
@@ -458,13 +421,11 @@ module.exports = {
             fileName: (busca.length > 30 ? busca.slice(0, 30) : busca) + ".mp3"
           }, { quoted: msg })
 
-          console.log("🎵 Música enviada:", busca, "(" + tamanhoMB + "MB, " + res.qualidade + "kbps)")
+          console.log("🎵 Música enviada:", busca, "(" + tamanhoMB + "MB)")
 
         } catch (e) {
           console.log("Erro play:", e.message)
-          await sock.sendMessage(jid, {
-            text: "🌙💥 *ERRO AO BAIXAR*\n\n⚠️ `" + e.message + "`"
-          }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "🌙💥 *ERRO AO BAIXAR*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
         }
       }
     },
@@ -477,15 +438,19 @@ module.exports = {
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
 
         if (!checarVip(db, sJ, isDono, isSubDono)) {
-          return sock.sendMessage(jid, { text: "🌙💜 *SÓ VIP*\n\n> _\"Packs de figurinha são privilégio dos nobres.\"_\n\n_\"Vá embora, mortal.\"_" }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "🌙💜 *SÓ VIP*\n\n> _\"Packs são privilégio dos nobres.\"_\n\n_\"Vá embora, mortal.\"_" }, { quoted: msg })
         }
 
         const busca = args.join(" ").trim()
         if (!busca) {
           return sock.sendMessage(jid, {
             text: "🌙🎨 *PACKFIG*\n\n" +
-              "> _\"Me diga o que quer buscar.\"_\n\n" +
-              "💡 `!packfig <nome ou busca>`\n\n" +
+              "> _\"Me diga o que buscar.\"_\n\n" +
+              "💡 `!packfig <nome>`\n\n" +
+              "📌 *Exemplos:*\n" +
+              "▸ `!packfig goku`\n" +
+              "▸ `!packfig kokushibo`\n" +
+              "▸ `!packfig paisagem`\n\n" +
               "⚠️ _20 figurinhas por pack_"
           }, { quoted: msg })
         }
@@ -493,39 +458,45 @@ module.exports = {
         const num = utils.soNumero(sender)
 
         await sock.sendMessage(jid, {
-          text: "🌙🎨 *BUSCANDO NO PINTEREST...*\n\n" +
-            "> _\"Meus 6 olhos procuram " + busca + "...\"_\n\n" +
-            "📥 _Baixando 20 imagens..._"
+          text: "🌙🎨 *BUSCANDO NO PINTEREST...*\n\n> _\"Meus 6 olhos procuram " + busca + "...\"_\n\n📥 _Aguarde..._"
         }, { quoted: msg })
 
         try {
-          const res = await baixarPinterest(busca, 20)
+          const res = await buscarPinterest(busca, 20)
 
-          if (!res.ok || res.imagens.length === 0) {
+          if (!res.ok || !res.urls.length) {
             return sock.sendMessage(jid, {
-              text: "🌙💥 *ERRO*\n\n" +
-                "> _\"Não encontrei imagens...\"_\n\n" +
-                "⚠️ `" + (res.erro || "Sem resultados") + "`"
+              text: "🌙💥 *ERRO*\n\n> _\"Não encontrei imagens...\"_\n\n⚠️ `" + (res.erro || "Sem resultados") + "`\n\n💡 Tente uma busca mais simples."
             }, { quoted: msg })
           }
+
+          await sock.sendMessage(jid, {
+            text: "🌙🎨 *CRIANDO PACK...*\n\n" +
+              "> _\"Encontrei " + res.urls.length + " imagens.\"_\n" +
+              "> _\"Convertendo em figurinhas...\"_\n\n" +
+              "⚠️ _Aguarde._"
+          }, { quoted: msg })
 
           const packId = "com.kokushibo.pack." + Date.now() + "." + num
           const packName = busca
           const autor = "Kokushibo Bot"
 
-          await sock.sendMessage(jid, {
-            text: "🌙🎨 *CRIANDO PACK...*\n\n" +
-              "> _\"Encontrei " + res.imagens.length + " imagens.\"_\n" +
-              "> _\"Convertendo em figurinhas...\"_\n\n" +
-              "⚠️ _Aguarde, pode demorar um pouco._"
-          }, { quoted: msg })
-
           let enviados = 0
           let falhas = 0
 
-          for (let i = 0; i < res.imagens.length; i++) {
+          for (let i = 0; i < res.urls.length; i++) {
             try {
-              const fig = await imagemParaFigurinha(res.imagens[i], packId, packName, autor)
+              const imgRes = await fetch(res.urls[i], {
+                headers: {
+                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                  "Referer": "https://br.pinterest.com/"
+                }
+              })
+              if (!imgRes.ok) { falhas++; continue }
+
+              const imgBuf = Buffer.from(await imgRes.arrayBuffer())
+              const fig = await imagemParaFigurinha(imgBuf, packId, packName, autor)
+
               if (fig) {
                 await sock.sendMessage(jid, { sticker: fig }, { quoted: msg })
                 enviados++
@@ -537,38 +508,32 @@ module.exports = {
               console.log("Erro figurinha " + i + ":", e.message)
             }
 
-            // Pequena pausa pra não sobrecarregar
             await new Promise(r => setTimeout(r, 300))
           }
 
           await sock.sendMessage(jid, {
             text: "🌙✅ *PACK ENVIADO!*\n\n" +
-              "> 👁️ _\"Meus 6 olhos criaram " + enviados + " figurinhas.\"_\n" +
-              "> _\"" + falhas + " falharam.\"_\n\n" +
-              "━━━━━━━━━━━━━━━━━━━━━━\n" +
+              "> 👁️ _\"Criei " + enviados + " figurinhas.\"_\n" +
+              (falhas > 0 ? "> _\"" + falhas + " falharam.\"_\n" : "") +
+              "\n━━━━━━━━━━━━━━━━━━━━━━\n" +
               "📦 *Pack:* " + packName + "\n" +
               "🎨 *Autor:* " + autor + "\n" +
               "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
               "> 💜 _\"Todas as imagens foram apagadas.\"_"
           }, { quoted: msg })
 
-          console.log("🎨 Pack criado:", enviados, "figurinhas enviadas")
+          console.log("🎨 Pack criado:", enviados, "figurinhas de", busca)
 
         } catch (e) {
           console.log("Erro packfig:", e.message)
           await sock.sendMessage(jid, {
-            text: "🌙💥 *ERRO NO PACK*\n\n" +
-              "> _\"Não consegui criar o pack...\"_\n\n" +
-              "⚠️ `" + e.message + "`\n\n" +
-              "💡 *Verifique:*\n" +
-              "▸ `npm install @lmna22/aio-downloader`\n" +
-              "▸ Internet do servidor"
+            text: "🌙💥 *ERRO NO PACK*\n\n> _\"Não consegui criar o pack...\"_\n\n⚠️ `" + e.message + "`"
           }, { quoted: msg })
         }
       }
     },
 
-    // ============ SPOT (Spotify) ============
+    // ============ SPOT ============
     spot: {
       aliases: ["spotify", "musicaspot", "spotdl"],
       async executar({ sock, msg, args, db, isDono, isSubDono }) {
@@ -576,23 +541,15 @@ module.exports = {
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
 
         if (!checarVip(db, sJ, isDono, isSubDono)) {
-          return sock.sendMessage(jid, { text: "🌙💜 *SÓ VIP*\n\n> _\"Spotify é privilégio dos nobres.\"_\n\n_\"Vá embora, mortal.\"_" }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
         }
 
         const link = args[0]
         if (!link || !/open\.spotify\.com/i.test(link)) {
-          return sock.sendMessage(jid, {
-            text: "🌙🎵 *SPOTIFY*\n\n" +
-              "> _\"Me diga o link da música.\"_\n\n" +
-              "💡 `!spot <link do Spotify>`"
-          }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "🌙🎵 `!spot <link do Spotify>`" }, { quoted: msg })
         }
 
-        await sock.sendMessage(jid, {
-          text: "🌙🎵 *BUSCANDO NO SPOTIFY...*\n\n" +
-            "> _\"Meus 6 olhos procuram a melodia...\"_\n\n" +
-            "📥 _Baixando... aguarde._"
-        }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "🌙🎵 *BUSCANDO NO SPOTIFY...*\n\n📥 _Aguarde._" }, { quoted: msg })
 
         try {
           const SpottyDL = require("spottydl")
@@ -618,9 +575,7 @@ module.exports = {
           try { fs.rmSync(pastaTemp, { recursive: true, force: true }) } catch (_) {}
 
           if (buffer.length > 16 * 1024 * 1024) {
-            return sock.sendMessage(jid, {
-              text: "🌙💢 *MÚSICA MUITO GRANDE*\n\n> _\"" + tamanhoMB + "MB é muito.\"_\n> _\"Limite: 16MB\"_"
-            }, { quoted: msg })
+            return sock.sendMessage(jid, { text: "🌙💢 *MUITO GRANDE*\n\n⚠️ " + tamanhoMB + "MB" }, { quoted: msg })
           }
 
           await sock.sendMessage(jid, {
@@ -630,13 +585,8 @@ module.exports = {
             fileName: trackInfo.title + " - " + (trackInfo.artist || "?") + ".mp3"
           }, { quoted: msg })
 
-          console.log("🎵 Spotify enviado:", trackInfo.title, "(" + tamanhoMB + "MB)")
-
         } catch (e) {
-          console.log("Erro spot:", e.message)
-          await sock.sendMessage(jid, {
-            text: "🌙💥 *ERRO NO SPOTIFY*\n\n⚠️ `" + e.message + "`"
-          }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "🌙💥 *ERRO NO SPOTIFY*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
         }
       }
     },
@@ -648,37 +598,21 @@ module.exports = {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
 
-        if (!checarVip(db, sJ, isDono, isSubDono)) {
-          return sock.sendMessage(jid, { text: "🌙💜 *SÓ VIP*\n\n> _\"Instagram é privilégio dos nobres.\"_\n\n_\"Vá embora, mortal.\"_" }, { quoted: msg })
-        }
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
 
         const link = args[0]
         if (!link || !/instagram\.com|instagr\.am/i.test(link)) {
-          return sock.sendMessage(jid, {
-            text: "🌙📥 *INSTAGRAM*\n\n" +
-              "> _\"Me diga o link.\"_\n\n" +
-              "💡 `!insta <link do Instagram>`"
-          }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "🌙📥 `!insta <link do Instagram>`" }, { quoted: msg })
         }
 
-        await sock.sendMessage(jid, {
-          text: "🌙📥 *BAIXANDO DO INSTAGRAM...*\n\n" +
-            "> _\"Meus 6 olhos capturam a mídia...\"_\n\n" +
-            "📥 _Aguarde..._"
-        }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "🌙📥 *BAIXANDO DO INSTAGRAM...*\n\n📥 _Aguarde..._" }, { quoted: msg })
 
         try {
           const res = baixarInstagram(link)
 
           if (!res.ok) {
             return sock.sendMessage(jid, {
-              text: "🌙💥 *ERRO NO INSTAGRAM*\n\n" +
-                "> _\"Não consegui baixar...\"_\n\n" +
-                "⚠️ `" + res.erro + "`\n\n" +
-                "💡 *Possíveis motivos:*\n" +
-                "▸ Post privado\n" +
-                "▸ Post apagado\n" +
-                "▸ Link inválido"
+              text: "🌙💥 *ERRO*\n\n⚠️ `" + res.erro + "`\n\n💡 Post privado? Apagado? Link inválido?"
             }, { quoted: msg })
           }
 
@@ -686,21 +620,16 @@ module.exports = {
           const tamanhoMB = (buffer.length / 1024 / 1024).toFixed(2)
 
           if (buffer.length > 16 * 1024 * 1024) {
-            return sock.sendMessage(jid, {
-              text: "🌙💢 *MÍDIA MUITO GRANDE*\n\n> _\"" + tamanhoMB + "MB é muito.\"_\n> _\"Limite: 16MB\"_"
-            }, { quoted: msg })
+            return sock.sendMessage(jid, { text: "🌙💢 *MÍDIA MUITO GRANDE*\n\n⚠️ " + tamanhoMB + "MB" }, { quoted: msg })
           }
 
           if (res.ehVideo) {
             await sock.sendMessage(jid, { video: buffer, mimetype: "video/mp4", fileName: "instagram.mp4" }, { quoted: msg })
           } else {
-            await sock.sendMessage(jid, { image: buffer, caption: "🌙📸 *INSTAGRAM*\n\n> _\"Meus 6 olhos capturaram.\"_" }, { quoted: msg })
+            await sock.sendMessage(jid, { image: buffer, caption: "🌙📸 *INSTAGRAM*" }, { quoted: msg })
           }
 
-          console.log("📸 Instagram enviado (" + tamanhoMB + "MB)")
-
         } catch (e) {
-          console.log("Erro insta:", e.message)
           await sock.sendMessage(jid, { text: "🌙💥 *ERRO*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
         }
       }
@@ -712,9 +641,8 @@ module.exports = {
       async executar({ sock, msg, args, db, isDono, isSubDono }) {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-
         if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
-        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: "🌙 Só funciona em grupos!" }, { quoted: msg })
+        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: "🌙 Só em grupos!" }, { quoted: msg })
 
         const op = (args[0] || "").toLowerCase()
         const ac = dbLer("autocfg.json", { grupos: {} })
@@ -723,17 +651,12 @@ module.exports = {
 
         if (!["on", "off"].includes(op)) {
           const s = ac.grupos[jid].autofig ? "ON ✅" : "OFF ❌"
-          return sock.sendMessage(jid, { text: "🌙 *AUTOFIX*\n\n📊 Status: *" + s + "*\n\n💡 Use `!autofig on/off`" }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "🌙 *AUTOFIX*\n\n📊 Status: *" + s + "*\n\n💡 `!autofig on/off`" }, { quoted: msg })
         }
 
         ac.grupos[jid].autofig = op === "on"
         dbSalvar("autocfg.json", ac)
-
-        await sock.sendMessage(jid, {
-          text: op === "on"
-            ? "🌙✅ *AUTOFIX LIGADO*\n\n> _\"Toda imagem/vídeo virará figurinha.\"_"
-            : "🌙💤 *AUTOFIX DESLIGADO*\n\n> _\"Chega de figurinhas.\"_"
-        }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "🌙 Autofig: *" + op.toUpperCase() + "*" }, { quoted: msg })
       }
     },
 
@@ -742,9 +665,8 @@ module.exports = {
       async executar({ sock, msg, args, db, isDono, isSubDono }) {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-
         if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
-        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: "🌙 Só funciona em grupos!" }, { quoted: msg })
+        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: "🌙 Só em grupos!" }, { quoted: msg })
 
         const op = (args[0] || "").toLowerCase()
         const ac = dbLer("autocfg.json", { grupos: {} })
@@ -753,17 +675,12 @@ module.exports = {
 
         if (!["on", "off"].includes(op)) {
           const s = ac.grupos[jid].autottk ? "ON ✅" : "OFF ❌"
-          return sock.sendMessage(jid, { text: "🌙 *AUTOTTK*\n\n📊 Status: *" + s + "*\n\n💡 Use `!autottk on/off`" }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "🌙 *AUTOTTK*\n\n📊 Status: *" + s + "*\n\n💡 `!autottk on/off`" }, { quoted: msg })
         }
 
         ac.grupos[jid].autottk = op === "on"
         dbSalvar("autocfg.json", ac)
-
-        await sock.sendMessage(jid, {
-          text: op === "on"
-            ? "🌙✅ *AUTOTTK LIGADO*\n\n> _\"Todo link do TikTok será baixado.\"_"
-            : "🌙💤 *AUTOTTK DESLIGADO*\n\n> _\"Chega de TikTok.\"_"
-        }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "🌙 Autottk: *" + op.toUpperCase() + "*" }, { quoted: msg })
       }
     },
 
@@ -800,7 +717,7 @@ module.exports = {
 
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         let q = ctx.quotedMessage
-        if (!q) return sock.sendMessage(jid, { text: "🌙👁️ Responda uma mensagem de *ver uma vez* com `!revela`" }, { quoted: msg })
+        if (!q) return sock.sendMessage(jid, { text: "🌙👁️ Responda uma mensagem de *ver uma vez*" }, { quoted: msg })
 
         let isVU = false
         if (q.viewOnceMessageV2) { q = q.viewOnceMessageV2.message || q.viewOnceMessageV2; isVU = true }
@@ -813,14 +730,14 @@ module.exports = {
         if (!isVU) return sock.sendMessage(jid, { text: "🌙❌ Não é de *ver uma vez*!" }, { quoted: msg })
         if (!img && !vid && !aud) return sock.sendMessage(jid, { text: "🌙❌ Sem mídia!" }, { quoted: msg })
 
-        await sock.sendMessage(jid, { text: "🌙👁️ *REVELANDO...*\n\n> _\"Meus 6 olhos veem o oculto.\"_" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "🌙👁️ *REVELANDO...*" }, { quoted: msg })
 
         try {
           const tipo = img ? "image" : vid ? "video" : "audio"
           const alvo = Object.assign({}, msg, { message: tipo === "image" ? { imageMessage: img } : tipo === "video" ? { videoMessage: vid } : { audioMessage: aud } })
           const buf = await utils.downloadMediaMessage(alvo, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
 
-          if (tipo === "image") await sock.sendMessage(jid, { image: buf, caption: "🌙👁️ *REVELADO*\n\n_Use !s pra virar figurinha_" }, { quoted: msg })
+          if (tipo === "image") await sock.sendMessage(jid, { image: buf, caption: "🌙👁️ *REVELADO*" }, { quoted: msg })
           else if (tipo === "video") await sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", caption: "🌙👁️ *REVELADO*" }, { quoted: msg })
           else await sock.sendMessage(jid, { audio: buf, mimetype: "audio/mp4", ptt: false }, { quoted: msg })
         } catch (e) {
@@ -924,7 +841,7 @@ module.exports = {
 
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         const q = ctx.quotedMessage
-        if (!q) return sock.sendMessage(jid, { text: "🌙🎨 Responda figurinha, foto ou vídeo com `!s3`" }, { quoted: msg })
+        if (!q) return sock.sendMessage(jid, { text: "🌙🎨 Responda figurinha, foto ou vídeo" }, { quoted: msg })
 
         const eSti = q.stickerMessage
         const eImg = q.imageMessage
