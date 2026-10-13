@@ -1,5 +1,5 @@
 /* ============================================================
-   🌙 MENU DONO - KOKUSHIBO BOT MD
+   🌙 MENU DONO - AKAZA BOT MD
    ============================================================ */
 
 const fs = require("fs")
@@ -42,11 +42,11 @@ module.exports = {
         const jid = msg.key.remoteJid
         const p = prefixoAtivo
         const cfg = db.config()
-        const texto = "🌙👁️ *COMANDO DO LUA SUPERIOR* 👁️🌙\n\n" +
-          "> _\"Vejo tudo... com meus 6 olhos.\"_\n" +
+        const texto = "🌙👹 *COMANDOS DO LUA SUPERIOR - AKAZA* 👹🌙\n\n" +
+          "> _\"Vejo tudo... com meus olhos de demônio.\"_\n" +
           "> _\"O que deseja, mestre?\"_\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "⚔️👁️ *EXÉRCITO*\n" +
+          "🔥👹 *EXÉRCITO*\n" +
           "▸ `" + p + "entrar` <link>\n" +
           "▸ `" + p + "botoff`\n" +
           "▸ `" + p + "reiniciar`\n" +
@@ -63,7 +63,7 @@ module.exports = {
           "▸ `" + p + "delvip` @user\n" +
           "▸ `" + p + "listavip`\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "🌙 *LUAS SUPERIORES*\n" +
+          "🔥 *LUAS SUPERIORES*\n" +
           "▸ `" + p + "addsubdono` @user\n" +
           "▸ `" + p + "delsubdono` @user\n" +
           "▸ `" + p + "listasubdono`\n\n" +
@@ -87,12 +87,12 @@ module.exports = {
           "▸ `" + p + "nuke`\n" +
           "▸ `" + p + "limpargp`\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
-          "> 🌙 _\"A lua conhece cada segredo.\"_\n" +
-          "> ⚔️ _\"E não perdoa nenhum.\"_"
+          "> 🔥 _\"Meus punhos destroem montanhas.\"_\n" +
+          "> ⚔️ _\"E não perdoam nenhum.\"_"
 
         if (cfg.fotoMenu) {
           const buf = Buffer.from(cfg.fotoMenu, "base64")
-          if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "kokushibo.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
+          if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "akaza.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
           return sock.sendMessage(jid, { image: buf, caption: texto }, { quoted: msg })
         }
         await sock.sendMessage(jid, { text: texto }, { quoted: msg })
@@ -111,7 +111,7 @@ module.exports = {
             try { fs.mkdirSync(DATA_DIR, { recursive: true }) } catch (e) {}
           }
 
-          const apiResp = await fetch(REPO_API, { headers: { "User-Agent": "KokushiboBot" } })
+          const apiResp = await fetch(REPO_API, { headers: { "User-Agent": "AkazaBot" } })
           if (!apiResp.ok) throw new Error("GitHub respondeu " + apiResp.status)
           const apiData = await apiResp.json()
           const commitHash = apiData.sha
@@ -124,7 +124,7 @@ module.exports = {
 
           if (commitSalvo.hash === commitHash) {
             return sock.sendMessage(jid, {
-              text: "🌙✅ *TUDO EM ORDEM...*\n\n> 👁️ _\"Já está atualizado, mestre.\"_\n\n" +
+              text: "🌙✅ *TUDO EM ORDEM...*\n\n> 👹 _\"Já está atualizado, mestre.\"_\n\n" +
                 "📌 Versão atual: `" + commitHash.slice(0, 7) + "`\n" +
                 "📝 _" + commitMsg + "_\n" +
                 "📅 " + formatarDataHora(commitData) + "\n\n" +
@@ -134,21 +134,21 @@ module.exports = {
           }
 
           await sock.sendMessage(jid, {
-            text: "🌙⚔️ *NOVA ATUALIZAÇÃO DETECTADA*\n\n" +
-              "> 👁️ _\"Meus 6 olhos captaram mudanças...\"_\n\n" +
+            text: "🌙👹 *NOVA ATUALIZAÇÃO DETECTADA*\n\n" +
+              "> 👁️ _\"Meus olhos captaram mudanças...\"_\n\n" +
               "━━━━━━━━━━━━━━━━━━━━━━\n" +
               "📌 *Versão:* `" + commitHash.slice(0, 7) + "`\n" +
               "📝 *Mudança:*\n" +
               "> _" + commitMsg + "_\n" +
               "📅 *Data:* " + formatarDataHora(commitData) + "\n" +
               "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
-              "📥 _Extraindo do reino lunar..._"
+              "📥 _Extraindo do reino demoníaco..._"
           }, { quoted: msg })
 
           const tmp = os.tmpdir()
           const id = Date.now()
-          zipPath = path.join(tmp, "kokushibo_" + id + ".zip")
-          extractDir = path.join(tmp, "kokushibo_" + id)
+          zipPath = path.join(tmp, "akaza_" + id + ".zip")
+          extractDir = path.join(tmp, "akaza_" + id)
 
           const zipUrl = REPO_URL + "/archive/refs/heads/main.zip"
           const r = await fetch(zipUrl)
@@ -213,7 +213,7 @@ module.exports = {
 
           await sock.sendMessage(jid, {
             text: "🌙✅ *ATUALIZAÇÃO CONCLUÍDA*\n\n" +
-              "> 👁️ _\"Meus 6 olhos assimilaram tudo.\"_\n\n" +
+              "> 👹 _\"Meus olhos assimilaram tudo.\"_\n\n" +
               "━━━━━━━━━━━━━━━━━━━━━━\n" +
               "📌 *Versão:* `" + commitHash.slice(0, 7) + "`\n" +
               "📝 *Mudança aplicada:*\n" +
@@ -226,7 +226,7 @@ module.exports = {
               "▸ `config.js`\n\n" +
               "━━━━━━━━━━━━━━━━━━━━━━\n" +
               (reloadOk 
-                ? "♻️ *Menus recarregados na hora!*\n\n> 🌙 _\"Nenhuma interrupção... a lua é eterna.\"_" 
+                ? "♻️ *Menus recarregados na hora!*\n\n> 🔥 _\"Nenhuma interrupção... o demônio é eterno.\"_" 
                 : "⚠️ *Precisa reiniciar no painel.*\n\n> _\"Meus olhos precisam descansar...\"_")
           }, { quoted: msg })
 
@@ -235,7 +235,7 @@ module.exports = {
           try { if (zipPath) fs.unlinkSync(zipPath) } catch (_) {}
           try { if (extractDir) fs.rmSync(extractDir, { recursive: true, force: true }) } catch (_) {}
           await sock.sendMessage(jid, {
-            text: "🌙💥 *FALHA NA ATUALIZAÇÃO!*\n\n⚠️ `" + e.message + "`\n\n> _\"Nem meus 6 olhos previram isso...\"_"
+            text: "🌙💥 *FALHA NA ATUALIZAÇÃO!*\n\n⚠️ `" + e.message + "`\n\n> _\"Nem meus olhos previram isso...\"_"
           }, { quoted: msg })
         }
       }
@@ -246,7 +246,7 @@ module.exports = {
       async executar({ sock, msg }) {
         const jid = msg.key.remoteJid
         try {
-          const r = await fetch(REPO_COMMITS, { headers: { "User-Agent": "KokushiboBot" } })
+          const r = await fetch(REPO_COMMITS, { headers: { "User-Agent": "AkazaBot" } })
           if (!r.ok) throw new Error("HTTP " + r.status)
           const commits = await r.json()
 
@@ -255,7 +255,7 @@ module.exports = {
           }
 
           let txt = "🌙📜 *HISTÓRICO DE MUDANÇAS*\n\n" +
-            "> _\"Meus 6 olhos veem o passado.\"_\n\n" +
+            "> _\"Meus olhos veem o passado.\"_\n\n" +
             "━━━━━━━━━━━━━━━━━━━━━━\n\n"
 
           commits.forEach((c, i) => {
@@ -264,7 +264,7 @@ module.exports = {
             const autor = c.commit && c.commit.author && c.commit.author.name || "?"
             const data = c.commit && c.commit.author && c.commit.author.date
 
-            const medalha = i === 0 ? "🟣" : i === 1 ? "💜" : "▸"
+            const medalha = i === 0 ? "🔴" : i === 1 ? "🟠" : "▸"
 
             txt += medalha + " *Versão* `" + hash + "`\n"
             txt += "📝 _" + msgCommit + "_\n"
@@ -275,7 +275,7 @@ module.exports = {
           })
 
           txt += "\n\n> 🌙 _\"O passado ilumina o futuro.\"_\n" +
-            "> ⚔️ _\"Cada versão é uma batalha vencida.\"_"
+            "> 🔥 _\"Cada versão é uma batalha vencida.\"_"
 
           await sock.sendMessage(jid, { text: txt }, { quoted: msg })
 
@@ -296,12 +296,12 @@ module.exports = {
         if (!novoNome) {
           const cfg = db.config()
           return sock.sendMessage(jid, {
-            text: "🌙⚔️ *NOME DO BOT*\n\n" +
+            text: "🌙🔥 *NOME DO BOT*\n\n" +
               "> _\"Me chame como quiser.\"_\n\n" +
-              "📝 Atual: *" + (cfg.nomeBot || "Kokushibo") + "*\n\n" +
+              "📝 Atual: *" + (cfg.nomeBot || "Akaza") + "*\n\n" +
               "💡 Use: `!nomebot <novo nome>`\n\n" +
               "⚠️ *Máx 20 caracteres*\n\n" +
-              "⚔️ Comandos sem prefixo:\n" +
+              "🔥 Comandos sem prefixo:\n" +
               "▸ `<nome> fecha`\n" +
               "▸ `<nome> abre`"
           }, { quoted: msg })
@@ -317,10 +317,10 @@ module.exports = {
 
         await sock.sendMessage(jid, {
           text: "🌙✅ *NOME ATUALIZADO*\n\n" +
-            "> _\"A lua ganha um novo nome.\"_\n\n" +
+            "> _\"O demônio ganha um novo nome.\"_\n\n" +
             "📝 Novo nome: *" + novoNome + "*\n\n" +
             "━━━━━━━━━━━━━━━━━━━━━━\n" +
-            "⚔️ Agora os comandos sem prefixo são:\n" +
+            "🔥 Agora os comandos sem prefixo são:\n" +
             "▸ `" + novoNome + " fecha`\n" +
             "▸ `" + novoNome + " abre`\n\n" +
             "> 🌙 _\"Meus olhos atendem a esse nome.\"_"
@@ -349,7 +349,7 @@ module.exports = {
       async executar({ sock, msg }) {
         const jid = msg.key.remoteJid
         try {
-          await sock.sendMessage(jid, { text: "🌙🔄 *RENASCENDO...*\n\n> _\"Voltarei mais forte.\"_\n> _\"Assim como a lua.\"_\n\n♻️ Recarregando..." }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "🌙🔄 *RENASCENDO...*\n\n> _\"Voltarei mais forte.\"_\n> _\"Assim como o fogo demoníaco.\"_\n\n♻️ Recarregando..." }, { quoted: msg })
 
           let ok = false
           if (global.__carregarMenus) {
@@ -362,15 +362,15 @@ module.exports = {
               text: "╔══════════════════════════════╗\n" +
                 "║   🌙✅ 𝐑𝐄𝐍𝐀𝐒𝐂𝐈𝐃𝐎 ✅🌙\n" +
                 "╚══════════════════════════════╝\n\n" +
-                "> 👁️ _\"Como a lua, sempre volto.\"_\n" +
-                "> _\"Com 6 olhos abertos.\"_\n\n" +
+                "> 👹 _\"Como a chama, sempre volto.\"_\n" +
+                "> _\"Com olhos abertos.\"_\n\n" +
                 "━━━━━━━━━━━━━━━━━━━━━━\n" +
                 "📊 *Estado do Império:*\n" +
-                "▸ ⚔️ Comandos: *" + (global.totalComandos || 0) + "*\n" +
+                "▸ 🔥 Comandos: *" + (global.totalComandos || 0) + "*\n" +
                 "▸ 🌙 Aliases: *" + (global.totalAliases || 0) + "*\n" +
                 "▸ 👁️ Categorias: *" + Object.keys(global.comandosPorCategoria || {}).length + "*\n" +
                 "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
-                "> 💜 _\"Respirando Lua Crescente...\"_"
+                "> 💜 _\"Respirando... 3ª Forma: Aniquilação\"_"
             }, { quoted: msg })
           } else {
             await sock.sendMessage(jid, { text: "🌙⚠️ *RELOAD NÃO DISPONÍVEL*\n\n> _\"Não consegui renascer...\"_\n\n💡 Reinicia no painel da A4." }, { quoted: msg })
@@ -386,12 +386,12 @@ module.exports = {
       async executar({ sock, msg }) {
         const jid = msg.key.remoteJid
         await sock.sendMessage(jid, {
-          text: "🌙😴 *A LUA SE APAGA...*\n\n" +
+          text: "🌙😴 *A CHAMA SE APAGA...*\n\n" +
             "> _\"Meus olhos se fecham...\"_\n" +
-            "> _\"...mas a lua sempre volta.\"_\n\n" +
+            "> _\"...mas o demônio sempre volta.\"_\n\n" +
             "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
-            "> 🌙 _\"Até a próxima noite, mestre.\"_\n" +
-            "> 💤 _Zzzz..._"
+            "> 🌙 _\"Até a próxima batalha, mestre.\"_\n" +
+            "> 🔥 _Zzzz..._"
         }, { quoted: msg })
         setTimeout(() => process.exit(0), 3000)
       }
@@ -404,11 +404,11 @@ module.exports = {
         const link = args[0]
         if (!link) return sock.sendMessage(jid, { text: "🌙🤔 *ENTRAR ONDE?*\n\n> _\"Me dá o link, mestre.\"_\n\n💡 `!entrar <link>`" }, { quoted: msg })
         const match = link.match(/chat\.whatsapp\.com\/([A-Za-z0-9]+)/)
-        if (!match) return sock.sendMessage(jid, { text: "🌙⚔️ *ISSO NÃO É LINK!*\n\n> _\"Meus olhos veem a verdade.\"_" }, { quoted: msg })
+        if (!match) return sock.sendMessage(jid, { text: "🌙🔥 *ISSO NÃO É LINK!*\n\n> _\"Meus olhos veem a verdade.\"_" }, { quoted: msg })
         try {
-          await sock.sendMessage(jid, { text: "🌙👁️ *ENTRANDO...*\n\n> _\"Meus 6 olhos estão atentos.\"_" }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "🌙👁️ *ENTRANDO...*\n\n> _\"Meus olhos estão atentos.\"_" }, { quoted: msg })
           const info = await sock.groupAcceptInvite(match[1])
-          await sock.sendMessage(jid, { text: "🌙✅ *ENTREI!*\n\n> _\"A lua observa mais um território.\"_\n\n⚔️ `" + (typeof info === "string" ? info : "ok") + "`" }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "🌙✅ *ENTREI!*\n\n> _\"O demônio observa mais um território.\"_\n\n🔥 `" + (typeof info === "string" ? info : "ok") + "`" }, { quoted: msg })
         } catch (e) {
           await sock.sendMessage(jid, { text: "🌙💥 *NÃO CONSEGUI!*\n\n> _\"Impossível... meus olhos falharam?\"_\n\n⚠️ " + e.message }, { quoted: msg })
         }
@@ -432,7 +432,7 @@ module.exports = {
             cfg.fotoMenu = buffer.toString("base64")
             cfg.tipoMenu = "foto"
             db.salvarConfig(cfg)
-            return sock.sendMessage(jid, { image: buffer, caption: "🌙✅ *ESTANDARTE SALVO*\n\n> _\"Meus 6 olhos gravaram.\"_\n\n🖼️ Foto do menu salva!" }, { quoted: msg })
+            return sock.sendMessage(jid, { image: buffer, caption: "🌙✅ *ESTANDARTE SALVO*\n\n> _\"Meus olhos gravaram.\"_\n\n🖼️ Foto do menu salva!" }, { quoted: msg })
           }
           const vidMsg = (msg.message && msg.message.videoMessage) ? msg : Object.assign({}, msg, { message: { videoMessage: quoted.videoMessage } })
           const vidBuffer = await utils.downloadMediaMessage(vidMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
@@ -441,14 +441,34 @@ module.exports = {
           const tIn = path.join(tmp, "menu_" + Date.now() + ".mp4")
           const tOut = path.join(tmp, "menu_" + Date.now() + "_out.mp4")
           fs.writeFileSync(tIn, vidBuffer)
-          execSync(`"${ff}" -y -i "${tIn}" -t 8 -vf "fps=15,scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=black" -an -c:v libx264 -preset fast -crf 28 -pix_fmt yuv420p -movflags +faststart "${tOut}"`, { stdio: "ignore" })
-          const outBuffer = fs.readFileSync(tOut)
+
+          // 🔄 Converte o vídeo INTEIRO (sem -t 8)
+          execSync(`"${ff}" -y -i "${tIn}" -vf "fps=12,scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=black" -an -c:v libx264 -preset fast -crf 30 -pix_fmt yuv420p -movflags +faststart "${tOut}"`, { stdio: "ignore", timeout: 180000 })
+
+          let outBuffer = fs.readFileSync(tOut)
+
+          // 🎯 Se ficar maior que 15MB, recomprime mais agressivo
+          if (outBuffer.length > 15 * 1024 * 1024) {
+            const tOut2 = path.join(tmp, "menu_" + Date.now() + "_out2.mp4")
+            execSync(`"${ff}" -y -i "${tOut}" -vf "fps=8,scale=384:384:force_original_aspect_ratio=decrease,pad=384:384:(ow-iw)/2:(oh-ih)/2:color=black" -an -c:v libx264 -preset fast -crf 32 -pix_fmt yuv420p -movflags +faststart "${tOut2}"`, { stdio: "ignore", timeout: 180000 })
+            outBuffer = fs.readFileSync(tOut2)
+            try { fs.unlinkSync(tOut2) } catch (_) {}
+          }
+
+          // 🎯 Se ainda estiver maior que 15MB, corta pra 15s
+          if (outBuffer.length > 15 * 1024 * 1024) {
+            const tOut3 = path.join(tmp, "menu_" + Date.now() + "_out3.mp4")
+            execSync(`"${ff}" -y -i "${tIn}" -t 15 -vf "fps=8,scale=384:384:force_original_aspect_ratio=decrease,pad=384:384:(ow-iw)/2:(oh-ih)/2:color=black" -an -c:v libx264 -preset fast -crf 32 -pix_fmt yuv420p -movflags +faststart "${tOut3}"`, { stdio: "ignore", timeout: 180000 })
+            outBuffer = fs.readFileSync(tOut3)
+            try { fs.unlinkSync(tOut3) } catch (_) {}
+          }
+
           cfg.fotoMenu = outBuffer.toString("base64")
           cfg.tipoMenu = "video"
           db.salvarConfig(cfg)
           try { fs.unlinkSync(tIn) } catch (_) {}
           try { fs.unlinkSync(tOut) } catch (_) {}
-          await sock.sendMessage(jid, { video: outBuffer, mimetype: "video/mp4", fileName: "kokushibo.mp4", gifPlayback: true, caption: "🌙✅ *ESTANDARTE ANIMADO SALVO*\n\n> _\"Movimento também é arte.\"_\n\n🎬 Vídeo do menu salvo!" }, { quoted: msg })
+          await sock.sendMessage(jid, { video: outBuffer, mimetype: "video/mp4", fileName: "akaza.mp4", gifPlayback: true, caption: "🌙✅ *ESTANDARTE ANIMADO SALVO*\n\n> _\"Movimento também é arte.\"_\n\n🎬 Vídeo do menu salvo!" }, { quoted: msg })
         } catch (e) {
           await sock.sendMessage(jid, { text: "🌙💥 *ERRO!*\n\n> _\"Falha nos olhos...\"_\n\n⚠️ " + e.message }, { quoted: msg })
         }
@@ -478,7 +498,7 @@ module.exports = {
         v.vips[alvo] = { expira, desde: Date.now() }
         db.salvarVips(v)
         const num = utils.soNumero(alvo)
-        await sock.sendMessage(jid, { text: "🌙💜 *NOBRE ADICIONADO*\n\n> _\"A lua reconhece você.\"_\n\n👤 @" + num + "\n💜 *" + (tempo === "inf" ? "ETERNO ♾️" : tempo.toUpperCase()) + "*", mentions: [alvo] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "🌙💜 *NOBRE ADICIONADO*\n\n> _\"O demônio reconhece você.\"_\n\n👤 @" + num + "\n💜 *" + (tempo === "inf" ? "ETERNO ♾️" : tempo.toUpperCase()) + "*", mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -492,7 +512,7 @@ module.exports = {
         if (!v.vips || !v.vips[alvo]) return sock.sendMessage(jid, { text: "🌙❌ *NÃO É VIP!*\n\n> _\"Meus olhos não erram.\"_\n\n👤 @" + utils.soNumero(alvo), mentions: [alvo] }, { quoted: msg })
         delete v.vips[alvo]
         db.salvarVips(v)
-        await sock.sendMessage(jid, { text: "🌙⚔️ *VIP REMOVIDO*\n\n> _\"Volte pro seu lugar.\"_\n\n👤 @" + utils.soNumero(alvo), mentions: [alvo] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "🌙🔥 *VIP REMOVIDO*\n\n> _\"Volte pro seu lugar.\"_\n\n👤 @" + utils.soNumero(alvo), mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -502,7 +522,7 @@ module.exports = {
         const jid = msg.key.remoteJid
         const v = db.vips()
         const vips = Object.entries(v.vips || {})
-        if (!vips.length) return sock.sendMessage(jid, { text: "🌙💜 *NINGUÉM...*\n\n> _\"Nem a lua tem nobres.\"_\n\n_\"Que solidão...\"_" }, { quoted: msg })
+        if (!vips.length) return sock.sendMessage(jid, { text: "🌙💜 *NINGUÉM...*\n\n> _\"Nem o demônio tem nobres.\"_\n\n_\"Que solidão...\"_" }, { quoted: msg })
         let txt = "🌙💜 *LISTA VIP:*\n\n"
         const mentions = []
         vips.forEach(([jidVip, info], i) => {
@@ -520,14 +540,14 @@ module.exports = {
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid
         const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: "🌙👁️ Use `!addsubdono @user`" }, { quoted: msg })
+        if (!alvo) return sock.sendMessage(jid, { text: "🌙👹 Use `!addsubdono @user`" }, { quoted: msg })
         const cfg = db.config()
         cfg.subdonos = cfg.subdonos || []
         const num = utils.soNumero(alvo)
         if (cfg.subdonos.some(s => utils.soNumero(s) === num)) return sock.sendMessage(jid, { text: "🌙 *JÁ É LUA SUPERIOR!*\n\n> _\"Meus olhos veem isso.\"_\n\n👤 @" + num, mentions: [alvo] }, { quoted: msg })
         cfg.subdonos.push(alvo)
         db.salvarConfig(cfg)
-        await sock.sendMessage(jid, { text: "🌙👁️ *NOVA LUA SUPERIOR...*\n\n> _\"Você agora vê como eu vejo.\"_\n\n👤 @" + num, mentions: [alvo] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "🌙👹 *NOVA LUA SUPERIOR...*\n\n> _\"Você agora vê como eu vejo.\"_\n\n👤 @" + num, mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -536,12 +556,12 @@ module.exports = {
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid
         const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: "🌙👁️ Use `!delsubdono @user`" }, { quoted: msg })
+        if (!alvo) return sock.sendMessage(jid, { text: "🌙👹 Use `!delsubdono @user`" }, { quoted: msg })
         const cfg = db.config()
         const num = utils.soNumero(alvo)
         cfg.subdonos = (cfg.subdonos || []).filter(s => utils.soNumero(s) !== num)
         db.salvarConfig(cfg)
-        await sock.sendMessage(jid, { text: "🌙⚔️ *REBAIXADO...*\n\n> _\"Seus olhos se fecham agora.\"_\n\n👤 @" + num, mentions: [alvo] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "🌙🔥 *REBAIXADO...*\n\n> _\"Seus olhos se fecham agora.\"_\n\n👤 @" + num, mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -551,8 +571,8 @@ module.exports = {
         const jid = msg.key.remoteJid
         const cfg = db.config()
         const subs = cfg.subdonos || []
-        if (!subs.length) return sock.sendMessage(jid, { text: "🌙👁️ *NINGUÉM...*\n\n> _\"Só eu vejo a verdade.\"_\n\n_\"Solidão lunar...\"_" }, { quoted: msg })
-        let txt = "🌙👁️ *LUAS SUPERIORES:*\n\n"
+        if (!subs.length) return sock.sendMessage(jid, { text: "🌙👹 *NINGUÉM...*\n\n> _\"Só eu vejo a verdade.\"_\n\n_\"Solidão demoníaca...\"_" }, { quoted: msg })
+        let txt = "🌙👹 *LUAS SUPERIORES:*\n\n"
         const mentions = []
         subs.forEach((jidS, i) => {
           txt += "▸ " + (i + 1) + ". @" + utils.soNumero(jidS) + "\n"
@@ -571,7 +591,7 @@ module.exports = {
         const cfg = db.config()
         cfg.prefixoGlobal = p
         db.salvarConfig(cfg)
-        await sock.sendMessage(jid, { text: "🌙⚙️ *PREFIXO ATUALIZADO*\n\n> _\"A lua muda de forma.\"_\n\n⚙️ Novo: `" + p + "`" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "🌙⚙️ *PREFIXO ATUALIZADO*\n\n> _\"O demônio muda de forma.\"_\n\n⚙️ Novo: `" + p + "`" }, { quoted: msg })
       }
     },
 
@@ -584,8 +604,8 @@ module.exports = {
         const cfg = db.config()
         cfg.slow = opcao === "on"
         db.salvarConfig(cfg)
-        if (opcao === "on") await sock.sendMessage(jid, { text: "🌙😴 *MODO LENTO*\n\n> _\"Como a lua, devagar...\"_\n\n⚙️ Status: *ON*" }, { quoted: msg })
-        else await sock.sendMessage(jid, { text: "🌙⚔️ *MODO RÁPIDO*\n\n> _\"Respiração da Lua Crescente!\"_\n\n⚙️ Status: *OFF*" }, { quoted: msg })
+        if (opcao === "on") await sock.sendMessage(jid, { text: "🌙😴 *MODO LENTO*\n\n> _\"Como a chama, devagar...\"_\n\n⚙️ Status: *ON*" }, { quoted: msg })
+        else await sock.sendMessage(jid, { text: "🌙🔥 *MODO RÁPIDO*\n\n> _\"Respirando... 3ª Forma: Aniquilação!\"_\n\n⚙️ Status: *OFF*" }, { quoted: msg })
       }
     },
 
@@ -602,7 +622,7 @@ module.exports = {
         db.salvarAluguel(a)
         await sock.sendMessage(jid, { text: opcao === "on"
           ? "🌙💰 *ALUGUEL ATIVADO*\n\n> _\"Meus olhos veem cada centavo.\"_"
-          : "🌙💰 *LIBERADO GERAL*\n\n> _\"A lua é generosa hoje.\"_"
+          : "🌙💰 *LIBERADO GERAL*\n\n> _\"O demônio é generoso hoje.\"_"
         }, { quoted: msg })
       }
     },
@@ -630,7 +650,7 @@ module.exports = {
           else if (u === "ano") ms = v * 365 * 24 * 60 * 60 * 1000
           totalMs += ms
         }
-        if (totalMs <= 0) return sock.sendMessage(jid, { text: "🌙⚔️ *FORMATO ERRADO!*\n\n> _\"Meus olhos não entendem isso.\"_" }, { quoted: msg })
+        if (totalMs <= 0) return sock.sendMessage(jid, { text: "🌙🔥 *FORMATO ERRADO!*\n\n> _\"Meus olhos não entendem isso.\"_" }, { quoted: msg })
         const a = db.aluguel()
         a.grupos = a.grupos || {}
         const agora = Date.now()
@@ -649,7 +669,7 @@ module.exports = {
         const a = db.aluguel()
         const agora = Date.now()
         const entradas = Object.entries(a.grupos || {}).filter(e => e[1] > agora)
-        if (!entradas.length) return sock.sendMessage(jid, { text: "🌙💰 *NADA ALUGADO*\n\n> _\"Nem a lua cobra nada hoje.\"_\n\n_\"Aproveitem.\"_" }, { quoted: msg })
+        if (!entradas.length) return sock.sendMessage(jid, { text: "🌙💰 *NADA ALUGADO*\n\n> _\"Nem o demônio cobra nada hoje.\"_\n\n_\"Aproveitem.\"_" }, { quoted: msg })
         let txt = "🌙💰 *TERRITÓRIOS ALUGADOS:*\n\n"
         for (const [jidG, exp] of entradas) {
           try {
@@ -673,7 +693,7 @@ module.exports = {
           if (!a.grupos[jid]) return sock.sendMessage(jid, { text: "🌙❌ *SEM ALUGUEL*\n\n> _\"Meus olhos veem que tá vazio.\"_" }, { quoted: msg })
           delete a.grupos[jid]
           db.salvarAluguel(a)
-          return sock.sendMessage(jid, { text: "🌙✅ *ALUGUEL REMOVIDO*\n\n> _\"Libertado pela lua.\"_" }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "🌙✅ *ALUGUEL REMOVIDO*\n\n> _\"Libertado pelo demônio.\"_" }, { quoted: msg })
         }
         await sock.sendMessage(jid, { text: "🌙💡 Use: `!delaluguel <nome>`\nOu em grupo: `!delaluguel`" }, { quoted: msg })
       }
@@ -687,7 +707,7 @@ module.exports = {
         b.grupos = b.grupos || {}
         b.grupos[jid] = true
         db.salvarBangp(b)
-        await sock.sendMessage(jid, { text: "🌙🚫 *TERRITÓRIO BANIDO*\n\n> _\"Meus 6 olhos não querem ver vocês.\"_\n> _\"Tchau.\"_" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "🌙🚫 *TERRITÓRIO BANIDO*\n\n> _\"Meus olhos não querem ver vocês.\"_\n> _\"Tchau.\"_" }, { quoted: msg })
       }
     },
 
@@ -699,7 +719,7 @@ module.exports = {
         if (b.grupos && b.grupos[jid]) {
           delete b.grupos[jid]
           db.salvarBangp(b)
-          return sock.sendMessage(jid, { text: "🌙✅ *LIBERADO*\n\n> _\"A lua perdoa... uma vez.\"_\n\n_\"Aproveitem.\"_" }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "🌙✅ *LIBERADO*\n\n> _\"O demônio perdoa... uma vez.\"_\n\n_\"Aproveitem.\"_" }, { quoted: msg })
         }
         await sock.sendMessage(jid, { text: "🌙❌ *NÃO TÁ BANIDO*\n\n> _\"Você não presta atenção.\"_" }, { quoted: msg })
       }
@@ -723,8 +743,8 @@ module.exports = {
       async executar({ sock, msg, groupMetadata, utils }) {
         const jid = msg.key.remoteJid
         if (!jid.endsWith("@g.us")) return
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "🌙💥 *PRECISO SER ADMIN!*\n\n> _\"Até os 6 olhos precisam de permissão.\"_" }, { quoted: msg })
-        await sock.sendMessage(jid, { text: "🌙💥 *LUZ LUNAR DESTRUTIVA...*\n\n> _\"Não olhe pra trás.\"_\n\n_\"Respiração da Lua Cheia.\"_" }, { quoted: msg })
+        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "🌙💥 *PRECISO SER ADMIN!*\n\n> _\"Até os olhos do demônio precisam de permissão.\"_" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "🌙💥 *LUZ DESTRUTIVA...*\n\n> _\"Não olhe pra trás.\"_\n\n_\"Respirando... 3ª Forma: Aniquilação.\"_" }, { quoted: msg })
         const meta = await sock.groupMetadata(jid)
         const botNum = utils.soNumero(sock.user && sock.user.id)
         const alvos = meta.participants.filter(p => utils.soNumero(p.id) !== botNum).map(p => p.id)
@@ -741,7 +761,7 @@ module.exports = {
         const jid = msg.key.remoteJid
         if (!jid.endsWith("@g.us")) return
         if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: "🌙🧹 *PRECISO SER ADMIN!*\n\n> _\"Sério...\"_" }, { quoted: msg })
-        await sock.sendMessage(jid, { text: "🌙🧹 *LIMPEZA LUNAR...*\n\n> _\"A lua observa em silêncio.\"_\n\n_\"Os indignos partem.\"_" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "🌙🧹 *LIMPEZA DEMONÍACA...*\n\n> _\"O demônio observa em silêncio.\"_\n\n_\"Os indignos partem.\"_" }, { quoted: msg })
         const meta = await sock.groupMetadata(jid)
         const botNum = utils.soNumero(sock.user && sock.user.id)
         const alvos = meta.participants.filter(p => {
