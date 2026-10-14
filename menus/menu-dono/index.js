@@ -10,7 +10,7 @@ const { execSync } = require("child_process")
 const DATA_DIR = path.join(__dirname, "..", "..", "data")
 const REPO_URL = "https://github.com/conrradokassiel23-arch/zenitsu-bot-md"
 const REPO_API = "https://api.github.com/repos/conrradokassiel23-arch/zenitsu-bot-md/commits/main"
-const REPO_COMMITS = "https://api.github.com/repos/conrradokassiel23-arch/zenitsu-bot-md/commits?per_page=5"
+const REPO_COMMITS = "https://api.github.com/repos/conrradokassiel23-arch/zenitsu-bot-md/commits?per_page=15"
 const BOT_DIR = path.join(__dirname, "..", "..")
 
 function dbLer(a, p = {}) {
@@ -26,6 +26,29 @@ function formatarDataHora(iso) {
   try {
     return new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })
   } catch (e) { return "?" }
+}
+
+function categorizarCommit(msg) {
+  const m = String(msg || "").toLowerCase()
+  if (m.includes("add") || m.includes("novo") || m.includes("new") || m.includes("cria") || m.includes("feat")) {
+    return { emoji: "✨", tipo: "Novo comando/sistema" }
+  }
+  if (m.includes("fix") || m.includes("corrig") || m.includes("bug") || m.includes("arrum")) {
+    return { emoji: "🔧", tipo: "Correção" }
+  }
+  if (m.includes("remove") || m.includes("delet") || m.includes("remov")) {
+    return { emoji: "🗑️", tipo: "Removido" }
+  }
+  if (m.includes("update") || m.includes("atualiz") || m.includes("melhor") || m.includes("improve")) {
+    return { emoji: "⚡", tipo: "Melhoria" }
+  }
+  if (m.includes("rename") || m.includes("nome") || m.includes("tema")) {
+    return { emoji: "🎨", tipo: "Visual/Tema" }
+  }
+  if (m.includes("doc") || m.includes("readme")) {
+    return { emoji: "📝", tipo: "Documentação" }
+  }
+  return { emoji: "🔹", tipo: "Mudança" }
 }
 
 module.exports = {
@@ -84,6 +107,7 @@ ${saudacao}, *${pushName}*!
 │ ▸ \`${p}reiniciar\`
 │ ▸ \`${p}botoff\`
 │ ▸ \`${p}setfoto\` (reply)
+│ ▸ \`${p}fotocmd\` (reply)
 │ ▸ \`${p}nomebot <nome>\`
 ╰────────────────────────
 
@@ -149,6 +173,61 @@ ${saudacao}, *${pushName}*!
       }
     },
 
+    // ============ FOTOCMD (foto do "comando não encontrado") ============
+    fotocmd: {
+      aliases: ["fotocomando", "fotonaoencontrado", "setfotocmd"],
+      async executar({ sock, msg, db, utils }) {
+        const jid = msg.key.remoteJid
+        const ctx = (msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo) || {}
+        const quoted = ctx.quotedMessage
+        const temImg = (msg.message && msg.message.imageMessage) || (quoted && quoted.imageMessage)
+        const temVid = (msg.message && msg.message.videoMessage) || (quoted && quoted.videoMessage)
+
+        if (!temImg && !temVid) {
+          return sock.sendMessage(jid, {
+            text: "🌙📸 *FOTO CMD*\n\n> _\"Me manda a imagem que aparece no 'comando não encontrado'.\"_\n\n💡 Responda uma foto/vídeo com `!fotocmd`\n💡 Use `!fotocmd off` pra desativar"
+          }, { quoted: msg })
+        }
+
+        try {
+          const cfg = db.config()
+
+          if (temImg) {
+            const alvoMsg = (msg.message && msg.message.imageMessage) ? msg : Object.assign({}, msg, { message: { imageMessage: quoted.imageMessage } })
+            const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
+            cfg.fotoCmd = buffer.toString("base64")
+            cfg.tipoFotoCmd = "foto"
+            db.salvarConfig(cfg)
+            return sock.sendMessage(jid, { image: buffer, caption: "🌙✅ *FOTO CMD SALVA*\n\n> _\"Vai aparecer no 'comando não encontrado'.\"_" }, { quoted: msg })
+          }
+
+          const vidMsg = (msg.message && msg.message.videoMessage) ? msg : Object.assign({}, msg, { message: { videoMessage: quoted.videoMessage } })
+          const vidBuffer = await utils.downloadMediaMessage(vidMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
+          const ff = require("@ffmpeg-installer/ffmpeg").path
+          const tmp = os.tmpdir()
+          const tIn = path.join(tmp, "cmd_" + Date.now() + ".mp4")
+          const tOut = path.join(tmp, "cmd_" + Date.now() + "_out.mp4")
+          fs.writeFileSync(tIn, vidBuffer)
+          execSync(`"${ff}" -y -i "${tIn}" -vf "fps=12,scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=black" -an -c:v libx264 -preset fast -crf 30 -pix_fmt yuv420p -movflags +faststart "${tOut}"`, { stdio: "ignore", timeout: 180000 })
+          let outBuffer = fs.readFileSync(tOut)
+          if (outBuffer.length > 15 * 1024 * 1024) {
+            const tOut2 = path.join(tmp, "cmd_" + Date.now() + "_out2.mp4")
+            execSync(`"${ff}" -y -i "${tOut}" -vf "fps=8,scale=384:384:force_original_aspect_ratio=decrease,pad=384:384:(ow-iw)/2:(oh-ih)/2:color=black" -an -c:v libx264 -preset fast -crf 32 -pix_fmt yuv420p -movflags +faststart "${tOut2}"`, { stdio: "ignore", timeout: 180000 })
+            outBuffer = fs.readFileSync(tOut2)
+            try { fs.unlinkSync(tOut2) } catch (_) {}
+          }
+          cfg.fotoCmd = outBuffer.toString("base64")
+          cfg.tipoFotoCmd = "video"
+          db.salvarConfig(cfg)
+          try { fs.unlinkSync(tIn) } catch (_) {}
+          try { fs.unlinkSync(tOut) } catch (_) {}
+          await sock.sendMessage(jid, { video: outBuffer, mimetype: "video/mp4", fileName: "akaza.mp4", gifPlayback: true, caption: "🌙✅ *VÍDEO CMD SALVO*\n\n> _\"Vai aparecer no 'comando não encontrado'.\"_" }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: "🌙💥 *ERRO!*\n\n⚠️ " + e.message }, { quoted: msg })
+        }
+      }
+    },
+
     atualizar: {
       aliases: ["update", "git"],
       async executar({ sock, msg }) {
@@ -169,28 +248,25 @@ ${saudacao}, *${pushName}*!
           const commitData = apiData.commit && apiData.commit.author && apiData.commit.author.date
 
           const commitSalvo = dbLer("ultimo_commit.json", { hash: null })
-          console.log("🔍 Commit GitHub:", commitHash)
-          console.log("🔍 Commit salvo:", commitSalvo.hash)
 
           if (commitSalvo.hash === commitHash) {
             return sock.sendMessage(jid, {
-              text: "🌙✅ *TUDO EM ORDEM...*\n\n> 👁️ _\"Já está atualizado, mestre.\"_\n\n" +
-                "📌 Versão atual: `" + commitHash.slice(0, 7) + "`\n" +
+              text: "🌙✅ *TUDO EM ORDEM*\n\n" +
+                "> 👁️ _\"Já está atualizado, mestre.\"_\n\n" +
+                "📌 Versão: `" + commitHash.slice(0, 7) + "`\n" +
                 "📝 _" + commitMsg + "_\n" +
                 "📅 " + formatarDataHora(commitData) + "\n\n" +
-                "> 🔥 _\"Nada escapa dos meus olhos.\"_\n\n" +
-                "💡 Use `!changelog` pra ver as últimas mudanças."
+                "💡 Use `!changelog` pra ver as novidades."
             }, { quoted: msg })
           }
 
           await sock.sendMessage(jid, {
-            text: "🌙🔥 *NOVA ATUALIZAÇÃO DETECTADA*\n\n" +
-              "> 👁️ _\"Meus olhos captaram mudanças...\"_\n\n" +
+            text: "🌙🔥 *NOVA ATUALIZAÇÃO!*\n\n" +
+              "> 👁️ _\"Detectei mudanças no servidor...\"_\n\n" +
               "━━━━━━━━━━━━━━━━━━━━━━\n" +
               "📌 *Versão:* `" + commitHash.slice(0, 7) + "`\n" +
-              "📝 *Mudança:*\n" +
-              "> _" + commitMsg + "_\n" +
-              "📅 *Data:* " + formatarDataHora(commitData) + "\n" +
+              "📝 _" + commitMsg + "_\n" +
+              "📅 " + formatarDataHora(commitData) + "\n" +
               "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
               "📥 _Baixando arquivos..._"
           }, { quoted: msg })
@@ -247,54 +323,49 @@ ${saudacao}, *${pushName}*!
             data: commitData,
             atualizadoEm: Date.now()
           }, null, 2))
-          console.log("💾 Commit salvo em:", commitPath)
 
           try { fs.unlinkSync(zipPath) } catch (_) {}
           try { fs.rmSync(extractDir, { recursive: true, force: true }) } catch (_) {}
 
           try {
-            if (global.__carregarMenus) {
-              global.__carregarMenus()
-              console.log("♻️ Menus recarregados na memória!")
-            }
+            if (global.__carregarMenus) global.__carregarMenus()
           } catch (e) { console.log("Aviso reload:", e.message) }
 
           await sock.sendMessage(jid, {
             text: "╔═══════════════════════════════╗\n" +
               "║   ✅  𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐃𝐎  ✅\n" +
               "╚═══════════════════════════════╝\n\n" +
-              "> 👁️ _\"Meus olhos assimilaram tudo.\"_\n\n" +
+              "> 👁️ _\"Tudo assimilado.\"_\n\n" +
               "━━━━━━━━━━━━━━━━━━━━━━\n" +
               "📌 *Versão:* `" + commitHash.slice(0, 7) + "`\n" +
-              "📝 *Mudança:*\n" +
-              "> _" + commitMsg + "_\n" +
-              "📅 *Data:* " + formatarDataHora(commitData) + "\n" +
+              "📝 _" + commitMsg + "_\n" +
+              "📅 " + formatarDataHora(commitData) + "\n" +
               "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
               "🔒 *Preservado:*\n" +
               "▸ `auth/` (sessão)\n" +
               "▸ `data/` (dados)\n" +
               "▸ `config.js`\n\n" +
               "━━━━━━━━━━━━━━━━━━━━━━\n" +
-              "🔥 *Reiniciando o bot...*\n" +
+              "🔥 *Reiniciando o bot em 3s...*\n" +
               "> ⚔️ _\"Aguarde alguns segundos.\"_"
           }, { quoted: msg })
 
           console.log("🔥 ATUALIZAÇÃO concluída. Reiniciando processo...")
-          setTimeout(() => process.exit(0), 2000)
+          setTimeout(() => process.exit(0), 3000)
 
         } catch (e) {
           console.log("Erro atualizar:", e.message)
           try { if (zipPath) fs.unlinkSync(zipPath) } catch (_) {}
           try { if (extractDir) fs.rmSync(extractDir, { recursive: true, force: true }) } catch (_) {}
           await sock.sendMessage(jid, {
-            text: "🌙💥 *FALHA NA ATUALIZAÇÃO!*\n\n⚠️ `" + e.message + "`\n\n> _\"Nem meus olhos previram isso...\"_"
+            text: "🌙💥 *FALHA NA ATUALIZAÇÃO!*\n\n⚠️ `" + e.message + "`\n\n> _\"Algo deu errado...\"_"
           }, { quoted: msg })
         }
       }
     },
 
     changelog: {
-      aliases: ["historico", "mudancas", "log"],
+      aliases: ["historico", "mudancas", "log", "novidades"],
       async executar({ sock, msg }) {
         const jid = msg.key.remoteJid
         try {
@@ -303,37 +374,45 @@ ${saudacao}, *${pushName}*!
           const commits = await r.json()
 
           if (!Array.isArray(commits) || !commits.length) {
-            return sock.sendMessage(jid, { text: "🌙 *SEM HISTÓRICO*\n\n> _\"Ainda não há mudanças registradas.\"_" }, { quoted: msg })
+            return sock.sendMessage(jid, {
+              text: "🌙📜 *SEM NOVIDADES*\n\n> _\"Nada novo no horizonte.\"_"
+            }, { quoted: msg })
           }
 
-          let txt = "🌙📜 *HISTÓRICO DE MUDANÇAS*\n\n" +
-            "> _\"Meus olhos veem o passado.\"_\n\n" +
-            "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+          let txt = "╔═══════════════════════════════╗\n" +
+            "║   🔥  𝐍𝐎𝐕𝐈𝐃𝐀𝐃𝐄𝐒 𝐃𝐎 𝐁𝐎𝐓  🔥\n" +
+            "╚═══════════════════════════════╝\n\n" +
+            "> 👁️ _\"O que mudou nas últimas versões?\"_\n\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
 
           commits.forEach((c, i) => {
             const hash = c.sha ? c.sha.slice(0, 7) : "?"
-            const msgCommit = (c.commit && c.commit.message || "").split("\n")[0]
+            const msgCommit = (c.commit && c.commit.message || "").split("\n")[0].trim()
             const autor = c.commit && c.commit.author && c.commit.author.name || "?"
             const data = c.commit && c.commit.author && c.commit.author.date
+            const cat = categorizarCommit(msgCommit)
 
-            const medalha = i === 0 ? "🔴" : i === 1 ? "🟠" : "▸"
+            const dataFmt = data ? new Date(data).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "?"
 
-            txt += medalha + " *Versão* `" + hash + "`\n"
-            txt += "📝 _" + msgCommit + "_\n"
-            txt += "👤 " + autor + "\n"
-            txt += "📅 " + formatarDataHora(data) + "\n"
+            txt += cat.emoji + " *" + cat.tipo + "*\n"
+            txt += "▸ _" + msgCommit + "_\n"
+            txt += "▸ 👤 " + autor + " — 📅 " + dataFmt + "\n"
+            txt += "▸ 🔖 `" + hash + "`\n"
 
-            if (i < commits.length - 1) txt += "\n━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            if (i < commits.length - 1) txt += "\n─────────────────────\n\n"
           })
 
-          txt += "\n\n> 🌙 _\"O passado ilumina o futuro.\"_\n" +
-            "> 🔥 _\"Cada versão é uma batalha vencida.\"_"
+          txt += "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+            "🔥 *Total:* " + commits.length + " atualizações recentes\n" +
+            "━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
+            "> ⚔️ _\"A força se renova a cada batalha.\"_\n" +
+            "> 🔥 _\"Sempre evoluindo.\"_"
 
           await sock.sendMessage(jid, { text: txt }, { quoted: msg })
 
         } catch (e) {
           await sock.sendMessage(jid, {
-            text: "🌙💥 *ERRO NO HISTÓRICO*\n\n⚠️ " + e.message + "\n\n> _\"Meus olhos falharam...\"_"
+            text: "🌙💥 *ERRO NO CHANGELOG*\n\n⚠️ " + e.message
           }, { quoted: msg })
         }
       }
@@ -352,10 +431,7 @@ ${saudacao}, *${pushName}*!
               "> _\"Me chame como quiser.\"_\n\n" +
               "📝 Atual: *" + (cfg.nomeBot || "Akaza") + "*\n\n" +
               "💡 Use: `!nomebot <novo nome>`\n\n" +
-              "⚠️ *Máx 20 caracteres*\n\n" +
-              "🔥 Comandos sem prefixo:\n" +
-              "▸ `<nome> fecha`\n" +
-              "▸ `<nome> abre`"
+              "⚠️ *Máx 20 caracteres*"
           }, { quoted: msg })
         }
 
@@ -371,11 +447,9 @@ ${saudacao}, *${pushName}*!
           text: "🌙✅ *NOME ATUALIZADO*\n\n" +
             "> _\"O bot ganha um novo nome.\"_\n\n" +
             "📝 Novo nome: *" + novoNome + "*\n\n" +
-            "━━━━━━━━━━━━━━━━━━━━━━\n" +
-            "🔥 Agora os comandos sem prefixo são:\n" +
+            "🔥 Comandos sem prefixo:\n" +
             "▸ `" + novoNome + " fecha`\n" +
-            "▸ `" + novoNome + " abre`\n\n" +
-            "> 🌙 _\"Meus olhos atendem a esse nome.\"_"
+            "▸ `" + novoNome + " abre`"
         }, { quoted: msg })
       }
     },
@@ -389,17 +463,16 @@ ${saudacao}, *${pushName}*!
             text: "╔═══════════════════════════════╗\n" +
               "║   🔥  𝐑𝐄𝐈𝐍𝐈𝐂𝐈𝐀𝐍𝐃𝐎...  🔥\n" +
               "╚═══════════════════════════════╝\n\n" +
-              "> ⚔️ _\"A força retorna em segundos.\"_\n\n" +
-              "♻️ Recarregando menus...\n" +
-              "🔄 Reiniciando o bot..."
+              "> ⚔️ _\"Recarregando todos os módulos...\"_\n\n" +
+              "♻️ Menus sendo recarregados...\n" +
+              "🔄 Bot vai reiniciar em 3s...\n\n" +
+              "> 📊 _\"Aguarde o aviso de retorno.\"_"
           }, { quoted: msg })
 
-          if (global.__carregarMenus) {
-            try { global.__carregarMenus() } catch (_) {}
-          }
+          try { if (global.__carregarMenus) global.__carregarMenus() } catch (_) {}
 
-          console.log("🔥 RELOAD solicitado pelo dono. Saindo...")
-          setTimeout(() => process.exit(0), 1500)
+          console.log("🔥 RELOAD solicitado pelo dono. Reiniciando...")
+          setTimeout(() => process.exit(0), 3000)
 
         } catch (e) {
           await sock.sendMessage(jid, { text: "🌙💥 *ERRO!*\n\n⚠️ " + e.message }, { quoted: msg })
@@ -417,15 +490,15 @@ ${saudacao}, *${pushName}*!
               "║   🔥  𝐑𝐄𝐍𝐀𝐒𝐂𝐄𝐍𝐃𝐎...  🔥\n" +
               "╚═══════════════════════════════╝\n\n" +
               "> ⚔️ _\"Voltarei mais forte.\"_\n\n" +
-              "♻️ Recarregando..."
+              "♻️ Recarregando módulos...\n" +
+              "🔄 Reiniciando em 3s...\n\n" +
+              "> 📊 _\"Aguarde o aviso de retorno.\"_"
           }, { quoted: msg })
 
-          if (global.__carregarMenus) {
-            try { global.__carregarMenus() } catch (_) {}
-          }
+          try { if (global.__carregarMenus) global.__carregarMenus() } catch (_) {}
 
-          console.log("🔥 REINICIAR solicitado pelo dono. Saindo...")
-          setTimeout(() => process.exit(0), 1500)
+          console.log("🔥 REINICIAR solicitado pelo dono. Reiniciando...")
+          setTimeout(() => process.exit(0), 3000)
 
         } catch (e) {
           await sock.sendMessage(jid, { text: "🌙💥 *ERRO!*\n\n⚠️ " + e.message }, { quoted: msg })
@@ -438,14 +511,17 @@ ${saudacao}, *${pushName}*!
       async executar({ sock, msg }) {
         const jid = msg.key.remoteJid
         await sock.sendMessage(jid, {
-          text: "🌙😴 *O BOT SE APAGA...*\n\n" +
+          text: "╔═══════════════════════════════╗\n" +
+            "║   🌙  𝐀𝐓𝐄́ 𝐋𝐎𝐆𝐎...  🌙\n" +
+            "╚═══════════════════════════════╝\n\n" +
             "> _\"Meus olhos se fecham...\"_\n" +
             "> _\"...mas sempre volto.\"_\n\n" +
             "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
             "> 🌙 _\"Até a próxima batalha, mestre.\"_\n" +
             "> 💤 _Zzzz..._"
         }, { quoted: msg })
-        setTimeout(() => process.exit(0), 3000)
+        console.log("🛑 BOTOFF solicitado. Desligando de vez...")
+        setTimeout(() => process.exit(2), 3000)
       }
     },
 
@@ -462,7 +538,7 @@ ${saudacao}, *${pushName}*!
           const info = await sock.groupAcceptInvite(match[1])
           await sock.sendMessage(jid, { text: "🌙✅ *ENTREI!*\n\n> _\"Mais um território observado.\"_\n\n🔥 `" + (typeof info === "string" ? info : "ok") + "`" }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: "🌙💥 *NÃO CONSEGUI!*\n\n> _\"Impossível... meus olhos falharam?\"_\n\n⚠️ " + e.message }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "🌙💥 *NÃO CONSEGUI!*\n\n⚠️ " + e.message }, { quoted: msg })
         }
       }
     },
@@ -494,7 +570,6 @@ ${saudacao}, *${pushName}*!
           const tOut = path.join(tmp, "menu_" + Date.now() + "_out.mp4")
           fs.writeFileSync(tIn, vidBuffer)
 
-          // 🔄 Converte o vídeo INTEIRO (sem -t 8)
           execSync(`"${ff}" -y -i "${tIn}" -vf "fps=12,scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=black" -an -c:v libx264 -preset fast -crf 30 -pix_fmt yuv420p -movflags +faststart "${tOut}"`, { stdio: "ignore", timeout: 180000 })
 
           let outBuffer = fs.readFileSync(tOut)
@@ -506,13 +581,6 @@ ${saudacao}, *${pushName}*!
             try { fs.unlinkSync(tOut2) } catch (_) {}
           }
 
-          if (outBuffer.length > 15 * 1024 * 1024) {
-            const tOut3 = path.join(tmp, "menu_" + Date.now() + "_out3.mp4")
-            execSync(`"${ff}" -y -i "${tIn}" -t 15 -vf "fps=8,scale=384:384:force_original_aspect_ratio=decrease,pad=384:384:(ow-iw)/2:(oh-ih)/2:color=black" -an -c:v libx264 -preset fast -crf 32 -pix_fmt yuv420p -movflags +faststart "${tOut3}"`, { stdio: "ignore", timeout: 180000 })
-            outBuffer = fs.readFileSync(tOut3)
-            try { fs.unlinkSync(tOut3) } catch (_) {}
-          }
-
           cfg.fotoMenu = outBuffer.toString("base64")
           cfg.tipoMenu = "video"
           db.salvarConfig(cfg)
@@ -520,7 +588,7 @@ ${saudacao}, *${pushName}*!
           try { fs.unlinkSync(tOut) } catch (_) {}
           await sock.sendMessage(jid, { video: outBuffer, mimetype: "video/mp4", fileName: "akaza.mp4", gifPlayback: true, caption: "🌙✅ *ESTANDARTE ANIMADO SALVO*\n\n> _\"Movimento também é arte.\"_\n\n🎬 Vídeo do menu salvo!" }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: "🌙💥 *ERRO!*\n\n> _\"Falha nos olhos...\"_\n\n⚠️ " + e.message }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "🌙💥 *ERRO!*\n\n⚠️ " + e.message }, { quoted: msg })
         }
       }
     },
