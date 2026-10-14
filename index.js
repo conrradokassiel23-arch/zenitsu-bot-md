@@ -1,5 +1,5 @@
 /* ============================================================
-   🌙 AKAZA BOT MD
+   🔥 AKAZA BOT MD
    ============================================================ */
 
 const {
@@ -442,7 +442,7 @@ async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo,
 
     if (!ehAdmin && !isDono && !isSubDono) {
       await sock.sendMessage(remetente, {
-        text: "🌙⚔️ *SEM PERMISSÃO*\n\n" +
+        text: "🔥⚔️ *SEM PERMISSÃO*\n\n" +
           "> 👁️ _\"Meus olhos veem que você não é admin.\"_\n" +
           "> _\"Não posso obedecer.\"_"
       }, { quoted: msg })
@@ -453,11 +453,11 @@ async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo,
       try {
         await sock.groupSettingUpdate(remetente, "announcement")
         await sock.sendMessage(remetente, {
-          text: "🌙🔒 *GRUPO FECHADO*\n\n" +
+          text: "🔥🔒 *GRUPO FECHADO*\n\n" +
             "> _\"A força observa em silêncio.\"_\n" +
             "> _\"Só os dignos falam.\"_\n\n" +
             "━━━━━━━━━━━━━━━━━━━━━━\n" +
-            "⚔️ _Respiração da Lua Crescente ativada._"
+            "⚔️ _Respiração... 3ª Forma: Aniquilação._"
         }, { quoted: msg })
       } catch (e) {
         await sock.sendMessage(remetente, { text: "🌙💢 *Erro ao fechar:* " + e.message }, { quoted: msg })
@@ -469,7 +469,7 @@ async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo,
       try {
         await sock.groupSettingUpdate(remetente, "not_announcement")
         await sock.sendMessage(remetente, {
-          text: "🌙🔓 *GRUPO ABERTO*\n\n" +
+          text: "🔥🔓 *GRUPO ABERTO*\n\n" +
             "> _\"A força ilumina todos.\"_\n" +
             "> _\"Respirem, mortais.\"_\n\n" +
             "━━━━━━━━━━━━━━━━━━━━━━\n" +
@@ -868,34 +868,42 @@ async function iniciar() {
 
     const cmd = getComando(cmdName.toLowerCase())
     if (!cmd) {
-      // ========== 🎨 AVISO BONITO "COMANDO NÃO ENCONTRADO" ==========
+      // ========== 🔥 AVISO BONITO "COMANDO NÃO ENCONTRADO" ==========
       const p = (isGrupo && confGrupo.multiprefixo && confGrupo.prefixo) ? confGrupo.prefixo : prefixoGlobal
-      const parecidos = comandosParecidos(cmdName, 3)
-      const sugestao = parecidos.length ? p + parecidos[0].comando : "inexistente"
+      const cmdLimpo = (cmdName || "").trim().toLowerCase()
+
+      // 🎯 Se o comando for vazio ou só o prefixo, sugere o menu
+      let sugestao = p + "menu"
+      if (cmdLimpo && cmdLimpo.length > 0) {
+        const parecidos = comandosParecidos(cmdLimpo, 3)
+        sugestao = parecidos.length ? p + parecidos[0].comando : "inexistente"
+      }
+
       const numUser = soNumero(sender)
       const agora = new Date()
       const hora = agora.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })
       const data = agora.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
       const nomeBot = db.config().nomeBot || "Akaza Bot"
+      const cmdExibido = cmdLimpo ? (p + cmdLimpo) : p
 
       const textoBase =
-`✨ • COMANDO NÃO ENCONTRADO •
+`🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •
 
-『 Informações 』 ↴
+『 𝐈𝐧𝐟𝐨𝐫𝐦𝐚𝐜̧𝐨̃𝐞𝐬 』 ↴
 
-↳ Usuário: 👤
+↳ 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨: 👤
    『 @${numUser} 』
 
-↳ Prefixo: 🎯
+↳ 𝐏𝐫𝐞𝐟𝐢𝐱𝐨: 🎯
    『 ${p} 』
 
-↳ Horário: 🕐
+↳ 𝐇𝐨𝐫𝐚́𝐫𝐢𝐨: 🕐
    『 ${hora} — ${data} 』
 
-↳ Comando: ❓
-   『 ${p}${cmdName} 』
+↳ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨: ❔
+   『 ${cmdExibido} 』
 
-↳ Você quis dizer: 💡
+↳ 𝐕𝐨𝐜𝐞̂ 𝐪𝐮𝐢𝐬 𝐝𝐢𝐳𝐞𝐫: 💡
    『 ${sugestao} 』
 
 _${nomeBot}_ 🌙`
