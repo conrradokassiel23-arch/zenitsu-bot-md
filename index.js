@@ -1,5 +1,5 @@
 /* ============================================================
-   ❄️ MOONS BOT MD - AKAZA
+   🔥 AKAZA BOT MD
    ============================================================ */
 
 const {
@@ -204,9 +204,9 @@ async function notificarX9(sock, groupJid, tipo, autor, alvo) {
     const nomeGrupo = meta.subject || "Grupo"
     const hora = new Date().toLocaleString("pt-BR")
     let texto = ""
-    if (tipo === "PROMOTE") texto = "❄️ X9 - @" + autorNum + " promoveu @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
-    else if (tipo === "DEMOTE") texto = "❄️ X9 - @" + autorNum + " rebaixou @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
-    else if (tipo === "REMOVE") texto = "❄️ X9 - @" + autorNum + " removeu @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
+    if (tipo === "PROMOTE") texto = "🔥 X9 - @" + autorNum + " promoveu @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
+    else if (tipo === "DEMOTE") texto = "🔥 X9 - @" + autorNum + " rebaixou @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
+    else if (tipo === "REMOVE") texto = "🔥 X9 - @" + autorNum + " removeu @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
     else return
     await sock.sendMessage(groupJid, { text: texto, mentions: [autor, alvo].filter(Boolean) })
   } catch (e) { console.log("X9 erro:", e.message) }
@@ -269,7 +269,7 @@ async function processarAutoTtk(sock, msg, remetente, isGrupo) {
     const buffer = Buffer.from(await vid.arrayBuffer())
 
     if (buffer.length > 16 * 1024 * 1024) {
-      await sock.sendMessage(remetente, { text: "❄️ Vídeo muito grande (max 16MB)" }, { quoted: msg })
+      await sock.sendMessage(remetente, { text: "🔥 Vídeo muito grande (max 16MB)" }, { quoted: msg })
       return true
     }
 
@@ -345,7 +345,7 @@ function carregarMenus() {
   global.totalAliases = aliases.size
   global.comandosPorCategoria = categorias
 
-  console.log("\n❄️ Moons Bot carregou " + comandos.size + " comandos...")
+  console.log("\n🔥 Akaza Bot carregou " + comandos.size + " comandos...")
   console.log(aliases.size + " aliases registrados\n")
 }
 
@@ -415,7 +415,7 @@ function envolverSendMessage(sock) {
 }
 
 // ============================================================
-// ❄️ COMANDOS SEM PREFIXO (nome do bot)
+// 🔥 COMANDOS SEM PREFIXO (nome do bot)
 // ============================================================
 async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo, isDono, isSubDono) {
   if (!isGrupo) return false
@@ -463,7 +463,7 @@ async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo,
 
     if (!ehAdmin && !isDono && !isSubDono) {
       await sock.sendMessage(remetente, {
-        text: "❄️⚔️ *SEM PERMISSÃO*\n\n" +
+        text: "🔥⚔️ *SEM PERMISSÃO*\n\n" +
           "> 👁️ _\"Meus olhos veem que você não é admin.\"_\n" +
           "> _\"Não posso obedecer.\"_"
       }, { quoted: msg })
@@ -474,14 +474,14 @@ async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo,
       try {
         await sock.groupSettingUpdate(remetente, "announcement")
         await sock.sendMessage(remetente, {
-          text: "❄️🔒 *GRUPO FECHADO*\n\n" +
+          text: "🔥🔒 *GRUPO FECHADO*\n\n" +
             "> _\"A força observa em silêncio.\"_\n" +
             "> _\"Só os dignos falam.\"_\n\n" +
             "━━━━━━━━━━━━━━━━━━━━━━\n" +
             "⚔️ _Respiração... 3ª Forma: Aniquilação._"
         }, { quoted: msg })
       } catch (e) {
-        await sock.sendMessage(remetente, { text: "❄️ *Erro ao fechar:* " + e.message }, { quoted: msg })
+        await sock.sendMessage(remetente, { text: "🔥 *Erro ao fechar:* " + e.message }, { quoted: msg })
       }
       return true
     }
@@ -490,14 +490,14 @@ async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo,
       try {
         await sock.groupSettingUpdate(remetente, "not_announcement")
         await sock.sendMessage(remetente, {
-          text: "❄️🔓 *GRUPO ABERTO*\n\n" +
+          text: "🔥🔓 *GRUPO ABERTO*\n\n" +
             "> _\"A força ilumina todos.\"_\n" +
             "> _\"Respirem, mortais.\"_\n\n" +
             "━━━━━━━━━━━━━━━━━━━━━━\n" +
             "⚔️ _Respirando Lua Crescente..._"
         }, { quoted: msg })
       } catch (e) {
-        await sock.sendMessage(remetente, { text: "❄️ *Erro ao abrir:* " + e.message }, { quoted: msg })
+        await sock.sendMessage(remetente, { text: "🔥 *Erro ao abrir:* " + e.message }, { quoted: msg })
       }
       return true
     }
@@ -551,11 +551,11 @@ async function processarFigCmd(sock, msg, remetente, sender, isGrupo, isDono, is
     const podeAdmin = isAdmin || isDono || isSubDono || (ehSub && ehComandoSub)
 
     if (cmdExecutar.donoOnly && !isDono && !isSubDono) {
-      await sock.sendMessage(remetente, { text: "❄️ Esse comando é só do mestre!" }, { quoted: msg })
+      await sock.sendMessage(remetente, { text: "🔥 Esse comando é só do mestre!" }, { quoted: msg })
       return true
     }
     if (cmdExecutar.adminOnly && !podeAdmin && !isSubDono) {
-      await sock.sendMessage(remetente, { text: "❄️ Esse comando é de adm!" }, { quoted: msg })
+      await sock.sendMessage(remetente, { text: "🔥 Esse comando é de adm!" }, { quoted: msg })
       return true
     }
 
@@ -616,7 +616,7 @@ async function iniciar() {
     setTimeout(async () => {
       try {
         console.log("\n═══════════════════════════════")
-        console.log("   ❄️ MOONS BOT - MD")
+        console.log("   🔥 AKAZA BOT - MD")
         console.log("═══════════════════════════════\n")
         console.log("Digite o NUMERO do bot (com DDI, so digitos):")
         console.log("Exemplo: 5511999999999\n")
@@ -650,7 +650,7 @@ async function iniciar() {
       if (motivo === DisconnectReason.loggedOut) process.exit(1)
       else setTimeout(() => iniciar(), 3000)
     } else if (connection === "open") {
-      console.log("\n❄️ CONECTADO! Moons Bot online\n")
+      console.log("\n🔥 CONECTADO! Akaza Bot online\n")
     }
   })
 
@@ -699,7 +699,7 @@ async function iniciar() {
       if (b.grupos && b.grupos[remetente]) return
     }
 
-    // ❄️ Comando sem prefixo (nome fecha/abre)
+    // 🔥 Comando sem prefixo (nome fecha/abre)
     if (isGrupo && !msg.key.fromMe) {
       const feito = await processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo, isDono, isSubDono)
       if (feito) return
@@ -740,7 +740,7 @@ async function iniciar() {
             rpg.usuarios[num].ultimoGanho = dataHoje
             db.salvarRpg(rpg)
             await sock.sendMessage(remetente, {
-              text: "❄️💰 Gold diario! +100 pra @" + num + "\nSaldo: " + rpg.usuarios[num].moedas,
+              text: "🔥💰 Gold diario! +100 pra @" + num + "\nSaldo: " + rpg.usuarios[num].moedas,
               mentions: [sender]
             })
           }
@@ -825,7 +825,7 @@ async function iniciar() {
         afks[remetente] = afkGrupo
         db.salvarAfk(afks)
         await sock.sendMessage(remetente, {
-          text: "❄️ @" + soNumero(jidAfk) + " voltou! Ficou AFK " + tempo,
+          text: "🔥 @" + soNumero(jidAfk) + " voltou! Ficou AFK " + tempo,
           mentions: [jidAfk]
         })
       }
@@ -837,7 +837,7 @@ async function iniciar() {
           if (soNumero(j) === soNumero(m)) {
             const tempo = formatarTempo(Date.now() - info.desde)
             await sock.sendMessage(remetente, {
-              text: "❄️💤 AFK: @" + soNumero(j) + "\nHa " + tempo + "\nMotivo: " + info.motivo,
+              text: "🔥💤 AFK: @" + soNumero(j) + "\nHa " + tempo + "\nMotivo: " + info.motivo,
               mentions: [j]
             })
           }
@@ -973,7 +973,7 @@ async function iniciar() {
 
     const cmd = getComando(cmdName.toLowerCase())
     if (!cmd) {
-      // ❄️ COMANDO NÃO ENCONTRADO
+      // 🔥 COMANDO NÃO ENCONTRADO
       const p = (isGrupo && confGrupo.multiprefixo && confGrupo.prefixo) ? confGrupo.prefixo : prefixoGlobal
       const cmdLimpo = (cmdName || "").trim().toLowerCase()
       const soPrefixo = !cmdLimpo || cmdLimpo.length === 0
@@ -985,34 +985,24 @@ async function iniciar() {
       }
 
       const VARIACOES_SO_PREFIXO = [
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •", aviso: "O comando informado não foi reconhecido.", frase: "💡 Digite um comando após o prefixo!" },
-        { topo: "❄️ • 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 𝐒𝐎𝐙𝐈𝐍𝐇𝐎 •", aviso: "Só o prefixo não faz nada.", frase: "💡 Complete com um comando!" },
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐕𝐀𝐙𝐈𝐎 •", aviso: "Isso não é um comando.", frase: "💡 Digite algo após o prefixo." },
-        { topo: "❄️ • 𝐎 𝐐𝐔𝐄 𝐕𝐎𝐂𝐄̂ 𝐐𝐔𝐄𝐑? •", aviso: "O prefixo sozinho não diz nada.", frase: "💡 Seja mais específico." },
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐂𝐎𝐌𝐏𝐋𝐄𝐓𝐎 •", aviso: "Você esqueceu do resto.", frase: "💡 Digite o comando inteiro." },
-        { topo: "❄️ • 𝐒𝐎 𝐎 𝐏𝐑𝐄𝐅𝐈𝐗𝐎? •", aviso: "Isso não vai funcionar.", frase: "💡 Falta o principal, guerreiro." },
-        { topo: "❄️ • 𝐂𝐎𝐑𝐓𝐎𝐔 𝐎 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 •", aviso: "Você cortou a frase no meio.", frase: "💡 Termine de digitar." },
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐅𝐀𝐋𝐓𝐀𝐍𝐃𝐎 •", aviso: "Tá faltando a alma do comando.", frase: "💡 Só o prefixo não basta." },
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐄𝐌 𝐁𝐑𝐀𝐍𝐂𝐎 •", aviso: "Sua mensagem ficou vazia.", frase: "💡 Preencha com um comando real." },
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐂𝐎𝐌𝐏𝐋𝐄𝐓𝐎 •", aviso: "Até o mais forte precisa da frase inteira.", frase: "💡 Digite o comando completo." }
+        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •", aviso: "O comando informado não foi reconhecido.", frase: "💡 Digite um comando após o prefixo!" },
+        { topo: "🔥 • 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 𝐒𝐎𝐙𝐈𝐍𝐇𝐎 •", aviso: "Só o prefixo não faz nada.", frase: "💡 Complete com um comando!" },
+        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐕𝐀𝐙𝐈𝐎 •", aviso: "Isso não é um comando.", frase: "💡 Digite algo após o prefixo." },
+        { topo: "🔥 • 𝐎 𝐐𝐔𝐄 𝐕𝐎𝐂𝐄̂ 𝐐𝐔𝐄𝐑? •", aviso: "O prefixo sozinho não diz nada.", frase: "💡 Seja mais específico." },
+        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐂𝐎𝐌𝐏𝐋𝐄𝐓𝐎 •", aviso: "Você esqueceu do resto.", frase: "💡 Digite o comando inteiro." }
       ]
 
       const VARIACOES_CMD_ERRADO = [
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •", aviso: "O comando informado não foi reconhecido.", frase: "💡 Verifique a escrita e tente novamente!" },
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐕𝐀́𝐋𝐈𝐃𝐎 •", aviso: "Isso não existe no meu repertório.", frase: "💡 Confira antes de tentar novamente." },
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐃𝐄𝐒𝐂𝐎𝐍𝐇𝐄𝐂𝐈𝐃𝐎 •", aviso: "Nem meus olhos encontraram isso.", frase: "💡 Talvez esteja em outro mundo." },
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐄𝐑𝐑𝐀𝐃𝐎 •", aviso: "Tenta de novo, mortal.", frase: "💡 A pressa cega os fracos." },
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐗𝐈𝐒𝐓𝐄 •", aviso: "Isso não tá na minha lista.", frase: "💡 Aprenda antes de usar." },
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐄𝐗𝐈𝐒𝐓𝐄𝐍𝐓𝐄 •", aviso: "Meus olhos não acham esse comando.", frase: "💡 Procure outro caminho." },
-        { topo: "❄️ • 𝐄𝐑𝐑𝐎 𝐃𝐄 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 •", aviso: "Esse não é o caminho, guerreiro.", frase: "💡 Retorne e estude as técnicas." },
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐌𝐈𝐒𝐓𝐄𝐑𝐈𝐎𝐒𝐎 •", aviso: "Isso não existe nesse mundo.", frase: "💡 Nem nos meus sonhos." },
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐏𝐄𝐑𝐃𝐈𝐃𝐎 •", aviso: "Se perdeu no caminho?", frase: "💡 Ou tá testando minha paciência?" },
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐄𝐒𝐂𝐎𝐍𝐃𝐈𝐃𝐎 •", aviso: "Sumiu no meio da noite.", frase: "💡 Ou nunca existiu." },
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐒𝐀𝐍𝐆𝐑𝐄𝐍𝐓𝐎 •", aviso: "Esse comando não sangra.", frase: "💡 Ou digitou com os olhos fechados." },
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐂𝐎𝐑𝐓𝐀𝐃𝐎 •", aviso: "Isso foi cortado da minha lista.", frase: "💡 Não insista, guerreiro." },
-        { topo: "❄️ • 𝐍𝐎𝐈𝐓𝐄 𝐄𝐒𝐂𝐔𝐑𝐀 •", aviso: "Você se perdeu na escuridão.", frase: "💡 Acenda a tocha da sabedoria." },
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐀𝐅𝐔𝐍𝐃𝐀𝐃𝐎 •", aviso: "Esse comando se perdeu no mar.", frase: "💡 Volte pra superfície, mortal." },
-        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐄𝐗𝐏𝐋𝐎𝐃𝐈𝐔 •", aviso: "Esse comando virou cinzas.", frase: "💡 Não tente reconstruir o que queimou." }
+        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •", aviso: "O comando informado não foi reconhecido.", frase: "💡 Verifique a escrita e tente novamente!" },
+        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐕𝐀́𝐋𝐈𝐃𝐎 •", aviso: "Isso não existe no meu repertório.", frase: "💡 Confira antes de tentar novamente." },
+        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐃𝐄𝐒𝐂𝐎𝐍𝐇𝐄𝐂𝐈𝐃𝐎 •", aviso: "Nem meus olhos encontraram isso.", frase: "💡 Talvez esteja em outro mundo." },
+        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐄𝐑𝐑𝐀𝐃𝐎 •", aviso: "Tenta de novo, mortal.", frase: "💡 A pressa cega os fracos." },
+        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐗𝐈𝐒𝐓𝐄 •", aviso: "Isso não tá na minha lista.", frase: "💡 Aprenda antes de usar." },
+        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐄𝐗𝐈𝐒𝐓𝐄𝐍𝐓𝐄 •", aviso: "Meus olhos não acham esse comando.", frase: "💡 Procure outro caminho." },
+        { topo: "🔥 • 𝐄𝐑𝐑𝐎 𝐃𝐄 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 •", aviso: "Esse não é o caminho, guerreiro.", frase: "💡 Retorne e estude as técnicas." },
+        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐌𝐈𝐒𝐓𝐄𝐑𝐈𝐎𝐒𝐎 •", aviso: "Isso não existe nesse mundo.", frase: "💡 Nem nos meus sonhos." },
+        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐏𝐄𝐑𝐃𝐈𝐃𝐎 •", aviso: "Se perdeu no caminho?", frase: "💡 Ou tá testando minha paciência?" },
+        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐄𝐒𝐂𝐎𝐍𝐃𝐈𝐃𝐎 •", aviso: "Sumiu no meio da noite.", frase: "💡 Ou nunca existiu." }
       ]
 
       const lista = soPrefixo ? VARIACOES_SO_PREFIXO : VARIACOES_CMD_ERRADO
@@ -1022,7 +1012,7 @@ async function iniciar() {
       const agora = new Date()
       const hora = agora.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })
       const data = agora.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
-      const nomeBot = db.config().nomeBot || "Moons Bot"
+      const nomeBot = db.config().nomeBot || "Akaza Bot"
       const cmdExibido = cmdLimpo ? (p + cmdLimpo) : p
 
       let textoBase
@@ -1039,7 +1029,7 @@ async function iniciar() {
 👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:
 ╰➜ @${numUser}
 
-❄️ 𝐏𝐫𝐞𝐟𝐢𝐱𝐨:
+🔥 𝐏𝐫𝐞𝐟𝐢𝐱𝐨:
 ╰➜ ${p}
 
 ❔ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐮𝐬𝐚𝐝𝐨:
@@ -1067,7 +1057,7 @@ ${v.frase}
 👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:
 ╰➜ @${numUser}
 
-❄️ 𝐏𝐫𝐞𝐟𝐢𝐱𝐨:
+🔥 𝐏𝐫𝐞𝐟𝐢𝐱𝐨:
 ╰➜ ${p}
 
 ❔ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐮𝐬𝐚𝐝𝐨:
@@ -1111,7 +1101,7 @@ ${v.frase}
       if (userCidade && userCidade.preso && userCidade.preso > Date.now()) {
         const tempoRestante = formatarTempo(userCidade.preso - Date.now())
         if (cmdName.toLowerCase() !== "prefixo") {
-          await sock.sendMessage(remetente, { text: "❄️🚔 VOCÊ ESTÁ PRESO!\n\n⏰ Tempo: " + tempoRestante }, { quoted: msg })
+          await sock.sendMessage(remetente, { text: "🔥🚔 VOCÊ ESTÁ PRESO!\n\n⏰ Tempo: " + tempoRestante }, { quoted: msg })
           return
         }
       }
@@ -1141,18 +1131,18 @@ ${v.frase}
     if (cmd.categoria === "menu-rpg" && isGrupo) {
       const excecoes = ["rpg", "menurpg", "prefixo"]
       if (!excecoes.includes(cmd.nome) && confGrupo.rpgAtivo !== true) {
-        return sock.sendMessage(remetente, { text: "❄️ RPG OFF! Ative com !rpg on" }, { quoted: msg })
+        return sock.sendMessage(remetente, { text: "🔥 RPG OFF! Ative com !rpg on" }, { quoted: msg })
       }
     }
 
     if (cmd.donoOnly && !isDono && !isSubDono) {
-      return sock.sendMessage(remetente, { text: "❄️ Esse comando e so do mestre!" }, { quoted: msg })
+      return sock.sendMessage(remetente, { text: "🔥 Esse comando e so do mestre!" }, { quoted: msg })
     }
     if (cmd.adminOnly && !podeAdmin && !isSubDono) {
-      return sock.sendMessage(remetente, { text: "❄️ Esse comando e de admin!" }, { quoted: msg })
+      return sock.sendMessage(remetente, { text: "🔥 Esse comando e de admin!" }, { quoted: msg })
     }
     if (cmd.grupoOnly && !isGrupo) {
-      return sock.sendMessage(remetente, { text: "❄️ So em grupo!" }, { quoted: msg })
+      return sock.sendMessage(remetente, { text: "🔥 So em grupo!" }, { quoted: msg })
     }
 
     try {
@@ -1173,7 +1163,7 @@ ${v.frase}
       console.log("ERRO em " + cmd.nome + ":")
       console.log(e)
       try {
-        await sock.sendMessage(remetente, { text: "❄️ ERRO no comando " + cmd.nome + "\n\n" + e.message }, { quoted: msg })
+        await sock.sendMessage(remetente, { text: "🔥 ERRO no comando " + cmd.nome + "\n\n" + e.message }, { quoted: msg })
       } catch (_) {}
     }
   })
@@ -1341,7 +1331,7 @@ function checarAgendamentos() {
 // 💻 CONSOLE
 // ============================================================
 function iniciarConsole() {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: "moons> " })
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: "akaza> " })
   rl.prompt()
   rl.on("line", async (linha) => {
     const texto = linha.trim()
