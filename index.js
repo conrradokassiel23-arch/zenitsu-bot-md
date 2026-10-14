@@ -868,6 +868,7 @@ async function iniciar() {
 
     const cmd = getComando(cmdName.toLowerCase())
     if (!cmd) {
+      // ========== 🎨 AVISO BONITO "COMANDO NÃO ENCONTRADO" ==========
       const p = (isGrupo && confGrupo.multiprefixo && confGrupo.prefixo) ? confGrupo.prefixo : prefixoGlobal
       const parecidos = comandosParecidos(cmdName, 3)
       const sugestao = parecidos.length ? p + parecidos[0].comando : "inexistente"
@@ -879,24 +880,23 @@ async function iniciar() {
 
       const textoBase =
 `✨ • COMANDO NÃO ENCONTRADO •
-✨
--
-『 Informações 』 ⬇️
--
-👤 Usuário:
-└ 『 @${numUser} 』
--
-🔤 Prefixo:
-└ 『 ${p} 』
--
-🕐 Horário:
-└ 『 ${hora} — ${data} 』
--
-❓ Comando:
-└ 『 ${p}${cmdName} 』
--
-💡 Você quis dizer:
-└ 『 ${sugestao} 』
+
+『 Informações 』 ↴
+
+↳ Usuário: 👤
+   『 @${numUser} 』
+
+↳ Prefixo: 🎯
+   『 ${p} 』
+
+↳ Horário: 🕐
+   『 ${hora} — ${data} 』
+
+↳ Comando: ❓
+   『 ${p}${cmdName} 』
+
+↳ Você quis dizer: 💡
+   『 ${sugestao} 』
 
 _${nomeBot}_ 🌙`
 
