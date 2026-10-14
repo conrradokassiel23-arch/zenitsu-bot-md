@@ -417,17 +417,37 @@ async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo,
   if (msg.key.fromMe) return false
 
   try {
-    const texto = getTexto(msg).toLowerCase().trim()
-    if (!texto) return false
+    const textoOriginal = getTexto(msg).trim()
+    if (!textoOriginal) return false
+    const texto = textoOriginal.toLowerCase()
 
     const cfg = db.config()
+    // 🔥 Remove espaços do nome salvo pra comparar melhor
     const nomeBot = (cfg.nomeBot || "akaza").toLowerCase().trim()
     if (!nomeBot) return false
 
-    if (!texto.startsWith(nomeBot)) return false
+    // 🔥 Normaliza: aceita "akaza fecha", "akazafecha" e "Akaza Fecha"
+    const textoSemEspaco = texto.replace(/\s+/g, " ")
+    const nomeSemEspaco = nomeBot.replace(/\s+/g, "")
 
-    const resto = texto.slice(nomeBot.length).trim()
-    if (resto !== "fecha" && resto !== "abre") return false
+    // Tenta match direto primeiro
+    let comando = null
+    if (textoSemEspaco.startsWith(nomeBot)) {
+      const resto = textoSemEspaco.slice(nomeBot.length).trim()
+      if (resto === "fecha") comando = "fecha"
+      else if (resto === "abre") comando = "abre"
+    }
+    // Tenta match sem espaço (akazafecha)
+    if (!comando) {
+      const textoSemEspacoTotal = texto.replace(/\s+/g, "")
+      if (textoSemEspacoTotal.startsWith(nomeSemEspaco)) {
+        const resto = textoSemEspacoTotal.slice(nomeSemEspaco.length)
+        if (resto === "fecha") comando = "fecha"
+        else if (resto === "abre") comando = "abre"
+      }
+    }
+
+    if (!comando) return false
 
     let ehAdmin = false
     try {
@@ -449,7 +469,7 @@ async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo,
       return true
     }
 
-    if (resto === "fecha") {
+    if (comando === "fecha") {
       try {
         await sock.groupSettingUpdate(remetente, "announcement")
         await sock.sendMessage(remetente, {
@@ -465,7 +485,7 @@ async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo,
       return true
     }
 
-    if (resto === "abre") {
+    if (comando === "abre") {
       try {
         await sock.groupSettingUpdate(remetente, "not_announcement")
         await sock.sendMessage(remetente, {
@@ -868,16 +888,43 @@ async function iniciar() {
 
     const cmd = getComando(cmdName.toLowerCase())
     if (!cmd) {
-      // ========== 🔥 AVISO BONITO "COMANDO NÃO ENCONTRADO" ==========
+      // ========== 🔥 COMANDO NÃO ENCONTRADO ==========
       const p = (isGrupo && confGrupo.multiprefixo && confGrupo.prefixo) ? confGrupo.prefixo : prefixoGlobal
       const cmdLimpo = (cmdName || "").trim().toLowerCase()
+      const soPrefixo = !cmdLimpo || cmdLimpo.length === 0
 
-      // 🎯 Se o comando for vazio ou só o prefixo, sugere o menu
-      let sugestao = p + "menu"
-      if (cmdLimpo && cmdLimpo.length > 0) {
+      // 🎯 Sugestão inteligente
+      let comandoCerto = p + "menu"
+      if (!soPrefixo) {
         const parecidos = comandosParecidos(cmdLimpo, 3)
-        sugestao = parecidos.length ? p + parecidos[0].comando : "inexistente"
+        comandoCerto = parecidos.length ? p + parecidos[0].comando : "inexistente"
       }
+
+      // 🎲 Variações SÓ PREFIXO
+      const VARIACOES_SO_PREFIXO = [
+        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •", aviso: "O comando informado não foi reconhecido.", frase: "💡 Digite um comando após o prefixo!" },
+        { topo: "❄️ • 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 𝐒𝐎𝐙𝐈𝐍𝐇𝐎 •", aviso: "Só o prefixo não faz nada.", frase: "💡 Complete com um comando!" },
+        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐕𝐀𝐙𝐈𝐎 •", aviso: "Isso não é um comando.", frase: "💡 Digite algo após o prefixo." },
+        { topo: "❄️ • 𝐎 𝐐𝐔𝐄 𝐕𝐎𝐂𝐄̂ 𝐐𝐔𝐄𝐑? •", aviso: "O prefixo sozinho não diz nada.", frase: "💡 Seja mais específico." },
+        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐂𝐎𝐌𝐏𝐋𝐄𝐓𝐎 •", aviso: "Você esqueceu do resto.", frase: "💡 Digite o comando inteiro." }
+      ]
+
+      // 🎲 Variações COMANDO ERRADO
+      const VARIACOES_CMD_ERRADO = [
+        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •", aviso: "O comando informado não foi reconhecido.", frase: "💡 Verifique a escrita e tente novamente!" },
+        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐕𝐀́𝐋𝐈𝐃𝐎 •", aviso: "Isso não existe no meu repertório.", frase: "💡 Confira antes de tentar novamente." },
+        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐃𝐄𝐒𝐂𝐎𝐍𝐇𝐄𝐂𝐈𝐃𝐎 •", aviso: "Nem meus olhos encontraram isso.", frase: "💡 Talvez esteja em outro mundo." },
+        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐄𝐑𝐑𝐀𝐃𝐎 •", aviso: "Tenta de novo, mortal.", frase: "💡 A pressa cega os fracos." },
+        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐗𝐈𝐒𝐓𝐄 •", aviso: "Isso não tá na minha lista.", frase: "💡 Aprenda antes de usar." },
+        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐄𝐗𝐈𝐒𝐓𝐄𝐍𝐓𝐄 •", aviso: "Meus olhos não acham esse comando.", frase: "💡 Procure outro caminho." },
+        { topo: "❄️ • 𝐄𝐑𝐑𝐎 𝐃𝐄 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 •", aviso: "Esse não é o caminho, guerreiro.", frase: "💡 Retorne e estude as técnicas." },
+        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐌𝐈𝐒𝐓𝐄𝐑𝐈𝐎𝐒𝐎 •", aviso: "Isso não existe nesse mundo.", frase: "💡 Nem nos meus sonhos." },
+        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐏𝐄𝐑𝐃𝐈𝐃𝐎 •", aviso: "Se perdeu no caminho?", frase: "💡 Ou tá testando minha paciência?" },
+        { topo: "❄️ • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐄𝐒𝐂𝐎𝐍𝐃𝐈𝐃𝐎 •", aviso: "Sumiu no meio da noite.", frase: "💡 Ou nunca existiu." }
+      ]
+
+      const lista = soPrefixo ? VARIACOES_SO_PREFIXO : VARIACOES_CMD_ERRADO
+      const v = lista[Math.floor(Math.random() * lista.length)]
 
       const numUser = soNumero(sender)
       const agora = new Date()
@@ -886,27 +933,64 @@ async function iniciar() {
       const nomeBot = db.config().nomeBot || "Akaza Bot"
       const cmdExibido = cmdLimpo ? (p + cmdLimpo) : p
 
-      const textoBase =
-`🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •
+      let textoBase
+      if (soPrefixo) {
+        textoBase =
+`${v.topo}
 
-『 𝐈𝐧𝐟𝐨𝐫𝐦𝐚𝐜̧𝐨̃𝐞𝐬 』 ↴
+╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕
+│ ${v.aviso}
+╰──────────────
 
-↳ 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨: 👤
-   『 @${numUser} 』
+『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
 
-↳ 𝐏𝐫𝐞𝐟𝐢𝐱𝐨: 🎯
-   『 ${p} 』
+👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:
+╰➜ @${numUser}
 
-↳ 𝐇𝐨𝐫𝐚́𝐫𝐢𝐨: 🕐
-   『 ${hora} — ${data} 』
+❄️ 𝐏𝐫𝐞𝐟𝐢𝐱𝐨:
+╰➜ ${p}
 
-↳ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨: ❔
-   『 ${cmdExibido} 』
+❔ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐮𝐬𝐚𝐝𝐨:
+╰➜ ${cmdExibido}
 
-↳ 𝐕𝐨𝐜𝐞̂ 𝐪𝐮𝐢𝐬 𝐝𝐢𝐳𝐞𝐫: 💡
-   『 ${sugestao} 』
+♦️ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐜𝐨𝐫𝐫𝐞𝐭𝐨:
+╰➜ ${p}menu
 
-_${nomeBot}_ 🌙`
+🕐 𝐇𝐨𝐫𝐚́𝐫𝐢𝐨:
+╰➜ ${hora} — ${data}
+
+${v.frase}
+
+"${nomeBot}"`
+      } else {
+        textoBase =
+`${v.topo}
+
+╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕
+│ ${v.aviso}
+╰──────────────
+
+『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
+
+👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:
+╰➜ @${numUser}
+
+❄️ 𝐏𝐫𝐞𝐟𝐢𝐱𝐨:
+╰➜ ${p}
+
+❔ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐮𝐬𝐚𝐝𝐨:
+╰➜ ${cmdExibido}
+
+♦️ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐜𝐨𝐫𝐫𝐞𝐭𝐨:
+╰➜ ${comandoCerto}
+
+🕐 𝐇𝐨𝐫𝐚́𝐫𝐢𝐨:
+╰➜ ${hora} — ${data}
+
+${v.frase}
+
+"${nomeBot}"`
+      }
 
       const cfgCmd = db.config()
       const mencoes = sender ? [sender] : []
