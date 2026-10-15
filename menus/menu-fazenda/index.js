@@ -1,5 +1,5 @@
 /* ============================================================
-   🌾 MENU FAZENDA - NAPOLEÃO BONAPARTE
+   ❄️ MENU FAZENDA - AKAZA BOT MD
    ============================================================ */
 
 const fs = require("fs")
@@ -24,6 +24,56 @@ function normalizar(s) {
   return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
 }
 
+function nomeBotDb(db) {
+  try { return db.config().nomeBot || "Akaza Bot" } catch { return "Akaza Bot" }
+}
+
+function lineEmoji(emoji, label, valor) {
+  return `${emoji} ${label}:\n╰➜ ${valor}`
+}
+
+function msgSucesso(titulo, aviso, detalhes, rodape, nomeBot) {
+  return `❄️ • ${titulo} •
+
+╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕
+│ ${aviso}
+╰──────────────
+
+『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
+
+${detalhes}
+
+${rodape ? rodape + "\n\n" : ""}"${nomeBot}"`
+}
+
+function msgAviso(titulo, aviso, detalhes, rodape, nomeBot) {
+  return `❄️ • ${titulo} •
+
+╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕
+│ ${aviso}
+╰──────────────
+
+『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
+
+${detalhes}
+
+${rodape ? rodape + "\n\n" : ""}"${nomeBot}"`
+}
+
+function msgErro(titulo, aviso, detalhes, rodape, nomeBot) {
+  return `❄️ • ${titulo} •
+
+╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕
+│ ${aviso}
+╰──────────────
+
+『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
+
+${detalhes}
+
+${rodape ? rodape + "\n\n" : ""}"${nomeBot}"`
+}
+
 const INTERVALO_RENDA = 3 * 60 * 60 * 1000
 const MAX_UPGRADES = 10
 const CAP_BASE = 3
@@ -35,7 +85,6 @@ const PRECO_TERRA = 800
 const PRECO_AGUA = 50
 const AGUA_POR_REGA = 1
 
-// ============ ANIMAIS ============
 const ANIMAIS = [
   { id: "galinha", nome: "Galinha", emoji: "🐔", preco: 100, producao: 15 },
   { id: "galo", nome: "Galo", emoji: "🐓", preco: 120, producao: 18 },
@@ -96,7 +145,6 @@ const ANIMAIS = [
   { id: "pintado", nome: "Pintado", emoji: "🐟", preco: 300, producao: 45 }
 ]
 
-// ============ SEMENTES ============
 const SEMENTES = [
   { id: "milho", nome: "Milho", emoji: "🌽", preco: 30, vendaBase: 90, tempo: 20 },
   { id: "trigo", nome: "Trigo", emoji: "🌾", preco: 25, vendaBase: 75, tempo: 18 },
@@ -257,10 +305,28 @@ module.exports = {
 
       try {
         const grupos = db.grupos()
-        const grupo = Object.keys(grupos).find(j => j.endsWith("@g.us"))
+        const grupo = user.ultimoGrupo || Object.keys(grupos).find(j => j.endsWith("@g.us"))
         if (grupo) {
           await sock.sendMessage(grupo, {
-            text: `🎩🌾 *RENDA ACUMULADA*\n\n👤 Usuário: *${num}*\n🦅 Acumulou: *+${renda} gold*\n🎩 Total pendente: *${user.rendaPendente}*\n🦅 Use *!resgatarfazenda* pra receber!`
+            text:
+`❄️ • 𝐑𝐄𝐍𝐃𝐀 𝐀𝐂𝐔𝐌𝐔𝐋𝐀𝐃𝐀 •
+
+╭─〔 🌾 𝐅𝐀𝐙𝐄𝐍𝐃𝐀 〕
+│ Sua renda foi gerada.
+╰──────────────
+
+『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
+
+👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:
+╰➜ ${num}
+
+💰 𝐀𝐜𝐮𝐦𝐮𝐥𝐚𝐝𝐨:
+╰➜ +${renda} gold
+
+📦 𝐏𝐞𝐧𝐝𝐞𝐧𝐭𝐞:
+╰➜ ${user.rendaPendente}
+
+💡 Use \`!resgatarfazenda\` pra receber!`
           })
         }
       } catch (_) {}
@@ -270,85 +336,77 @@ module.exports = {
 
   commands: {
 
-    // ============ MENU FAZENDA ============
     menufazenda: {
       aliases: ["fazenda", "menuf", "comandosfazenda"],
       async executar({ sock, msg, prefixoAtivo, db }) {
         const jid = msg.key.remoteJid
         const p = prefixoAtivo
+        const nomeBot = nomeBotDb(db)
         const cfg = db.config()
         const texto =
-`╭━━━━━━━━━━━━━━━━━━━━━━━━━━━╮
-┃   🎩🌾  𝐌𝐄𝐍𝐔 𝐅𝐀𝐙𝐄𝐍𝐃𝐀  🌾🎩   ┃
-╰━━━━━━━━━━━━━━━━━━━━━━━━━━━╯
+`❄️ • 𝐌𝐄𝐍𝐔 𝐅𝐀𝐙𝐄𝐍𝐃𝐀 •
 
-🦅 *Napoleão apresenta:*
-🎩 *o celeiro imperial!*
+╭─〔 🌾 𝐌𝐔𝐍𝐃𝐎 𝐑𝐔𝐑𝐀𝐋 〕
+│ O celeiro do império.
+╰──────────────
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
-🎩💰 *RESGATAR*
-▸ ${p}resgatarfazenda
+『 𝐂𝐚𝐭𝐞𝐠𝐨𝐫𝐢𝐚𝐬 』 ↴
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
-🎩🐾 *ANIMAIS*
-▸ ${p}animais
-▸ ${p}compraranimal <nome>
-▸ ${p}venderanimal <nome>
-▸ ${p}statusanimais
+💰 𝐑𝐄𝐒𝐆𝐀𝐓𝐀𝐑
+╰➜ \`${p}resgatarfazenda\`
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
-🎩🌱 *SEMENTES / PLANTAÇÃO*
-▸ ${p}sementes
-▸ ${p}comprarsemente <nome>
-▸ ${p}plantarsemente <nome>
-▸ ${p}regarsementes
-▸ ${p}regarplanta <nome>
-▸ ${p}venderplanta <nome>
+🐾 𝐀𝐍𝐈𝐌𝐀𝐈𝐒
+╰➜ \`${p}animais\`
+╰➜ \`${p}compraranimal <nome>\`
+╰➜ \`${p}venderanimal <nome>\`
+╰➜ \`${p}statusanimais\`
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
-🎩🏠 *CERCAS / TERRAS*
-▸ ${p}comprarcercado
-▸ ${p}comprarterra
-▸ ${p}compraragua
+🌱 𝐒𝐄𝐌𝐄𝐍𝐓𝐄𝐒
+╰➜ \`${p}sementes\`
+╰➜ \`${p}comprarsemente <nome>\`
+╰➜ \`${p}plantarsemente <nome>\`
+╰➜ \`${p}regarsementes\`
+╰➜ \`${p}regarplanta <nome>\`
+╰➜ \`${p}venderplanta <nome>\`
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
-🎩🍖 *CUIDADOS*
-▸ ${p}alimentaranimais (300$)
-▸ ${p}banhoanimais (200$)
-▸ ${p}limparfazenda
+🏠 𝐂𝐄𝐑𝐂𝐀𝐒
+╰➜ \`${p}comprarcercado\`
+╰➜ \`${p}comprarterra\`
+╰➜ \`${p}compraragua\`
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
-🎩📊 *STATUS*
-▸ ${p}statusfazenda
-▸ ${p}statusplanta
+🍖 𝐂𝐔𝐈𝐃𝐀𝐃𝐎𝐒
+╰➜ \`${p}alimentaranimais\` (300$)
+╰➜ \`${p}banhoanimais\` (200$)
+╰➜ \`${p}limparfazenda\`
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 𝐒𝐓𝐀𝐓𝐔𝐒
+╰➜ \`${p}statusfazenda\`
+╰➜ \`${p}statusplanta\`
 
-🦅 *Renda acumula de 3h em 3h!*
-🎩 Use *!resgatarfazenda* pra receber~`
+❄️ _\"A renda acumula de 3h em 3h!\"_
+
+"${nomeBot}"`
 
         if (cfg.fotoMenu) {
           const buf = Buffer.from(cfg.fotoMenu, "base64")
-          if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "napoleao.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
+          if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "akaza.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
           return sock.sendMessage(jid, { image: buf, caption: texto }, { quoted: msg })
         }
         await sock.sendMessage(jid, { text: texto }, { quoted: msg })
       }
     },
 
-    // ============ RESGATAR FAZENDA ============
     resgatarfazenda: {
       aliases: ["resgatar", "coletar", "coletarfazenda"],
       async executar({ sock, msg, db, utils, sender }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender)
         const { f, u } = getFazenda(num)
-
         const pendente = u.rendaPendente || 0
+
         if (pendente <= 0) {
-          return sock.sendMessage(jid, {
-            text: `🎩🌾 *RESGATAR FAZENDA*\n\n😢 Você não tem nada pra resgatar!\n\n🦅 A renda acumula a cada *3h*~\n🎩 Cuide dos bichinhos!`
-          }, { quoted: msg })
+          return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐒𝐆𝐀𝐓𝐀𝐑 𝐅𝐀𝐙𝐄𝐍𝐃𝐀", "Você não tem nada pra resgatar.", "🦅 A renda acumula a cada *3h*\n╰➜ Cuide dos bichinhos!", null, nomeBot) }, { quoted: msg })
         }
 
         const rpg = db.rpg()
@@ -359,34 +417,43 @@ module.exports = {
         u.rendaPendente = 0
         dbSalvar("fazenda.json", f)
 
-        const numLimpo = String(num).replace(/\D/g, "")
         await sock.sendMessage(jid, {
-          text: `╭━━━━━━━━━━━━━━━━━━━━━━━━━╮
-┃   🎩💰 𝐑𝐄𝐒𝐆𝐀𝐓𝐄 𝐅𝐄𝐈𝐓𝐎 💰🎩  ┃
-╰━━━━━━━━━━━━━━━━━━━━━━━━━╯
+          text:
+`❄️ • 𝐑𝐄𝐒𝐆𝐀𝐓𝐄 𝐅𝐄𝐈𝐓𝐎 •
 
-🦅👤 @${numLimpo}
-🎩💰 Resgatou: *+${pendente} gold*
-🦅💼 Saldo total: *${rpg.usuarios[num].moedas}*
+╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕
+│ Renda coletada com sucesso.
+╰──────────────
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
-🎩🌾 Cuide bem da fazenda!\n🦅 Volte em *3h*~`,
-          mentions: [`${numLimpo}@s.whatsapp.net`]
+『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
+
+👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:
+╰➜ @${num}
+
+💰 𝐑𝐞𝐬𝐠𝐚𝐭𝐚𝐝𝐨:
+╰➜ +${pendente} gold
+
+💼 𝐒𝐚𝐥𝐝𝐨 𝐭𝐨𝐭𝐚𝐥:
+╰➜ ${rpg.usuarios[num].moedas}
+
+❄️ _\"Cuide bem da fazenda!\"_
+
+"${nomeBot}"`,
+          mentions: [`${num}@s.whatsapp.net`]
         }, { quoted: msg })
       }
     },
 
-    // ============ ANIMAIS ============
     animais: {
       aliases: ["listaanimais", "lojaanimais"],
-      async executar({ sock, msg, prefixoAtivo }) {
+      async executar({ sock, msg, prefixoAtivo, db }) {
         const jid = msg.key.remoteJid
-        const p = prefixoAtivo
-        let txt = `🎩🐾 *ANIMAIS DISPONÍVEIS* 🐾🎩\n\n`
+        const nomeBot = nomeBotDb(db)
+        let txt = `❄️ • 𝐀𝐍𝐈𝐌𝐀𝐈𝐒 𝐃𝐈𝐒𝐏𝐎𝐍𝐈́𝐕𝐄𝐈𝐒 •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
         ANIMAIS.forEach((a, i) => {
-          txt += `🎩 ${i + 1}. ${a.emoji} *${a.nome}*\n   💰 ${a.preco} | 📈 ${a.producao}/3h\n`
+          txt += `${i + 1}. ${a.emoji} ${a.nome}\n╰➜ 💰 ${a.preco} | 📈 ${a.producao}/3h\n\n`
         })
-        txt += `\n🦅💡 Use: *${p}compraranimal <nome>*`
+        txt += `💡 Use: \`!compraranimal <nome>\`\n\n"${nomeBot}"`
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
@@ -395,21 +462,20 @@ module.exports = {
       aliases: ["cercado", "buycercado"],
       async executar({ sock, msg, db, utils, sender }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender)
         const { f, u } = getFazenda(num)
-
-        if (u.upgrades >= MAX_UPGRADES) return sock.sendMessage(jid, { text: `🎩💢 Máximo de cercados (${MAX_UPGRADES})!` }, { quoted: msg })
+        if (u.upgrades >= MAX_UPGRADES) return sock.sendMessage(jid, { text: msgAviso("𝐂𝐄𝐑𝐂𝐀𝐃𝐎", "Máximo de cercados atingido.", lineEmoji("📊", "𝐔𝐩𝐠𝐫𝐚𝐝𝐞𝐬", u.upgrades + "/" + MAX_UPGRADES), null, nomeBot) }, { quoted: msg })
         const rpg = db.rpg()
         rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
         const gold = rpg.usuarios[num].moedas || 0
         const preco = u.upgrades === 0 ? 0 : PRECO_CERCADO
-        if (gold < preco) return sock.sendMessage(jid, { text: `🎩💢 Faltam *${preco - gold}* gold!` }, { quoted: msg })
-
+        if (gold < preco) return sock.sendMessage(jid, { text: msgErro("𝐂𝐄𝐑𝐂𝐀𝐃𝐎", "Gold insuficiente.", lineEmoji("💰", "𝐅𝐚𝐥𝐭𝐚𝐦", (preco - gold) + " gold"), null, nomeBot) }, { quoted: msg })
         rpg.usuarios[num].moedas = gold - preco
         u.upgrades += 1; u.cercados += 1
         u.limiteAnimais = CAP_BASE + (u.upgrades - 1) * CAP_UPGRADE
         db.salvarRpg(rpg); dbSalvar("fazenda.json", f)
-        await sock.sendMessage(jid, { text: `🎩✅ Cercado comprado!\n🐾 Capacidade: *${u.limiteAnimais}*\n📊 Upgrades: *${u.upgrades}/${MAX_UPGRADES}*`, mentions: [sender] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("𝐂𝐄𝐑𝐂𝐀𝐃𝐎 𝐂𝐎𝐌𝐏𝐑𝐀𝐃𝐎", "Mais espaço pros animais.", lineEmoji("🐾", "𝐂𝐚𝐩𝐚𝐜𝐢𝐝𝐚𝐝𝐞", u.limiteAnimais) + "\n" + lineEmoji("📊", "𝐔𝐩𝐠𝐫𝐚𝐝𝐞𝐬", u.upgrades + "/" + MAX_UPGRADES), null, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -417,23 +483,20 @@ module.exports = {
       aliases: ["buyanimal", "adotaranimal"],
       async executar({ sock, msg, args, db, utils, sender }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender)
         const { f, u } = getFazenda(num)
-
-        if (u.cercados === 0) return sock.sendMessage(jid, { text: `🎩💢 Compre um *cercado* primeiro!` }, { quoted: msg })
-        if (u.animais.length >= u.limiteAnimais) return sock.sendMessage(jid, { text: `🎩💢 Cercado cheio! ${u.animais.length}/${u.limiteAnimais}` }, { quoted: msg })
-
+        if (u.cercados === 0) return sock.sendMessage(jid, { text: msgAviso("𝐂𝐎𝐌𝐏𝐑𝐀𝐑 𝐀𝐍𝐈𝐌𝐀𝐋", "Compre um cercado primeiro.", "💡 Use `!comprarcercado`", null, nomeBot) }, { quoted: msg })
+        if (u.animais.length >= u.limiteAnimais) return sock.sendMessage(jid, { text: msgErro("𝐂𝐎𝐌𝐏𝐑𝐀𝐑 𝐀𝐍𝐈𝐌𝐀𝐋", "Cercado cheio.", lineEmoji("🐾", "𝐎𝐜𝐮𝐩𝐚𝐝𝐨", u.animais.length + "/" + u.limiteAnimais), null, nomeBot) }, { quoted: msg })
         const animal = acharAnimal(args.join(" "))
-        if (!animal) return sock.sendMessage(jid, { text: `🎩❌ Não achei! Veja *!animais*` }, { quoted: msg })
-
+        if (!animal) return sock.sendMessage(jid, { text: msgErro("𝐂𝐎𝐌𝐏𝐑𝐀𝐑 𝐀𝐍𝐈𝐌𝐀𝐋", "Não encontrei esse animal.", "💡 Veja `!animais`", null, nomeBot) }, { quoted: msg })
         const rpg = db.rpg()
         rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
-        if ((rpg.usuarios[num].moedas || 0) < animal.preco) return sock.sendMessage(jid, { text: `🎩💢 Faltam *${animal.preco - (rpg.usuarios[num].moedas || 0)}* gold!` }, { quoted: msg })
-
+        if ((rpg.usuarios[num].moedas || 0) < animal.preco) return sock.sendMessage(jid, { text: msgErro("𝐂𝐎𝐌𝐏𝐑𝐀𝐑 𝐀𝐍𝐈𝐌𝐀𝐋", "Gold insuficiente.", lineEmoji("💰", "𝐅𝐚𝐥𝐭𝐚𝐦", (animal.preco - (rpg.usuarios[num].moedas || 0)) + " gold"), null, nomeBot) }, { quoted: msg })
         rpg.usuarios[num].moedas -= animal.preco
         u.animais.push({ id: animal.id, nome: animal.nome, emoji: animal.emoji, fome: 0, sujo: 0, compradoEm: Date.now() })
         db.salvarRpg(rpg); dbSalvar("fazenda.json", f)
-        await sock.sendMessage(jid, { text: `🎩${animal.emoji} *${animal.nome}* comprado!\n📈 ${animal.producao}/3h`, mentions: [sender] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐍𝐈𝐌𝐀𝐋 𝐂𝐎𝐌𝐏𝐑𝐀𝐃𝐎", "Novo animal na fazenda.", lineEmoji(animal.emoji, "𝐀𝐧𝐢𝐦𝐚𝐥", animal.nome) + "\n" + lineEmoji("📈", "𝐏𝐫𝐨𝐝𝐮𝐜̧𝐚̃𝐨", animal.producao + "/3h"), null, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -441,11 +504,11 @@ module.exports = {
       aliases: ["vendaranimal", "sellanimal"],
       async executar({ sock, msg, args, db, utils, sender }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender)
         const { f, u } = getFazenda(num)
         const idx = u.animais.findIndex(a => normalizar(a.nome) === normalizar(args.join(" ")) || a.id === normalizar(args.join(" ")))
-        if (idx === -1) return sock.sendMessage(jid, { text: `🎩❌ Você não tem esse animal!` }, { quoted: msg })
-
+        if (idx === -1) return sock.sendMessage(jid, { text: msgErro("𝐕𝐄𝐍𝐃𝐄𝐑 𝐀𝐍𝐈𝐌𝐀𝐋", "Você não tem esse animal.", "💡 Veja `!statusanimais`", null, nomeBot) }, { quoted: msg })
         const a = u.animais[idx]
         const info = ANIMAIS.find(x => x.id === a.id)
         const valor = Math.floor((info?.preco || 100) * 0.5)
@@ -454,7 +517,7 @@ module.exports = {
         rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
         rpg.usuarios[num].moedas = (rpg.usuarios[num].moedas || 0) + valor
         db.salvarRpg(rpg); dbSalvar("fazenda.json", f)
-        await sock.sendMessage(jid, { text: `🎩💰 ${a.emoji} *${a.nome}* vendido!\n💵 +${valor}`, mentions: [sender] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐍𝐈𝐌𝐀𝐋 𝐕𝐄𝐍𝐃𝐈𝐃𝐎", "O animal foi vendido.", lineEmoji(a.emoji, "𝐀𝐧𝐢𝐦𝐚𝐥", a.nome) + "\n" + lineEmoji("💰", "𝐕𝐚𝐥𝐨𝐫", "+" + valor + " gold"), null, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -462,17 +525,18 @@ module.exports = {
       aliases: ["alimentaranimal", "feedanimais"],
       async executar({ sock, msg, db, utils, sender }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender)
         const { f, u } = getFazenda(num)
-        if (!u.animais.length) return sock.sendMessage(jid, { text: `🎩🐾 Sem animais!` }, { quoted: msg })
+        if (!u.animais.length) return sock.sendMessage(jid, { text: msgAviso("𝐀𝐋𝐈𝐌𝐄𝐍𝐓𝐀𝐑", "Você não tem animais.", "💡 Use `!compraranimal`", null, nomeBot) }, { quoted: msg })
         const rpg = db.rpg()
         rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
-        if ((rpg.usuarios[num].moedas || 0) < PRECO_ALIMENTAR) return sock.sendMessage(jid, { text: `🎩💰 Precisa de *${PRECO_ALIMENTAR}*!` }, { quoted: msg })
+        if ((rpg.usuarios[num].moedas || 0) < PRECO_ALIMENTAR) return sock.sendMessage(jid, { text: msgErro("𝐀𝐋𝐈𝐌𝐄𝐍𝐓𝐀𝐑", "Gold insuficiente.", lineEmoji("💰", "𝐏𝐫𝐞𝐜𝐢𝐬𝐚", PRECO_ALIMENTAR + " gold"), null, nomeBot) }, { quoted: msg })
         rpg.usuarios[num].moedas -= PRECO_ALIMENTAR
         let n = 0
         for (const a of u.animais) { if ((a.fome || 0) > 0) { a.fome = 0; n++ } }
         db.salvarRpg(rpg); dbSalvar("fazenda.json", f)
-        await sock.sendMessage(jid, { text: `🎩🍖 *${n}* animal(is) alimentados!\n💰 -${PRECO_ALIMENTAR}`, mentions: [sender] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐍𝐈𝐌𝐀𝐈𝐒 𝐀𝐋𝐈𝐌𝐄𝐍𝐓𝐀𝐃𝐎𝐒", "Todos os animais foram alimentados.", lineEmoji("🐾", "𝐐𝐮𝐚𝐧𝐭𝐢𝐝𝐚𝐝𝐞", n + " animal(is)") + "\n" + lineEmoji("💰", "𝐏𝐚𝐠𝐨", "-" + PRECO_ALIMENTAR + " gold"), null, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -480,41 +544,43 @@ module.exports = {
       aliases: ["banhoanimal", "lavaranimais"],
       async executar({ sock, msg, db, utils, sender }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender)
         const { f, u } = getFazenda(num)
-        if (!u.animais.length) return sock.sendMessage(jid, { text: `🎩🐾 Sem animais!` }, { quoted: msg })
+        if (!u.animais.length) return sock.sendMessage(jid, { text: msgAviso("𝐁𝐀𝐍𝐇𝐎", "Você não tem animais.", "💡 Use `!compraranimal`", null, nomeBot) }, { quoted: msg })
         const rpg = db.rpg()
         rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
-        if ((rpg.usuarios[num].moedas || 0) < PRECO_BANHO) return sock.sendMessage(jid, { text: `🎩💰 Precisa de *${PRECO_BANHO}*!` }, { quoted: msg })
+        if ((rpg.usuarios[num].moedas || 0) < PRECO_BANHO) return sock.sendMessage(jid, { text: msgErro("𝐁𝐀𝐍𝐇𝐎", "Gold insuficiente.", lineEmoji("💰", "𝐏𝐫𝐞𝐜𝐢𝐬𝐚", PRECO_BANHO + " gold"), null, nomeBot) }, { quoted: msg })
         rpg.usuarios[num].moedas -= PRECO_BANHO
         let n = 0
         for (const a of u.animais) { if ((a.sujo || 0) > 0) { a.sujo = 0; n++ } }
         db.salvarRpg(rpg); dbSalvar("fazenda.json", f)
-        await sock.sendMessage(jid, { text: `🎩🚿 *${n}* animal(is) lavados!\n💰 -${PRECO_BANHO}`, mentions: [sender] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐍𝐈𝐌𝐀𝐈𝐒 𝐋𝐀𝐕𝐀𝐃𝐎𝐒", "Todos os animais foram lavados.", lineEmoji("🚿", "𝐐𝐮𝐚𝐧𝐭𝐢𝐝𝐚𝐝𝐞", n + " animal(is)") + "\n" + lineEmoji("💰", "𝐏𝐚𝐠𝐨", "-" + PRECO_BANHO + " gold"), null, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
     limparfazenda: {
       aliases: ["limparfaz"],
-      async executar({ sock, msg, utils, sender }) {
+      async executar({ sock, msg, utils, sender, db }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender)
         const { f, u } = getFazenda(num)
-        if ((u.sujeira || 0) === 0) return sock.sendMessage(jid, { text: `🎩✨ Já está limpa!` }, { quoted: msg })
+        if ((u.sujeira || 0) === 0) return sock.sendMessage(jid, { text: msgSucesso("𝐋𝐈𝐌𝐏𝐄𝐙𝐀", "A fazenda já está limpa.", "✨ _Nada a fazer._", null, nomeBot) }, { quoted: msg })
         u.sujeira = 0
         dbSalvar("fazenda.json", f)
-        await sock.sendMessage(jid, { text: `🎩🧹 Fazenda limpa!`, mentions: [sender] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐋𝐈𝐌𝐏𝐀", "A sujeira foi removida.", "🧹 _Tudo brilhando!_", null, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
     statusfazenda: {
       aliases: ["fazendastatus", "minhafazenda"],
-      async executar({ sock, msg, utils, sender }) {
+      async executar({ sock, msg, utils, sender, db }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender)
         const { u } = getFazenda(num)
-        if (u.cercados === 0 && u.terras === 0) return sock.sendMessage(jid, { text: `🎩🌾 Sem fazenda! Use *!comprarcercado*` }, { quoted: msg })
-
+        if (u.cercados === 0 && u.terras === 0) return sock.sendMessage(jid, { text: msgAviso("𝐒𝐓𝐀𝐓𝐔𝐒 𝐅𝐀𝐙𝐄𝐍𝐃𝐀", "Você não tem fazenda.", "💡 Use `!comprarcercado`", null, nomeBot) }, { quoted: msg })
         const nivel = nivelFazenda(u)
         const renda = calcularRenda(u)
         const restante = Math.max(0, INTERVALO_RENDA - (Date.now() - (u.ultimaRenda || Date.now())))
@@ -522,67 +588,88 @@ module.exports = {
         const m = Math.floor((restante % 3600000) / 60000)
         const tempo = h > 0 ? `${h}h ${m}min` : `${m}min`
         const cheio = Math.min(10, Math.floor(u.animais.length / Math.max(1, u.limiteAnimais) * 10))
-        const barra = "🟨".repeat(cheio) + "⬜".repeat(10 - cheio)
+        const barra = "🟦".repeat(cheio) + "⬜".repeat(10 - cheio)
         const statusSujeira = u.sujeira > 70 ? "🔴" : u.sujeira > 40 ? "🟡" : "🟢"
         const prontas = (u.plantacoes || []).filter(p => p.pronta).length
-        const numLimpo = String(num).replace(/\D/g, "")
-
         await sock.sendMessage(jid, {
-          text: `╭━━━━━━━━━━━━━━━━━━━━━━━━━╮
-┃  🎩🌾 𝐒𝐓𝐀𝐓𝐔𝐒 𝐅𝐀𝐙𝐄𝐍𝐃𝐀 🌾🎩 ┃
-╰━━━━━━━━━━━━━━━━━━━━━━━━━╯
+          text:
+`❄️ • 𝐒𝐓𝐀𝐓𝐔𝐒 𝐅𝐀𝐙𝐄𝐍𝐃𝐀 •
 
-🦅👤 @${numLimpo}
-🎩📊 Nível: *${nivel}*
-🎩🏠 Cercados: *${u.cercados}*
-🎩🟫 Terras: *${u.terras}*
-🎩💧 Água: *${u.agua}L*
-🎩🐾 Animais: *${barra} ${u.animais.length}/${u.limiteAnimais}*
-🎩🌱 Plantações: *${u.plantacoes.length}* (${prontas} prontas)
-🎩🧹 Sujeira: *${u.sujeira}%* ${statusSujeira}
+╭─〔 🌾 𝐅𝐀𝐙𝐄𝐍𝐃𝐀 〕
+│ Visão geral do seu terreno.
+╰──────────────
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
-🎩💰 *RENDA*
-▸ Rendimento: *${renda}/3h*
-▸ 💰 Pendente: *${u.rendaPendente || 0}*
-▸ ⏰ Próxima: *${tempo}*
-▸ 💼 Total ganho: *${u.rendaTotal || 0}*
-▸ 📈 Upgrade: *${u.upgrades}/${MAX_UPGRADES}*
-━━━━━━━━━━━━━━━━━━━━━━━━━
+『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
 
-🦅 Use *!resgatarfazenda* pra pegar!`,
-          mentions: [`${numLimpo}@s.whatsapp.net`]
+👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:
+╰➜ @${num}
+
+📊 𝐍𝐢́𝐯𝐞𝐥:
+╰➜ ${nivel}
+
+🏠 𝐂𝐞𝐫𝐜𝐚𝐝𝐨𝐬:
+╰➜ ${u.cercados}
+
+🟫 𝐓𝐞𝐫𝐫𝐚𝐬:
+╰➜ ${u.terras}
+
+💧 𝐀́𝐠𝐮𝐚:
+╰➜ ${u.agua}L
+
+🐾 𝐀𝐧𝐢𝐦𝐚𝐢𝐬:
+${barra} ${u.animais.length}/${u.limiteAnimais}
+
+🌱 𝐏𝐥𝐚𝐧𝐭𝐚𝐜̧𝐨̃𝐞𝐬:
+╰➜ ${u.plantacoes.length} (${prontas} prontas)
+
+🧹 𝐒𝐮𝐣𝐞𝐢𝐫𝐚:
+╰➜ ${u.sujeira}% ${statusSujeira}
+
+💰 𝐑𝐄𝐍𝐃𝐀
+╰➜ Rendimento: ${renda}/3h
+╰➜ Pendente: ${u.rendaPendente || 0}
+╰➜ Próxima: ${tempo}
+╰➜ Total ganho: ${u.rendaTotal || 0}
+╰➜ Upgrade: ${u.upgrades}/${MAX_UPGRADES}
+
+💡 Use \`!resgatarfazenda\` pra pegar!
+
+"${nomeBot}"`,
+          mentions: [`${num}@s.whatsapp.net`]
         }, { quoted: msg })
       }
     },
 
     statusanimais: {
       aliases: ["meusanimais", "veranimais"],
-      async executar({ sock, msg, utils, sender }) {
+      async executar({ sock, msg, utils, sender, db }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender)
         const { u } = getFazenda(num)
-        if (!u.animais.length) return sock.sendMessage(jid, { text: `🎩🐾 Sem animais!` }, { quoted: msg })
-        let txt = `🎩🐾 *ANIMAIS* (${u.animais.length}/${u.limiteAnimais})\n\n`
+        if (!u.animais.length) return sock.sendMessage(jid, { text: msgAviso("𝐒𝐓𝐀𝐓𝐔𝐒 𝐀𝐍𝐈𝐌𝐀𝐈𝐒", "Você não tem animais.", "💡 Use `!compraranimal`", null, nomeBot) }, { quoted: msg })
+        let txt = `❄️ • 𝐀𝐍𝐈𝐌𝐀𝐈𝐒 (${u.animais.length}/${u.limiteAnimais}) •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
         for (const a of u.animais) {
           const fomeIco = a.fome > 70 ? "🔴" : a.fome > 40 ? "🟡" : "🟢"
           const sujoIco = a.sujo > 70 ? "🔴" : a.sujo > 40 ? "🟡" : "🟢"
-          txt += `🎩 ${a.emoji} *${a.nome}*\n   🍖 ${fomeIco} ${a.fome}% | 🚿 ${sujoIco} ${a.sujo}%\n\n`
+          txt += `${a.emoji} ${a.nome}\n╰➜ 🍖 ${fomeIco} ${a.fome}% | 🚿 ${sujoIco} ${a.sujo}%\n\n`
         }
+        txt += `"${nomeBot}"`
         await sock.sendMessage(jid, { text: txt, mentions: [sender] }, { quoted: msg })
       }
     },
 
-    // ============ SEMENTES ============
     sementes: {
       aliases: ["lojasementes", "listarsementes"],
-      async executar({ sock, msg, prefixoAtivo }) {
-        let txt = `🎩🌱 *LOJA DE SEMENTES* 🌱🎩\n\n`
+      async executar({ sock, msg, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        let txt = `❄️ • 𝐋𝐎𝐉𝐀 𝐃𝐄 𝐒𝐄𝐌𝐄𝐍𝐓𝐄𝐒 •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
         SEMENTES.forEach((s, i) => {
-          txt += `🎩 ${i + 1}. ${s.emoji} *${s.nome}*\n   💰 ${s.preco} | ⏰ ${s.tempo}min | 💵 ~${s.vendaBase}\n`
+          txt += `${i + 1}. ${s.emoji} ${s.nome}\n╰➜ 💰 ${s.preco} | ⏰ ${s.tempo}min | 💵 ~${s.vendaBase}\n\n`
         })
-        txt += `\n🦅💡 *${prefixoAtivo}comprarsemente <nome> <qtd>*`
-        await sock.sendMessage(msg.key.remoteJid, { text: txt }, { quoted: msg })
+        txt += `💡 \`!comprarsemente <nome> <qtd>\`\n\n"${nomeBot}"`
+        await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
 
@@ -590,27 +677,23 @@ module.exports = {
       aliases: ["buysemente"],
       async executar({ sock, msg, args, db, utils, sender }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender)
         const { f, u } = getFazenda(num)
-
-        if (u.terras === 0) return sock.sendMessage(jid, { text: `🎩💢 Compre uma *terra* primeiro! Use *!comprarterra*` }, { quoted: msg })
-
+        if (u.terras === 0) return sock.sendMessage(jid, { text: msgAviso("𝐂𝐎𝐌𝐏𝐑𝐀𝐑 𝐒𝐄𝐌𝐄𝐍𝐓𝐄", "Compre uma terra primeiro.", "💡 Use `!comprarterra`", null, nomeBot) }, { quoted: msg })
         let qtd = 1
         const ultimo = args[args.length - 1]
         if (/^\d+$/.test(ultimo)) { qtd = parseInt(ultimo); args.pop() }
-
         const sem = acharSemente(args.join(" "))
-        if (!sem) return sock.sendMessage(jid, { text: `🎩❌ Não achei! Veja *!sementes*` }, { quoted: msg })
-
+        if (!sem) return sock.sendMessage(jid, { text: msgErro("𝐂𝐎𝐌𝐏𝐑𝐀𝐑 𝐒𝐄𝐌𝐄𝐍𝐓𝐄", "Não achei essa semente.", "💡 Veja `!sementes`", null, nomeBot) }, { quoted: msg })
         const total = sem.preco * qtd
         const rpg = db.rpg()
         rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
-        if ((rpg.usuarios[num].moedas || 0) < total) return sock.sendMessage(jid, { text: `🎩💢 Faltam *${total - (rpg.usuarios[num].moedas || 0)}* gold!` }, { quoted: msg })
-
+        if ((rpg.usuarios[num].moedas || 0) < total) return sock.sendMessage(jid, { text: msgErro("𝐂𝐎𝐌𝐏𝐑𝐀𝐑 𝐒𝐄𝐌𝐄𝐍𝐓𝐄", "Gold insuficiente.", lineEmoji("💰", "𝐅𝐚𝐥𝐭𝐚𝐦", (total - (rpg.usuarios[num].moedas || 0)) + " gold"), null, nomeBot) }, { quoted: msg })
         rpg.usuarios[num].moedas -= total
         u.sementes[sem.id] = (u.sementes[sem.id] || 0) + qtd
         db.salvarRpg(rpg); dbSalvar("fazenda.json", f)
-        await sock.sendMessage(jid, { text: `🎩${sem.emoji} *${sem.nome}* x${qtd}!\n💰 -${total}`, mentions: [sender] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("𝐒𝐄𝐌𝐄𝐍𝐓𝐄 𝐂𝐎𝐌𝐏𝐑𝐀𝐃𝐀", "Semente adicionada ao estoque.", lineEmoji(sem.emoji, "𝐒𝐞𝐦𝐞𝐧𝐭𝐞", sem.nome + " x" + qtd) + "\n" + lineEmoji("💰", "𝐏𝐚𝐠𝐨", "-" + total + " gold"), null, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -618,21 +701,19 @@ module.exports = {
       aliases: ["terra", "buyterra"],
       async executar({ sock, msg, db, utils, sender }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender)
         const { f, u } = getFazenda(num)
-
-        if (u.terras >= 20) return sock.sendMessage(jid, { text: `🎩💢 Máximo de 20 terras!` }, { quoted: msg })
-
+        if (u.terras >= 20) return sock.sendMessage(jid, { text: msgAviso("𝐂𝐎𝐌𝐏𝐑𝐀𝐑 𝐓𝐄𝐑𝐑𝐀", "Máximo de 20 terras atingido.", lineEmoji("🟫", "𝐓𝐞𝐫𝐫𝐚𝐬", u.terras), null, nomeBot) }, { quoted: msg })
         const rpg = db.rpg()
         rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
         const gold = rpg.usuarios[num].moedas || 0
         const preco = PRECO_TERRA + u.terras * 200
-        if (gold < preco) return sock.sendMessage(jid, { text: `🎩💢 Faltam *${preco - gold}* gold!\n💰 Preço: *${preco}*` }, { quoted: msg })
-
+        if (gold < preco) return sock.sendMessage(jid, { text: msgErro("𝐂𝐎𝐌𝐏𝐑𝐀𝐑 𝐓𝐄𝐑𝐑𝐀", "Gold insuficiente.", lineEmoji("💰", "𝐏𝐫𝐞𝐜𝐨", preco + " gold") + "\n" + lineEmoji("💸", "𝐅𝐚𝐥𝐭𝐚𝐦", (preco - gold) + " gold"), null, nomeBot) }, { quoted: msg })
         rpg.usuarios[num].moedas = gold - preco
         u.terras += 1
         db.salvarRpg(rpg); dbSalvar("fazenda.json", f)
-        await sock.sendMessage(jid, { text: `🎩🟫 Terra comprada!\n📊 Total: *${u.terras}*\n💰 -${preco}`, mentions: [sender] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("𝐓𝐄𝐑𝐑𝐀 𝐂𝐎𝐌𝐏𝐑𝐀𝐃𝐀", "Mais espaço pra plantação.", lineEmoji("🟫", "𝐓𝐨𝐭𝐚𝐥", u.terras) + "\n" + lineEmoji("💰", "𝐏𝐚𝐠𝐨", "-" + preco + " gold"), null, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -640,20 +721,19 @@ module.exports = {
       aliases: ["agua", "buyagua"],
       async executar({ sock, msg, args, db, utils, sender }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender)
         const { f, u } = getFazenda(num)
         const qtd = parseInt(args[0]) || 10
-        if (qtd < 1 || qtd > 100) return sock.sendMessage(jid, { text: `🎩💧 Use *!compraragua <1-100>*` }, { quoted: msg })
-
+        if (qtd < 1 || qtd > 100) return sock.sendMessage(jid, { text: msgAviso("𝐂𝐎𝐌𝐏𝐑𝐀𝐑 𝐀́𝐆𝐔𝐀", "Quantidade inválida.", "💡 Use `!compraragua <1-100>`", null, nomeBot) }, { quoted: msg })
         const total = PRECO_AGUA * qtd
         const rpg = db.rpg()
         rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
-        if ((rpg.usuarios[num].moedas || 0) < total) return sock.sendMessage(jid, { text: `🎩💢 Faltam *${total - (rpg.usuarios[num].moedas || 0)}* gold!` }, { quoted: msg })
-
+        if ((rpg.usuarios[num].moedas || 0) < total) return sock.sendMessage(jid, { text: msgErro("𝐂𝐎𝐌𝐏𝐑𝐀𝐑 𝐀́𝐆𝐔𝐀", "Gold insuficiente.", lineEmoji("💰", "𝐅𝐚𝐥𝐭𝐚𝐦", (total - (rpg.usuarios[num].moedas || 0)) + " gold"), null, nomeBot) }, { quoted: msg })
         rpg.usuarios[num].moedas -= total
         u.agua += qtd
         db.salvarRpg(rpg); dbSalvar("fazenda.json", f)
-        await sock.sendMessage(jid, { text: `🎩💧 *${qtd}L* comprada!\n💼 Total: *${u.agua}L*\n💰 -${total}`, mentions: [sender] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("𝐀́𝐆𝐔𝐀 𝐂𝐎𝐌𝐏𝐑𝐀𝐃𝐀", "Água adicionada ao estoque.", lineEmoji("💧", "𝐐𝐮𝐚𝐧𝐭𝐢𝐝𝐚𝐝𝐞", qtd + "L") + "\n" + lineEmoji("💼", "𝐓𝐨𝐭𝐚𝐥", u.agua + "L") + "\n" + lineEmoji("💰", "𝐏𝐚𝐠𝐨", "-" + total + " gold"), null, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -661,30 +741,19 @@ module.exports = {
       aliases: ["plantar", "plant"],
       async executar({ sock, msg, args, db, utils, sender }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender)
         const { f, u } = getFazenda(num)
-
-        if (u.terras === 0) return sock.sendMessage(jid, { text: `🎩💢 Sem terra! Use *!comprarterra*` }, { quoted: msg })
-        if (u.plantacoes.length >= u.terras) return sock.sendMessage(jid, { text: `🎩💢 Todas as terras ocupadas! ${u.plantacoes.length}/${u.terras}` }, { quoted: msg })
-
+        if (u.terras === 0) return sock.sendMessage(jid, { text: msgAviso("𝐏𝐋𝐀𝐍𝐓𝐀𝐑", "Sem terra!", "💡 Use `!comprarterra`", null, nomeBot) }, { quoted: msg })
+        if (u.plantacoes.length >= u.terras) return sock.sendMessage(jid, { text: msgErro("𝐏𝐋𝐀𝐍𝐓𝐀𝐑", "Todas as terras ocupadas.", lineEmoji("🌱", "𝐎𝐜𝐮𝐩𝐚𝐝𝐚𝐬", u.plantacoes.length + "/" + u.terras), null, nomeBot) }, { quoted: msg })
         const sem = acharSemente(args.join(" "))
-        if (!sem) return sock.sendMessage(jid, { text: `🎩❌ Não achei! Veja *!sementes*` }, { quoted: msg })
-        if ((u.sementes[sem.id] || 0) < 1) return sock.sendMessage(jid, { text: `🎩💢 Você não tem *${sem.nome}*!` }, { quoted: msg })
-
+        if (!sem) return sock.sendMessage(jid, { text: msgErro("𝐏𝐋𝐀𝐍𝐓𝐀𝐑", "Não achei essa semente.", "💡 Veja `!sementes`", null, nomeBot) }, { quoted: msg })
+        if ((u.sementes[sem.id] || 0) < 1) return sock.sendMessage(jid, { text: msgErro("𝐏𝐋𝐀𝐍𝐓𝐀𝐑", "Você não tem essa semente.", lineEmoji("📝", "𝐒𝐞𝐦𝐞𝐧𝐭𝐞", sem.nome), null, nomeBot) }, { quoted: msg })
         u.sementes[sem.id]--
         if (u.sementes[sem.id] === 0) delete u.sementes[sem.id]
-
-        u.plantacoes.push({
-          id: sem.id, nome: sem.nome, emoji: sem.emoji,
-          plantadaEm: Date.now(), regas: 0, qualidadeBase: 30,
-          pronta: false, prontaEm: null
-        })
-
+        u.plantacoes.push({ id: sem.id, nome: sem.nome, emoji: sem.emoji, plantadaEm: Date.now(), regas: 0, qualidadeBase: 30, pronta: false, prontaEm: null })
         dbSalvar("fazenda.json", f)
-        await sock.sendMessage(jid, {
-          text: `🎩${sem.emoji} *${sem.nome}* plantada!\n⏰ ~${sem.tempo}min\n💧 Use *!regarplanta ${sem.nome}*`,
-          mentions: [sender]
-        }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("𝐒𝐄𝐌𝐄𝐍𝐓𝐄 𝐏𝐋𝐀𝐍𝐓𝐀𝐃𝐀", "A semente foi plantada.", lineEmoji(sem.emoji, "𝐒𝐞𝐦𝐞𝐧𝐭𝐞", sem.nome) + "\n" + lineEmoji("⏰", "𝐓𝐞𝐦𝐩𝐨", "~" + sem.tempo + "min") + "\n\n💡 Use `!regarplanta " + sem.nome + "`", null, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -692,12 +761,11 @@ module.exports = {
       aliases: ["regartudo", "regartodas"],
       async executar({ sock, msg, db, utils, sender }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender)
         const { f, u } = getFazenda(num)
-
-        if (!u.plantacoes.length) return sock.sendMessage(jid, { text: `🎩🌱 Sem plantações!` }, { quoted: msg })
-        if (u.agua < AGUA_POR_REGA) return sock.sendMessage(jid, { text: `🎩💧 Sem água! Use *!compraragua*` }, { quoted: msg })
-
+        if (!u.plantacoes.length) return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐆𝐀𝐑", "Sem plantações.", "💡 Use `!plantarsemente`", null, nomeBot) }, { quoted: msg })
+        if (u.agua < AGUA_POR_REGA) return sock.sendMessage(jid, { text: msgErro("𝐑𝐄𝐆𝐀𝐑", "Sem água.", "💡 Use `!compraragua`", null, nomeBot) }, { quoted: msg })
         let regadas = 0
         for (const p of u.plantacoes) {
           if (u.agua < AGUA_POR_REGA) break
@@ -707,12 +775,8 @@ module.exports = {
           p.qualidadeBase = Math.min(100, (p.qualidadeBase || 30) + 5)
           regadas++
         }
-
         dbSalvar("fazenda.json", f)
-        await sock.sendMessage(jid, {
-          text: `🎩💧 *${regadas}* planta(s) regadas!\n💼 Água: *${u.agua}L*`,
-          mentions: [sender]
-        }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐋𝐀𝐍𝐓𝐀𝐒 𝐑𝐄𝐆𝐀𝐃𝐀𝐒", "Rega em massa concluída.", lineEmoji("💧", "𝐑𝐞𝐠𝐚𝐝𝐚𝐬", regadas + " planta(s)") + "\n" + lineEmoji("💼", "𝐀́𝐠𝐮𝐚", u.agua + "L"), null, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -720,25 +784,19 @@ module.exports = {
       aliases: ["regar"],
       async executar({ sock, msg, args, db, utils, sender }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender)
         const { f, u } = getFazenda(num)
-
-        if (u.agua < AGUA_POR_REGA) return sock.sendMessage(jid, { text: `🎩💧 Sem água!` }, { quoted: msg })
-
+        if (u.agua < AGUA_POR_REGA) return sock.sendMessage(jid, { text: msgErro("𝐑𝐄𝐆𝐀𝐑", "Sem água.", "💡 Use `!compraragua`", null, nomeBot) }, { quoted: msg })
         const busca = normalizar(args.join(" "))
         const p = u.plantacoes.find(x => normalizar(x.nome) === busca || x.id === busca || normalizar(x.nome).includes(busca))
-        if (!p) return sock.sendMessage(jid, { text: `🎩❌ Planta não encontrada!` }, { quoted: msg })
-        if (p.pronta) return sock.sendMessage(jid, { text: `🎩✅ Já está pronta! Use *!venderplanta ${p.nome}*` }, { quoted: msg })
-
+        if (!p) return sock.sendMessage(jid, { text: msgErro("𝐑𝐄𝐆𝐀𝐑", "Planta não encontrada.", "💡 Veja `!statusplanta`", null, nomeBot) }, { quoted: msg })
+        if (p.pronta) return sock.sendMessage(jid, { text: msgSucesso("𝐑𝐄𝐆𝐀𝐑", "A planta já está pronta.", lineEmoji(p.emoji, "𝐏𝐥𝐚𝐧𝐭𝐚", p.nome) + "\n\n💡 Use `!venderplanta " + p.nome + "`", null, nomeBot) }, { quoted: msg })
         u.agua -= AGUA_POR_REGA
         p.regas = (p.regas || 0) + 1
         p.qualidadeBase = Math.min(100, (p.qualidadeBase || 30) + 5)
-
         dbSalvar("fazenda.json", f)
-        await sock.sendMessage(jid, {
-          text: `🎩${p.emoji} *${p.nome}* regada!\n💧 Água: *${u.agua}L*\n📊 Regas: *${p.regas}*`,
-          mentions: [sender]
-        }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐋𝐀𝐍𝐓𝐀 𝐑𝐄𝐆𝐀𝐃𝐀", "A planta foi regada.", lineEmoji(p.emoji, "𝐏𝐥𝐚𝐧𝐭𝐚", p.nome) + "\n" + lineEmoji("💧", "𝐀́𝐠𝐮𝐚", u.agua + "L") + "\n" + lineEmoji("📊", "𝐑𝐞𝐠𝐚𝐬", p.regas), null, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -746,54 +804,46 @@ module.exports = {
       aliases: ["vender", "colher"],
       async executar({ sock, msg, args, db, utils, sender }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender)
         const { f, u } = getFazenda(num)
-
         const busca = normalizar(args.join(" "))
-        if (!busca) return sock.sendMessage(jid, { text: `🎩🌸 Use *!venderplanta <nome>*` }, { quoted: msg })
-
+        if (!busca) return sock.sendMessage(jid, { text: msgAviso("𝐕𝐄𝐍𝐃𝐄𝐑 𝐏𝐋𝐀𝐍𝐓𝐀", "Informe o nome.", "💡 `!venderplanta <nome>`", null, nomeBot) }, { quoted: msg })
         const idx = u.plantacoes.findIndex(x => normalizar(x.nome) === busca || x.id === busca || normalizar(x.nome).includes(busca))
-        if (idx === -1) return sock.sendMessage(jid, { text: `🎩❌ Você não tem essa planta!` }, { quoted: msg })
-
+        if (idx === -1) return sock.sendMessage(jid, { text: msgErro("𝐕𝐄𝐍𝐃𝐄𝐑 𝐏𝐋𝐀𝐍𝐓𝐀", "Você não tem essa planta.", "💡 Veja `!statusplanta`", null, nomeBot) }, { quoted: msg })
         const p = u.plantacoes[idx]
-        if (!p.pronta) return sock.sendMessage(jid, { text: `🎩⏰ Ainda não está pronta!` }, { quoted: msg })
-
+        if (!p.pronta) return sock.sendMessage(jid, { text: msgAviso("𝐕𝐄𝐍𝐃𝐄𝐑 𝐏𝐋𝐀𝐍𝐓𝐀", "A planta ainda não está pronta.", lineEmoji(p.emoji, "𝐏𝐥𝐚𝐧𝐭𝐚", p.nome), null, nomeBot) }, { quoted: msg })
         const valor = valorPlanta(p)
         const qualidade = qualidadePlanta(p)
         u.plantacoes.splice(idx, 1)
-
         const rpg = db.rpg()
         rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
         rpg.usuarios[num].moedas = (rpg.usuarios[num].moedas || 0) + valor
-
         db.salvarRpg(rpg); dbSalvar("fazenda.json", f)
-
-        const estrelas = qualidade >= 90 ? "🎩⭐⭐" : qualidade >= 70 ? "⭐⭐" : qualidade >= 50 ? "⭐" : ""
-        await sock.sendMessage(jid, {
-          text: `🎩${p.emoji} *${p.nome}* vendida!\n📊 Qualidade: *${qualidade}%* ${estrelas}\n💵 *+${valor}*\n💼 *${rpg.usuarios[num].moedas}*`,
-          mentions: [sender]
-        }, { quoted: msg })
+        const estrelas = qualidade >= 90 ? "❄️❄️" : qualidade >= 70 ? "❄️" : ""
+        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐋𝐀𝐍𝐓𝐀 𝐕𝐄𝐍𝐃𝐈𝐃𝐀", "Colheita vendida.", lineEmoji(p.emoji, "𝐏𝐥𝐚𝐧𝐭𝐚", p.nome) + "\n" + lineEmoji("📊", "𝐐𝐮𝐚𝐥𝐢𝐝𝐚𝐝𝐞", qualidade + "% " + estrelas) + "\n" + lineEmoji("💵", "𝐕𝐚𝐥𝐨𝐫", "+" + valor + " gold") + "\n" + lineEmoji("💼", "𝐓𝐨𝐭𝐚𝐥", rpg.usuarios[num].moedas), null, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
     statusplanta: {
       aliases: ["minhasplantas", "plantacoes"],
-      async executar({ sock, msg, utils, sender }) {
+      async executar({ sock, msg, utils, sender, db }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender)
         const { u } = getFazenda(num)
-        if (!u.plantacoes.length) return sock.sendMessage(jid, { text: `🎩🌱 Sem plantações!` }, { quoted: msg })
-
-        let txt = `🎩🌱 *PLANTAÇÕES* (${u.plantacoes.length}/${u.terras})\n\n`
+        if (!u.plantacoes.length) return sock.sendMessage(jid, { text: msgAviso("𝐒𝐓𝐀𝐓𝐔𝐒 𝐏𝐋𝐀𝐍𝐓𝐀", "Você não tem plantações.", "💡 Use `!plantarsemente`", null, nomeBot) }, { quoted: msg })
+        let txt = `❄️ • 𝐏𝐋𝐀𝐍𝐓𝐀𝐂̧𝐎̃𝐄𝐒 (${u.plantacoes.length}/${u.terras}) •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
         for (const p of u.plantacoes) {
           const q = qualidadePlanta(p)
-          const estrelas = q >= 90 ? "🎩⭐⭐" : q >= 70 ? "⭐⭐" : q >= 50 ? "⭐" : ""
+          const estrelas = q >= 90 ? "❄️❄️" : q >= 70 ? "❄️" : ""
           const status = p.pronta ? "✅ Pronta!" : `⏰ Crescendo...`
-          txt += `🎩 ${p.emoji} *${p.nome}*\n   ${status}\n   📊 ${q}% ${estrelas}\n   💧 Regas: ${p.regas || 0}\n\n`
+          txt += `${p.emoji} ${p.nome}\n╰➜ ${status}\n╰➜ 📊 ${q}% ${estrelas}\n╰➜ 💧 Regas: ${p.regas || 0}\n\n`
         }
+        txt += `"${nomeBot}"`
         await sock.sendMessage(jid, { text: txt, mentions: [sender] }, { quoted: msg })
       }
     }
 
   }
-    }
+}
