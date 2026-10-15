@@ -41,43 +41,48 @@ function lineEmoji(emoji, label, valor) {
 }
 
 // ============================================================
-// 🎵 BAIXAR MÚSICA (via youtube-dl-exec — melhor opção pra VPS)
+// 🎵 BAIXAR MÚSICA (via play-dl)
 // ============================================================
 async function baixarMusica(busca, qualidade = 64) {
   try {
-    const youtubeDl = require("youtube-dl-exec")
+    const playdl = require("play-dl")
+    const ff = require("@ffmpeg-installer/ffmpeg").path
+
     const tmpDir = os.tmpdir()
     const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
-    const outTpl = path.join(tmpDir, "akaza_mus_" + id + ".%(ext)s")
+    const tIn = path.join(tmpDir, "akaza_" + id + ".webm")
+    const tOut = path.join(tmpDir, "akaza_" + id + ".mp3")
 
-    const ehUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(busca)
-    const alvo = ehUrl ? busca : "ytsearch1:" + busca
-
-    await youtubeDl(alvo, {
-      extractAudio: true,
-      audioFormat: "mp3",
-      audioQuality: qualidade + "K",
-      output: outTpl,
-      noPlaylist: true,
-      maxFilesize: "16M",
-      noWarnings: true,
-      noCheckCertificates: true,
-      preferFreeFormats: true,
-      extractorArgs: "youtube:player_client=web,web_safari,web_embedded",
-      noCacheDir: true
-    })
-
-    const prefixo = "akaza_mus_" + id
-    const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && (f.endsWith(".mp3") || f.endsWith(".m4a") || f.endsWith(".webm") || f.endsWith(".opus")))
-
-    if (arquivos.length > 0) {
-      const caminho = path.join(tmpDir, arquivos[0])
-      const buffer = fs.readFileSync(caminho)
-      try { fs.unlinkSync(caminho) } catch (_) {}
-      return { ok: true, buffer, titulo: busca }
+    let url = busca
+    if (!/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)/i.test(busca)) {
+      const results = await playdl.search(busca, { limit: 1 })
+      if (!results.length) throw new Error("Nenhum vídeo encontrado")
+      url = results[0].url
     }
 
-    return { ok: false, erro: "Arquivo não encontrado" }
+    const stream = await playdl.stream(url, { quality: 2, discordPlayerCompatibility: false })
+
+    const chunks = []
+    for await (const chunk of stream.stream) {
+      chunks.push(chunk)
+      if (Buffer.concat(chunks).length > 20 * 1024 * 1024) {
+        stream.stream.destroy()
+        throw new Error("Arquivo muito grande (>20MB)")
+      }
+    }
+    const buffer = Buffer.concat(chunks)
+    if (!buffer.length) throw new Error("Áudio vazio")
+
+    fs.writeFileSync(tIn, buffer)
+    execSync(`"${ff}" -y -i "${tIn}" -vn -ar 44100 -ac 2 -b:a ${qualidade}k "${tOut}"`, { stdio: "ignore", timeout: 120000 })
+    const mp3Buf = fs.readFileSync(tOut)
+
+    try { fs.unlinkSync(tIn) } catch (_) {}
+    try { fs.unlinkSync(tOut) } catch (_) {}
+
+    if (mp3Buf.length > 16 * 1024 * 1024) return { ok: false, erro: "Arquivo muito grande (>16MB)" }
+
+    return { ok: true, buffer: mp3Buf, titulo: busca }
   } catch (e) {
     console.log("🎵 Erro baixarMusica:", e.message)
     return { ok: false, erro: e.message }
@@ -85,37 +90,26 @@ async function baixarMusica(busca, qualidade = 64) {
 }
 
 // ============================================================
-// 🎥 BAIXAR VÍDEO (via youtube-dl-exec)
+// 🎥 BAIXAR VÍDEO (via play-dl)
 // ============================================================
 async function baixarVideoYoutube(link) {
   try {
-    const youtubeDl = require("youtube-dl-exec")
-    const tmpDir = os.tmpdir()
-    const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
-    const outTpl = path.join(tmpDir, "akaza_vid_" + id + ".%(ext)s")
+    const playdl = require("play-dl")
 
-    await youtubeDl(link, {
-      format: "best[ext=mp4][filesize<16M]/best[filesize<16M]",
-      output: outTpl,
-      noPlaylist: true,
-      maxFilesize: "16M",
-      noWarnings: true,
-      noCheckCertificates: true,
-      extractorArgs: "youtube:player_client=web,web_safari,web_embedded",
-      noCacheDir: true
-    })
+    const stream = await playdl.stream(link, { quality: 1, discordPlayerCompatibility: false })
 
-    const prefixo = "akaza_vid_" + id
-    const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && f.endsWith(".mp4"))
-
-    if (arquivos.length > 0) {
-      const caminho = path.join(tmpDir, arquivos[0])
-      const buffer = fs.readFileSync(caminho)
-      try { fs.unlinkSync(caminho) } catch (_) {}
-      return { ok: true, buffer }
+    const chunks = []
+    for await (const chunk of stream.stream) {
+      chunks.push(chunk)
+      if (Buffer.concat(chunks).length > 16 * 1024 * 1024) {
+        stream.stream.destroy()
+        throw new Error("Vídeo muito grande (>16MB)")
+      }
     }
+    const buffer = Buffer.concat(chunks)
+    if (!buffer.length) throw new Error("Vídeo vazio")
 
-    return { ok: false, erro: "Arquivo não encontrado" }
+    return { ok: true, buffer }
   } catch (e) {
     console.log("🎥 Erro baixarVideoYoutube:", e.message)
     return { ok: false, erro: e.message }
