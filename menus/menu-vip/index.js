@@ -45,7 +45,7 @@ function lineEmoji(emoji, label, valor) {
 // ============================================================
 async function baixarMusica(busca, qualidade = 64) {
   try {
-    // 🎯 TENTATIVA 1: API vevioz (não bloqueia VPS)
+    // 🎯 TENTATIVA 1: API vevioz
     try {
       const apiUrl = `https://api.vevioz.com/api/button/mp3/${encodeURIComponent(busca)}`
       const r = await fetch(apiUrl, {
@@ -69,23 +69,7 @@ async function baixarMusica(busca, qualidade = 64) {
       console.log("🎵 Tentativa 1 (vevioz) falhou:", e.message)
     }
 
-    // 🎯 TENTATIVA 2: API workers
-    try {
-      const apiUrl = `https://cdn2.ytmp3.workers.dev/api/ytmp3?url=${encodeURIComponent(busca)}`
-      const r = await fetch(apiUrl)
-      const d = await r.json()
-      if (d && d.url) {
-        const audioRes = await fetch(d.url)
-        const buffer = Buffer.from(await audioRes.arrayBuffer())
-        if (buffer.length > 0 && buffer.length < 16 * 1024 * 1024) {
-          return { ok: true, buffer, titulo: busca }
-        }
-      }
-    } catch (e) {
-      console.log("🎵 Tentativa 2 (workers) falhou:", e.message)
-    }
-
-    // 🎯 TENTATIVA 3: youtube-dl-exec (se tudo falhar)
+    // 🎯 TENTATIVA 2: youtube-dl-exec
     try {
       const youtubeDl = require("youtube-dl-exec")
       const tmpDir = os.tmpdir()
@@ -121,7 +105,7 @@ async function baixarMusica(busca, qualidade = 64) {
         return { ok: false, erro: "Música muito grande (limite 16MB)" }
       }
     } catch (e) {
-      console.log("🎵 Tentativa 3 (youtube-dl-exec) falhou:", e.message)
+      console.log("🎵 Tentativa 2 (youtube-dl-exec) falhou:", e.message)
     }
 
     return { ok: false, erro: "Todas as tentativas falharam. Tente outra música." }
@@ -278,7 +262,7 @@ module.exports = {
           return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Você não é nobre.\n╰──────────────\n\n_"Vá embora."_\n\n"${nomeBot}"` }, { quoted: msg })
         }
 
-        const texto = `❄️ • 𝐌𝐄𝐍𝐔 𝐕𝐈𝐏 •\n\n╭─〔 ♦️ 𝐀́𝐑𝐄𝐀 𝐍𝐎𝐁𝐑𝐄 〕\n│ Apenas nobres podem ver esses segredos.\n╰──────────────\n\n『 𝐂𝐚𝐭𝐞𝐠𝐨𝐫𝐢𝐚𝐬 』 ↴\n\n🎵 𝐌𝐔́𝐒𝐈𝐂𝐀\n╰➜ \`${p}play <nome ou link>\`\n╰➜ \`${p}spot <link>\`\n\n📥 𝐃𝐎𝐖𝐍𝐋𝐎𝐀𝐃𝐒\n╰➜ \`${p}insta <link>\`\n╰➜ \`${p}tiktok <link>\`\n\n🎨 𝐅𝐈𝐆𝐔𝐑𝐈𝐍𝐇𝐀𝐒\n╰➜ \`${p}brat / ${p}s / ${p}rename\`\n╰➜ \`${p}smeme / ${p}s3\`\n╰➜ \`${p}procurado / ${p}wasted / ${p}revela\`\n\n🎮 𝐉𝐎𝐆𝐎𝐒\n╰➜ \`${p}verdadedesafio\`\n╰➜ \`${p}bolavsbola\`\n╰➜ \`${p}jogodavelha\`\n\n♦️ 𝐄𝐗𝐓𝐑𝐀𝐒\n╰➜ \`${p}fraseprofunda\`\n╰➜ \`${p}mito\`\n╰➜ \`${p}napoleao\`\n\n💠 _"A força recompensa os nobres."_\n\n"${nomeBot}"`
+        const texto = `❄️ • 𝐌𝐄𝐍𝐔 𝐕𝐈𝐏 •\n\n╭─〔 ♦️ 𝐀́𝐑𝐄𝐀 𝐍𝐎𝐁𝐑𝐄 〕\n│ Apenas nobres podem ver esses segredos.\n╰──────────────\n\n『 𝐂𝐚𝐭𝐞𝐠𝐨𝐫𝐢𝐚𝐬 』 ↴\n\n🎵 𝐌𝐔́𝐒𝐈𝐂𝐀\n╰➜ \`${p}play <nome ou link>\`\n╰➜ \`${p}spot <link>\`\n\n📥 𝐃𝐎𝐖𝐍𝐋𝐎𝐀𝐃𝐒\n╰➜ \`${p}insta <link>\`\n╰➜ \`${p}tiktok <link>\`\n\n🎨 𝐅𝐈𝐆𝐔𝐑𝐈𝐍𝐇𝐀𝐒\n╰➜ \`${p}brat / ${p}s / ${p}rename\`\n╰➜ \`${p}smeme / ${p}s3\`\n╰➜ \`${p}procurado / ${p}wasted / ${p}revela\`\n\n🎮 𝐉𝐎𝐆𝐎𝐒\n╰➜ \`${p}verdadedesafio\`\n╰➜ \`${p}bolavsbola\`\n╰➜ \`${p}jogodavelha\`\n\n🤖 𝐈𝐍𝐓𝐄𝐋𝐈𝐆𝐄̂𝐍𝐂𝐈𝐀\n╰➜ \`${p}unliai <pergunta>\`\n\n📅 𝐔𝐓𝐈𝐋𝐈𝐃𝐀𝐃𝐄𝐒\n╰➜ \`${p}feriados [ano]\`\n\n♦️ 𝐄𝐗𝐓𝐑𝐀𝐒\n╰➜ \`${p}fraseprofunda\`\n╰➜ \`${p}mito\`\n╰➜ \`${p}napoleao\`\n\n💠 _"A força recompensa os nobres."_\n\n"${nomeBot}"`
 
         const cfg = db.config()
         if (cfg.fotoMenu) {
@@ -728,6 +712,160 @@ module.exports = {
           await sock.sendMessage(jid, { sticker: outBuf, packname: t, author: t }, { quoted: msg })
         } catch (e) {
           await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+      }
+    },
+
+    // ============ FERIADOS ============
+    feriados: {
+      aliases: ["feriado", "calendario"],
+      async executar({ sock, msg, args, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const ano = (args[0] && /^\d{4}$/.test(args[0].trim())) ? args[0].trim() : new Date().getFullYear()
+
+        await sock.sendMessage(jid, {
+          text:
+`❄️ • 𝐅𝐄𝐑𝐈𝐀𝐃𝐎𝐒 •
+
+╭─〔 ♦️ 𝐁𝐔𝐒𝐂𝐀𝐍𝐃𝐎 〕
+│ Procurando feriados de ${ano}...
+╰──────────────
+
+"${nomeBot}"`
+        }, { quoted: msg })
+
+        try {
+          const r = await fetch(`https://obanai-apis.eu.cc/api/outros/feriados?ano=${ano}&apitoken=rj8SpI`)
+          const data = await r.json()
+
+          if (!data?.success || !data.data?.total) {
+            return sock.sendMessage(jid, {
+              text:
+`❄️ • 𝐅𝐄𝐑𝐈𝐀𝐃𝐎𝐒 •
+
+╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕
+│ Nenhum feriado encontrado.
+╰──────────────
+
+💡 Tente outro ano: \`!feriados 2027\`
+
+"${nomeBot}"`
+            }, { quoted: msg })
+          }
+
+          const lista = data.data.feriados.map(f => `📌 *${f.date}* — ${f.name} _(${f.weekday})_`).join("\n")
+
+          await sock.sendMessage(jid, {
+            text:
+`❄️ • 𝐅𝐄𝐑𝐈𝐀𝐃𝐎𝐒 •
+
+╭─〔 🗓️ 𝐀𝐍𝐎 ${data.data.ano} 〕
+│ ${data.data.total} feriados encontrados.
+╰──────────────
+
+『 𝐋𝐢𝐬𝐭𝐚 』 ↴
+
+${lista}
+
+"${nomeBot}"`
+          }, { quoted: msg })
+
+        } catch (e) {
+          console.log("Erro feriados:", e.message)
+          await sock.sendMessage(jid, {
+            text:
+`❄️ • 𝐅𝐄𝐑𝐈𝐀𝐃𝐎𝐒 •
+
+╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕
+│ Erro ao buscar feriados.
+╰──────────────
+
+⚠️ \`${e.message}\`
+
+"${nomeBot}"`
+          }, { quoted: msg })
+        }
+      }
+    },
+
+    // ============ UNLIAI (IA) ============
+    unliai: {
+      aliases: ["ia", "unli", "chatia"],
+      async executar({ sock, msg, args, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const pergunta = args.join(" ").trim()
+
+        if (!pergunta) {
+          return sock.sendMessage(jid, {
+            text:
+`❄️ • 𝐔𝐍𝐋𝐈𝐀𝐈 •
+
+╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕
+│ Informe a pergunta.
+╰──────────────
+
+💡 Use:
+╰➜ \`!unliai <pergunta>\`
+
+📌 Exemplo:
+╰➜ \`!unliai o que é a lua?\`
+
+"${nomeBot}"`
+          }, { quoted: msg })
+        }
+
+        try {
+          await sock.sendPresenceUpdate("composing", jid)
+
+          await sock.sendMessage(jid, {
+            text:
+`❄️ • 𝐔𝐍𝐋𝐈𝐀𝐈 •
+
+╭─〔 ♦️ 𝐏𝐄𝐍𝐒𝐀𝐍𝐃𝐎 〕
+│ Consultando a inteligência...
+╰──────────────
+
+❔ 𝐏𝐞𝐫𝐠𝐮𝐧𝐭𝐚:
+╰➜ ${pergunta}
+
+"${nomeBot}"`
+          }, { quoted: msg })
+
+          const apiUrl = `https://obanai-apis.eu.cc/api/ias/unliai?q=${encodeURIComponent(pergunta)}&apitoken=rj8SpI`
+          const r = await fetch(apiUrl)
+          const data = await r.json()
+
+          if (!data?.success || !data?.response) {
+            return sock.sendMessage(jid, {
+              text:
+`❄️ • 𝐔𝐍𝐋𝐈𝐀𝐈 •
+
+╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕
+│ Não consegui acessar a IA.
+╰──────────────
+
+"${nomeBot}"`
+            }, { quoted: msg })
+          }
+
+          await sock.sendMessage(jid, { text: data.response }, { quoted: msg })
+
+        } catch (e) {
+          console.log("Erro unliai:", e.message)
+          await sock.sendMessage(jid, {
+            text:
+`❄️ • 𝐔𝐍𝐋𝐈𝐀𝐈 •
+
+╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕
+│ Não consegui acessar a IA.
+╰──────────────
+
+⚠️ \`${e.message}\`
+
+"${nomeBot}"`
+          }, { quoted: msg })
         }
       }
     },
