@@ -1,5 +1,5 @@
 /* ============================================================
-   🌙 MENU VIP - KOKUSHIBO BOT MD
+   ❄️ MENU VIP - AKAZA BOT MD
    ============================================================ */
 
 const fs = require("fs")
@@ -40,74 +40,81 @@ async function baixarTikTok(u) {
 }
 
 // ============================================================
-// 🎵 BAIXAR MÚSICA (YouTube via yt-dlp)
+// 🎵 BAIXAR MÚSICA (via tikwm.com — sem yt-dlp)
 // ============================================================
-function baixarMusica(busca, qualidade = 64) {
-  const tmpDir = os.tmpdir()
-  const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
-  const outTpl = path.join(tmpDir, "kokushibo_mus_" + id + ".%(ext)s")
+async function baixarMusica(busca, qualidade = 64) {
+  try {
+    let videoUrl = null
+    let titulo = busca
 
-  const ehUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(busca)
-  const alvo = ehUrl ? busca : "ytsearch1:" + busca
+    // Se for link direto do YouTube
+    if (/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(busca)) {
+      videoUrl = busca
+    } else {
+      // Busca via tikwm
+      const searchUrl = `https://www.tikwm.com/api/feed/search?keywords=${encodeURIComponent(busca)}&count=1`
+      const r = await fetch(searchUrl)
+      const d = await r.json()
 
-  const cmds = [
-    `yt-dlp -x --audio-format mp3 --audio-quality ${qualidade}k -o "${outTpl}" --no-playlist --match-filter "duration < 1200" --max-filesize 16M "${alvo}"`,
-    `python3 -m yt_dlp -x --audio-format mp3 --audio-quality ${qualidade}k -o "${outTpl}" --no-playlist --match-filter "duration < 1200" --max-filesize 16M "${alvo}"`,
-    `python -m yt_dlp -x --audio-format mp3 --audio-quality ${qualidade}k -o "${outTpl}" --no-playlist --match-filter "duration < 1200" --max-filesize 16M "${alvo}"`
-  ]
-
-  let ultimoErro = "yt-dlp não encontrado"
-  for (const cmd of cmds) {
-    try {
-      execSync(cmd, { stdio: "ignore", timeout: 120000 })
-      const prefixo = "kokushibo_mus_" + id
-      const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && (f.endsWith(".mp3") || f.endsWith(".m4a") || f.endsWith(".webm") || f.endsWith(".opus")))
-      if (arquivos.length > 0) {
-        const caminho = path.join(tmpDir, arquivos[0])
-        const buffer = fs.readFileSync(caminho)
-        try { fs.unlinkSync(caminho) } catch (_) {}
-        return { ok: true, buffer, qualidade }
+      if (d.code === 0 && d.data && d.data.videos && d.data.videos.length) {
+        const v = d.data.videos[0]
+        videoUrl = v.play || v.wmplay || v.hdplay
+        titulo = v.title || busca
       }
-    } catch (e) {
-      ultimoErro = e.message
     }
-  }
 
-  return { ok: false, erro: ultimoErro }
+    if (!videoUrl) throw new Error("Nenhum resultado encontrado")
+
+    // Pega o áudio
+    const dlUrl = `https://www.tikwm.com/api/?url=${encodeURIComponent(videoUrl)}&hd=1`
+    const dlRes = await fetch(dlUrl)
+    const dlData = await dlRes.json()
+
+    if (dlData.code !== 0 || !dlData.data) throw new Error("Falha ao baixar")
+
+    const audioUrl = dlData.data.music || dlData.data.play
+    if (!audioUrl) throw new Error("Sem áudio disponível")
+
+    const audioRes = await fetch(audioUrl)
+    const buffer = Buffer.from(await audioRes.arrayBuffer())
+
+    if (buffer.length > 16 * 1024 * 1024) {
+      return { ok: false, erro: "Arquivo muito grande (>16MB)" }
+    }
+
+    return { ok: true, buffer, titulo }
+  } catch (e) {
+    console.log("Erro baixarMusica:", e.message)
+    return { ok: false, erro: e.message }
+  }
 }
 
 // ============================================================
-// 🎥 BAIXAR VÍDEO DO YOUTUBE
+// 🎥 BAIXAR VÍDEO DO YOUTUBE (via tikwm)
 // ============================================================
-function baixarVideoYoutube(link) {
-  const tmpDir = os.tmpdir()
-  const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
-  const outTpl = path.join(tmpDir, "kokushibo_vid_" + id + ".%(ext)s")
+async function baixarVideoYoutube(link) {
+  try {
+    const dlUrl = `https://www.tikwm.com/api/?url=${encodeURIComponent(link)}&hd=1`
+    const r = await fetch(dlUrl)
+    const d = await r.json()
 
-  const cmds = [
-    `yt-dlp -f "best[ext=mp4][filesize<16M]/best[filesize<16M]" -o "${outTpl}" --no-playlist --max-filesize 16M "${link}"`,
-    `python3 -m yt_dlp -f "best[ext=mp4][filesize<16M]/best[filesize<16M]" -o "${outTpl}" --no-playlist --max-filesize 16M "${link}"`,
-    `python -m yt_dlp -f "best[ext=mp4][filesize<16M]/best[filesize<16M]" -o "${outTpl}" --no-playlist --max-filesize 16M "${link}"`
-  ]
+    if (d.code !== 0 || !d.data) throw new Error("Falha ao baixar vídeo")
 
-  let ultimoErro = "yt-dlp não encontrado"
-  for (const cmd of cmds) {
-    try {
-      execSync(cmd, { stdio: "ignore", timeout: 120000 })
-      const prefixo = "kokushibo_vid_" + id
-      const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && f.endsWith(".mp4"))
-      if (arquivos.length > 0) {
-        const caminho = path.join(tmpDir, arquivos[0])
-        const buffer = fs.readFileSync(caminho)
-        try { fs.unlinkSync(caminho) } catch (_) {}
-        return { ok: true, buffer }
-      }
-    } catch (e) {
-      ultimoErro = e.message
+    const videoUrl = d.data.hdplay || d.data.play
+    if (!videoUrl) throw new Error("Sem vídeo disponível")
+
+    const res = await fetch(videoUrl)
+    const buffer = Buffer.from(await res.arrayBuffer())
+
+    if (buffer.length > 16 * 1024 * 1024) {
+      return { ok: false, erro: "Vídeo muito grande (>16MB)" }
     }
-  }
 
-  return { ok: false, erro: ultimoErro }
+    return { ok: true, buffer }
+  } catch (e) {
+    console.log("Erro baixarVideoYoutube:", e.message)
+    return { ok: false, erro: e.message }
+  }
 }
 
 // ============================================================
@@ -116,7 +123,7 @@ function baixarVideoYoutube(link) {
 function baixarInstagram(link) {
   const tmpDir = os.tmpdir()
   const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
-  const outTpl = path.join(tmpDir, "kokushibo_insta_" + id + ".%(ext)s")
+  const outTpl = path.join(tmpDir, "akaza_insta_" + id + ".%(ext)s")
 
   const cmds = [
     `yt-dlp -o "${outTpl}" --no-playlist "${link}"`,
@@ -128,7 +135,7 @@ function baixarInstagram(link) {
   for (const cmd of cmds) {
     try {
       execSync(cmd, { stdio: "ignore", timeout: 90000 })
-      const prefixo = "kokushibo_insta_" + id
+      const prefixo = "akaza_insta_" + id
       const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && !f.endsWith(".part") && !f.endsWith(".ytdl"))
       if (arquivos.length > 0) {
         const caminho = path.join(tmpDir, arquivos[0])
@@ -143,82 +150,6 @@ function baixarInstagram(link) {
   }
 
   return { ok: false, erro: ultimoErro }
-}
-
-// ============================================================
-// 📌 BUSCAR PINTEREST (via API interna JSON)
-// ============================================================
-async function buscarPinterest(busca, limite = 20) {
-  try {
-    const payload = {
-      options: {
-        article: "",
-        app_version: "1.0",
-        appliedProductFilters: "---",
-        bookmarks: [""],
-        field_set_key: "unauth_react_main_pin",
-        isPrefetch: false,
-        layout: "react_grid",
-        page_size: 25,
-        price_max: null,
-        price_min: null,
-        query: busca,
-        scope: "pins",
-        tab: "all"
-      },
-      context: {}
-    }
-
-    const url = "https://br.pinterest.com/resource/BaseSearchResource/get/?" +
-      "source_url=" + encodeURIComponent("/search/pins/?q=" + busca) +
-      "&data=" + encodeURIComponent(JSON.stringify(payload))
-
-    const r = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/javascript, */*; q=0.01",
-        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Referer": "https://br.pinterest.com/search/pins/?q=" + encodeURIComponent(busca),
-        "X-Requested-With": "XMLHttpRequest",
-        "X-APP-VERSION": "1.0",
-        "X-Pinterest-AppState": "active"
-      }
-    })
-
-    if (!r.ok) throw new Error("HTTP " + r.status)
-
-    const json = await r.json()
-
-    const results = json?.resource_response?.data?.results || []
-
-    if (!results.length) throw new Error("Sem resultados na resposta")
-
-    const urls = []
-    for (const pin of results) {
-      const img =
-        pin?.images?.["736x"]?.url ||
-        pin?.images?.orig?.url ||
-        pin?.images?.["564x"]?.url ||
-        pin?.images?.["474x"]?.url ||
-        pin?.image
-
-      if (img && /i\.pinimg\.com/.test(img)) {
-        urls.push(img)
-      }
-    }
-
-    const unicas = [...new Set(urls)].slice(0, limite)
-
-    if (!unicas.length) throw new Error("Nenhuma URL de imagem válida")
-
-    console.log("📌 Pinterest retornou", unicas.length, "imagens para:", busca)
-
-    return { ok: true, urls: unicas }
-
-  } catch (e) {
-    console.log("❌ Erro Pinterest:", e.message)
-    return { ok: false, erro: e.message }
-  }
 }
 
 const VERDADES = ["Qual é o seu maior sonho?","Qual foi o momento mais feliz da sua vida?","Qual é o seu maior medo?","Quem é a pessoa que você mais admira?","Qual foi a coisa mais engraçada que já te aconteceu?","Qual é a sua comida favorita?","Qual a música que mais te marca?","Qual foi o melhor presente que você já ganhou?","Se você pudesse viajar pra qualquer lugar agora, pra onde iria?","Qual é o seu hobby favorito?","Qual filme você já assistiu mais de 10 vezes?","O que te faz rir muito?","Qual é a sua maior qualidade?","E o seu maior defeito?","Se você pudesse ter um superpoder, qual seria?","Qual foi a última vez que você riu até chorar?","Qual é o seu desenho ou anime favorito?","Qual é a coisa mais aleatória que você já pesquisou?","Qual animal você seria se pudesse escolher?","Qual foi a melhor fase da sua vida até agora?"]
@@ -248,11 +179,11 @@ async function enviarFigTexto(sock, jid, buf, texto, quoted) {
     const ov = await sharp(Buffer.from(svg)).png().toBuffer()
     const out = await sharp(buf, { animated: false }).resize(T, T, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).composite([{ input: ov, top: 0, left: 0 }]).webp({ quality: 90 }).toBuffer()
     await sock.sendMessage(jid, { sticker: out }, { quoted })
-  } catch (e) { await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted }) }
+  } catch (e) { await sock.sendMessage(jid, { text: "❄️💢 " + e.message }, { quoted }) }
 }
 
 // ============================================================
-// 🌙 CONVERTER IMAGEM EM FIGURINHA COM EXIF DE PACK
+// ❄️ CONVERTER IMAGEM EM FIGURINHA COM EXIF DE PACK
 // ============================================================
 async function imagemParaFigurinha(buffer, packId, packName, autor) {
   try {
@@ -271,7 +202,7 @@ async function imagemParaFigurinha(buffer, packId, packName, autor) {
       "sticker-pack-id": packId,
       "sticker-pack-name": packName,
       "sticker-pack-publisher": autor,
-      "emojis": ["🌙"]
+      "emojis": ["❄️", "♦️"]
     }
 
     const exifAttr = Buffer.from([
@@ -322,10 +253,10 @@ module.exports = {
         }
 
         if (!infoVip && !isDono && !isSubDono) {
-          return sock.sendMessage(jid, { text: "🌙💜 *SÓ VIP*\n\n> _\"Meus olhos veem que você não é nobre.\"_\n\n_\"Vá embora.\"_" }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "❄️💠 *SÓ VIP*\n\n> _\"Meus olhos veem que você não é nobre.\"_\n\n_\"Vá embora.\"_" }, { quoted: msg })
         }
 
-        const texto = "🌙💜 *MENU VIP - KOKUSHIBO* 💜🌙\n\n" +
+        const texto = "❄️💠 *MENU VIP - AKAZA* 💠❄️\n\n" +
           "> _\"Apenas nobres podem ver esses segredos.\"_\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
           "🎵 *MÚSICA*\n" +
@@ -334,12 +265,11 @@ module.exports = {
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
           "📥 *DOWNLOADS*\n" +
           "▸ `" + p + "insta <link>`\n" +
-          "▸ `" + p + "tiktok <link>`\n" +
-          "▸ `" + p + "packfig <busca>`\n\n" +
+          "▸ `" + p + "tiktok <link>`\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
           "🎨 *FIGURINHAS*\n" +
-          "▸ `" + p + "brat / " + p + "ttps / " + p + "s`\n" +
-          "▸ `" + p + "smeme / " + p + "s3 / " + p + "rename`\n" +
+          "▸ `" + p + "brat / " + p + "s / " + p + "rename`\n" +
+          "▸ `" + p + "smeme / " + p + "s3`\n" +
           "▸ `" + p + "procurado / " + p + "wasted / " + p + "revela`\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
           "🎮 *JOGOS*\n" +
@@ -347,17 +277,17 @@ module.exports = {
           "▸ `" + p + "bolavsbola`\n" +
           "▸ `" + p + "jogodavelha`\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-          "⚔️ *EXTRAS*\n" +
+          "♦️ *EXTRAS*\n" +
           "▸ `" + p + "fraseprofunda`\n" +
           "▸ `" + p + "mito`\n" +
           "▸ `" + p + "napoleao`\n\n" +
           "━━━━━━━━━━━━━━━━━━━━━━━━━\n\n" +
-          "> 💜 _\"A lua recompensa os nobres.\"_"
+          "> 💠 _\"A força recompensa os nobres.\"_"
 
         const cfg = db.config()
         if (cfg.fotoMenu) {
           const buf = Buffer.from(cfg.fotoMenu, "base64")
-          if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "kokushibo.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
+          if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "akaza.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
           return sock.sendMessage(jid, { image: buf, caption: texto }, { quoted: msg })
         }
         await sock.sendMessage(jid, { text: texto }, { quoted: msg })
@@ -372,49 +302,45 @@ module.exports = {
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
 
         if (!checarVip(db, sJ, isDono, isSubDono)) {
-          return sock.sendMessage(jid, { text: "🌙💜 *SÓ VIP*\n\n> _\"Música é privilégio dos nobres.\"_\n\n_\"Vá embora, mortal.\"_" }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "❄️💠 *SÓ VIP*\n\n> _\"Música é privilégio dos nobres.\"_\n\n_\"Vá embora, mortal.\"_" }, { quoted: msg })
         }
 
         const busca = args.join(" ").trim()
         if (!busca) {
           return sock.sendMessage(jid, {
-            text: "🌙🎵 *PLAY*\n\n> _\"Me diga o que quer ouvir.\"_\n\n💡 `!play <nome>`\n💡 `!play <link yt>` _(vídeo)_\n\n⚠️ _Limite: 20 min_"
+            text: "❄️🎵 *PLAY*\n\n> _\"Me diga o que quer ouvir.\"_\n\n💡 `!play <nome>`\n💡 `!play <link yt>` _(vídeo)_\n\n⚠️ _Limite: 20 min_"
           }, { quoted: msg })
         }
 
         const ehLinkVideo = /(youtube\.com\/(watch|shorts|live)|youtu\.be\/|music\.youtube\.com)/i.test(busca)
 
         if (ehLinkVideo) {
-          await sock.sendMessage(jid, { text: "🌙🎥 *BAIXANDO VÍDEO...*\n\n📥 _Aguarde._" }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "❄️🎥 *BAIXANDO VÍDEO...*\n\n📥 _Aguarde._" }, { quoted: msg })
           try {
-            const res = baixarVideoYoutube(busca)
+            const res = await baixarVideoYoutube(busca)
             if (!res.ok) throw new Error(res.erro)
             const buffer = res.buffer
             const tamanhoMB = (buffer.length / 1024 / 1024).toFixed(2)
             if (buffer.length > 16 * 1024 * 1024) {
-              return sock.sendMessage(jid, { text: "🌙💢 *MUITO GRANDE*\n\n⚠️ " + tamanhoMB + "MB" }, { quoted: msg })
+              return sock.sendMessage(jid, { text: "❄️💢 *MUITO GRANDE*\n\n⚠️ " + tamanhoMB + "MB" }, { quoted: msg })
             }
             await sock.sendMessage(jid, { video: buffer, mimetype: "video/mp4", fileName: "youtube.mp4" }, { quoted: msg })
           } catch (e) {
-            await sock.sendMessage(jid, { text: "🌙💥 *ERRO*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
+            await sock.sendMessage(jid, { text: "❄️💥 *ERRO*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
           }
           return
         }
 
-        await sock.sendMessage(jid, { text: "🌙🎵 *BUSCANDO...*\n\n📥 _Aguarde._" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "❄️🎵 *BUSCANDO...*\n\n📥 _Aguarde._" }, { quoted: msg })
 
         try {
-          let res = baixarMusica(busca, 64)
-          if (res.ok && res.buffer.length > 16 * 1024 * 1024) {
-            await sock.sendMessage(jid, { text: "🌙💢 *MUITO GRANDE*\n\n> _\"Tentando reduzir qualidade...\"_" }, { quoted: msg })
-            res = baixarMusica(busca, 32)
-          }
+          let res = await baixarMusica(busca, 64)
           if (!res.ok) {
-            return sock.sendMessage(jid, { text: "🌙💥 *ERRO*\n\n⚠️ _Verifique yt-dlp/ffmpeg._" }, { quoted: msg })
+            return sock.sendMessage(jid, { text: "❄️💥 *ERRO*\n\n⚠️ _" + res.erro + "_" }, { quoted: msg })
           }
           const buffer = res.buffer
           if (buffer.length > 16 * 1024 * 1024) {
-            return sock.sendMessage(jid, { text: "🌙💢 *MUITO GRANDE*\n\n⚠️ Limite: 16MB" }, { quoted: msg })
+            return sock.sendMessage(jid, { text: "❄️💢 *MUITO GRANDE*\n\n⚠️ Limite: 16MB" }, { quoted: msg })
           }
           await sock.sendMessage(jid, {
             audio: buffer,
@@ -423,123 +349,7 @@ module.exports = {
             fileName: (busca.length > 30 ? busca.slice(0, 30) : busca) + ".mp3"
           }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: "🌙💥 *ERRO*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
-        }
-      }
-    },
-
-    // ============ PACKFIG ============
-    packfig: {
-      aliases: ["pack", "figpack", "stickerpack"],
-      async executar({ sock, msg, args, db, isDono, isSubDono, sender, utils }) {
-        const jid = msg.key.remoteJid
-        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-
-        if (!checarVip(db, sJ, isDono, isSubDono)) {
-          return sock.sendMessage(jid, { text: "🌙💜 *SÓ VIP*\n\n> _\"Packs são privilégio dos nobres.\"_\n\n_\"Vá embora, mortal.\"_" }, { quoted: msg })
-        }
-
-        const busca = args.join(" ").trim()
-        if (!busca) {
-          return sock.sendMessage(jid, {
-            text: "🌙🎨 *PACKFIG*\n\n> _\"Me diga o que buscar.\"_\n\n💡 `!packfig <nome>`\n\n📌 Ex: `!packfig goku`\n\n⚠️ _20 figurinhas por pack_"
-          }, { quoted: msg })
-        }
-
-        const num = utils.soNumero(sender)
-
-        await sock.sendMessage(jid, {
-          text: "🌙🎨 *BUSCANDO NO PINTEREST...*\n\n> _\"Meus 6 olhos procuram " + busca + "...\"_\n\n📥 _Aguarde..._"
-        }, { quoted: msg })
-
-        const pastaTemp = path.join(os.tmpdir(), "kokushibo_pack_" + Date.now() + "_" + num)
-
-        try {
-          fs.mkdirSync(pastaTemp, { recursive: true })
-
-          const res = await buscarPinterest(busca, 20)
-
-          if (!res.ok || !res.urls.length) {
-            return sock.sendMessage(jid, {
-              text: "🌙💥 *ERRO*\n\n> _\"Não encontrei imagens...\"_\n\n⚠️ `" + (res.erro || "Sem resultados") + "`\n\n💡 Tente uma busca mais simples."
-            }, { quoted: msg })
-          }
-
-          await sock.sendMessage(jid, {
-            text: "🌙🎨 *CRIANDO PACK...*\n\n> _\"Encontrei " + res.urls.length + " imagens.\"_\n> _\"Convertendo...\"_\n\n⚠️ _Aguarde._"
-          }, { quoted: msg })
-
-          const packId = "com.kokushibo.pack." + Date.now() + "." + num
-          const packName = busca
-          const autor = "Kokushibo Bot"
-
-          let enviados = 0
-          let falhas = 0
-
-          for (let i = 0; i < res.urls.length; i++) {
-            const caminhoBruto = path.join(pastaTemp, "img_" + i + ".bin")
-            const caminhoFig = path.join(pastaTemp, "fig_" + i + ".webp")
-
-            try {
-              const imgRes = await fetch(res.urls[i], {
-                headers: {
-                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                  "Referer": "https://br.pinterest.com/"
-                }
-              })
-              if (!imgRes.ok) { falhas++; continue }
-              const imgBuf = Buffer.from(await imgRes.arrayBuffer())
-              fs.writeFileSync(caminhoBruto, imgBuf)
-
-              const fig = await imagemParaFigurinha(fs.readFileSync(caminhoBruto), packId, packName, autor)
-              if (fig) {
-                fs.writeFileSync(caminhoFig, fig)
-                await sock.sendMessage(jid, { sticker: fs.readFileSync(caminhoFig) }, { quoted: msg })
-                enviados++
-              } else {
-                falhas++
-              }
-
-              try { fs.unlinkSync(caminhoBruto) } catch (_) {}
-              try { fs.unlinkSync(caminhoFig) } catch (_) {}
-
-            } catch (e) {
-              falhas++
-              console.log("Erro figurinha " + i + ":", e.message)
-              try { fs.unlinkSync(caminhoBruto) } catch (_) {}
-              try { fs.unlinkSync(caminhoFig) } catch (_) {}
-            }
-            await new Promise(r => setTimeout(r, 300))
-          }
-
-          await sock.sendMessage(jid, {
-            text: "🌙✅ *PACK ENVIADO!*\n\n" +
-              "> 👁️ _\"Criei " + enviados + " figurinhas.\"_\n" +
-              (falhas > 0 ? "> _\"" + falhas + " falharam.\"_\n" : "") +
-              "\n━━━━━━━━━━━━━━━━━━━━━━\n" +
-              "📦 *Pack:* " + packName + "\n" +
-              "🎨 *Autor:* " + autor + "\n" +
-              "━━━━━━━━━━━━━━━━━━━━━━\n\n" +
-              "> 💜 _\"Todas as imagens foram apagadas do servidor.\"_"
-          }, { quoted: msg })
-
-          console.log("🎨 Pack criado:", enviados, "figurinhas de", busca)
-
-        } catch (e) {
-          console.log("Erro packfig:", e.message)
-          await sock.sendMessage(jid, {
-            text: "🌙💥 *ERRO NO PACK*\n\n⚠️ `" + e.message + "`"
-          }, { quoted: msg })
-
-        } finally {
-          try {
-            if (fs.existsSync(pastaTemp)) {
-              fs.rmSync(pastaTemp, { recursive: true, force: true })
-              console.log("🧹 Pasta temp limpa:", pastaTemp)
-            }
-          } catch (e) {
-            console.log("Aviso limpeza:", e.message)
-          }
+          await sock.sendMessage(jid, { text: "❄️💥 *ERRO*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
         }
       }
     },
@@ -550,20 +360,20 @@ module.exports = {
       async executar({ sock, msg, args, db, isDono, isSubDono }) {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "❄️💠 Só nobres!" }, { quoted: msg })
 
         const link = args[0]
         if (!link || !/open\.spotify\.com/i.test(link)) {
-          return sock.sendMessage(jid, { text: "🌙🎵 `!spot <link do Spotify>`" }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "❄️🎵 `!spot <link do Spotify>`" }, { quoted: msg })
         }
 
-        await sock.sendMessage(jid, { text: "🌙🎵 *BUSCANDO NO SPOTIFY...*\n\n📥 _Aguarde._" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "❄️🎵 *BUSCANDO NO SPOTIFY...*\n\n📥 _Aguarde._" }, { quoted: msg })
 
         try {
           const SpottyDL = require("spottydl")
           const tmpDir = os.tmpdir()
           const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
-          const pastaTemp = path.join(tmpDir, "kokushibo_spot_" + id)
+          const pastaTemp = path.join(tmpDir, "akaza_spot_" + id)
           if (!fs.existsSync(pastaTemp)) fs.mkdirSync(pastaTemp, { recursive: true })
 
           const trackInfo = await SpottyDL.getTrack(link)
@@ -582,7 +392,7 @@ module.exports = {
           try { fs.rmSync(pastaTemp, { recursive: true, force: true }) } catch (_) {}
 
           if (buffer.length > 16 * 1024 * 1024) {
-            return sock.sendMessage(jid, { text: "🌙💢 *MUITO GRANDE*\n\n⚠️ " + tamanhoMB + "MB" }, { quoted: msg })
+            return sock.sendMessage(jid, { text: "❄️💢 *MUITO GRANDE*\n\n⚠️ " + tamanhoMB + "MB" }, { quoted: msg })
           }
 
           await sock.sendMessage(jid, {
@@ -592,7 +402,7 @@ module.exports = {
             fileName: trackInfo.title + " - " + (trackInfo.artist || "?") + ".mp3"
           }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: "🌙💥 *ERRO NO SPOTIFY*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "❄️💥 *ERRO NO SPOTIFY*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
         }
       }
     },
@@ -603,27 +413,27 @@ module.exports = {
       async executar({ sock, msg, args, db, isDono, isSubDono }) {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "❄️💠 Só nobres!" }, { quoted: msg })
 
         const link = args[0]
         if (!link || !/instagram\.com|instagr\.am/i.test(link)) {
-          return sock.sendMessage(jid, { text: "🌙📥 `!insta <link>`" }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "❄️📥 `!insta <link>`" }, { quoted: msg })
         }
 
-        await sock.sendMessage(jid, { text: "🌙📥 *BAIXANDO DO INSTAGRAM...*\n\n📥 _Aguarde..._" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "❄️📥 *BAIXANDO DO INSTAGRAM...*\n\n📥 _Aguarde..._" }, { quoted: msg })
 
         try {
           const res = baixarInstagram(link)
-          if (!res.ok) return sock.sendMessage(jid, { text: "🌙💥 *ERRO*\n\n⚠️ `" + res.erro + "`" }, { quoted: msg })
+          if (!res.ok) return sock.sendMessage(jid, { text: "❄️💥 *ERRO*\n\n⚠️ `" + res.erro + "`" }, { quoted: msg })
           const buffer = res.buffer
-          if (buffer.length > 16 * 1024 * 1024) return sock.sendMessage(jid, { text: "🌙💢 *MUITO GRANDE*" }, { quoted: msg })
+          if (buffer.length > 16 * 1024 * 1024) return sock.sendMessage(jid, { text: "❄️💢 *MUITO GRANDE*" }, { quoted: msg })
           if (res.ehVideo) {
             await sock.sendMessage(jid, { video: buffer, mimetype: "video/mp4", fileName: "instagram.mp4" }, { quoted: msg })
           } else {
-            await sock.sendMessage(jid, { image: buffer, caption: "🌙📸 *INSTAGRAM*" }, { quoted: msg })
+            await sock.sendMessage(jid, { image: buffer, caption: "❄️📸 *INSTAGRAM*" }, { quoted: msg })
           }
         } catch (e) {
-          await sock.sendMessage(jid, { text: "🌙💥 *ERRO*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "❄️💥 *ERRO*\n\n⚠️ `" + e.message + "`" }, { quoted: msg })
         }
       }
     },
@@ -634,8 +444,8 @@ module.exports = {
       async executar({ sock, msg, args, db, isDono, isSubDono }) {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
-        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: "🌙 Só em grupos!" }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "❄️💠 Só nobres!" }, { quoted: msg })
+        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: "❄️ Só em grupos!" }, { quoted: msg })
 
         const op = (args[0] || "").toLowerCase()
         const ac = dbLer("autocfg.json", { grupos: {} })
@@ -643,11 +453,11 @@ module.exports = {
         ac.grupos[jid] = ac.grupos[jid] || {}
         if (!["on", "off"].includes(op)) {
           const s = ac.grupos[jid].autofig ? "ON ✅" : "OFF ❌"
-          return sock.sendMessage(jid, { text: "🌙 *AUTOFIX*\n\n📊 Status: *" + s + "*\n\n💡 `!autofig on/off`" }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "❄️ *AUTOFIX*\n\n📊 Status: *" + s + "*\n\n💡 `!autofig on/off`" }, { quoted: msg })
         }
         ac.grupos[jid].autofig = op === "on"
         dbSalvar("autocfg.json", ac)
-        await sock.sendMessage(jid, { text: "🌙 Autofig: *" + op.toUpperCase() + "*" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "❄️ Autofig: *" + op.toUpperCase() + "*" }, { quoted: msg })
       }
     },
 
@@ -656,8 +466,8 @@ module.exports = {
       async executar({ sock, msg, args, db, isDono, isSubDono }) {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
-        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: "🌙 Só em grupos!" }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "❄️💠 Só nobres!" }, { quoted: msg })
+        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: "❄️ Só em grupos!" }, { quoted: msg })
 
         const op = (args[0] || "").toLowerCase()
         const ac = dbLer("autocfg.json", { grupos: {} })
@@ -665,11 +475,11 @@ module.exports = {
         ac.grupos[jid] = ac.grupos[jid] || {}
         if (!["on", "off"].includes(op)) {
           const s = ac.grupos[jid].autottk ? "ON ✅" : "OFF ❌"
-          return sock.sendMessage(jid, { text: "🌙 *AUTOTTK*\n\n📊 Status: *" + s + "*\n\n💡 `!autottk on/off`" }, { quoted: msg })
+          return sock.sendMessage(jid, { text: "❄️ *AUTOTTK*\n\n📊 Status: *" + s + "*\n\n💡 `!autottk on/off`" }, { quoted: msg })
         }
         ac.grupos[jid].autottk = op === "on"
         dbSalvar("autocfg.json", ac)
-        await sock.sendMessage(jid, { text: "🌙 Autottk: *" + op.toUpperCase() + "*" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "❄️ Autottk: *" + op.toUpperCase() + "*" }, { quoted: msg })
       }
     },
 
@@ -679,19 +489,19 @@ module.exports = {
       async executar({ sock, msg, args, db, isDono, isSubDono }) {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "❄️💠 Só nobres!" }, { quoted: msg })
 
         const link = args[0]
-        if (!link || !/tiktok\.com|vm\.tiktok|vt\.tiktok/i.test(link)) return sock.sendMessage(jid, { text: "🌙📥 `!tiktok <link>`" }, { quoted: msg })
+        if (!link || !/tiktok\.com|vm\.tiktok|vt\.tiktok/i.test(link)) return sock.sendMessage(jid, { text: "❄️📥 `!tiktok <link>`" }, { quoted: msg })
 
-        await sock.sendMessage(jid, { text: "🌙📥 *BAIXANDO...*" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "❄️📥 *BAIXANDO...*" }, { quoted: msg })
 
         try {
           const url = await baixarTikTok(link)
           const r = await fetch(url)
           await sock.sendMessage(jid, { video: Buffer.from(await r.arrayBuffer()), mimetype: "video/mp4", fileName: "tiktok.mp4" }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "❄️💢 " + e.message }, { quoted: msg })
         }
       }
     },
@@ -702,11 +512,11 @@ module.exports = {
       async executar({ sock, msg, db, utils, isDono, isSubDono }) {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "❄️💠 Só nobres!" }, { quoted: msg })
 
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         let q = ctx.quotedMessage
-        if (!q) return sock.sendMessage(jid, { text: "🌙👁️ Responda uma mensagem de *ver uma vez*" }, { quoted: msg })
+        if (!q) return sock.sendMessage(jid, { text: "❄️👁️ Responda uma mensagem de *ver uma vez*" }, { quoted: msg })
 
         let isVU = false
         if (q.viewOnceMessageV2) { q = q.viewOnceMessageV2.message || q.viewOnceMessageV2; isVU = true }
@@ -716,20 +526,20 @@ module.exports = {
         if (img && img.viewOnce) isVU = true
         if (vid && vid.viewOnce) isVU = true
         if (aud && aud.viewOnce) isVU = true
-        if (!isVU) return sock.sendMessage(jid, { text: "🌙❌ Não é de *ver uma vez*!" }, { quoted: msg })
-        if (!img && !vid && !aud) return sock.sendMessage(jid, { text: "🌙❌ Sem mídia!" }, { quoted: msg })
+        if (!isVU) return sock.sendMessage(jid, { text: "❄️❌ Não é de *ver uma vez*!" }, { quoted: msg })
+        if (!img && !vid && !aud) return sock.sendMessage(jid, { text: "❄️❌ Sem mídia!" }, { quoted: msg })
 
-        await sock.sendMessage(jid, { text: "🌙👁️ *REVELANDO...*" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "❄️👁️ *REVELANDO...*" }, { quoted: msg })
 
         try {
           const tipo = img ? "image" : vid ? "video" : "audio"
           const alvo = Object.assign({}, msg, { message: tipo === "image" ? { imageMessage: img } : tipo === "video" ? { videoMessage: vid } : { audioMessage: aud } })
           const buf = await utils.downloadMediaMessage(alvo, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
-          if (tipo === "image") await sock.sendMessage(jid, { image: buf, caption: "🌙👁️ *REVELADO*" }, { quoted: msg })
-          else if (tipo === "video") await sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", caption: "🌙👁️ *REVELADO*" }, { quoted: msg })
+          if (tipo === "image") await sock.sendMessage(jid, { image: buf, caption: "❄️👁️ *REVELADO*" }, { quoted: msg })
+          else if (tipo === "video") await sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", caption: "❄️👁️ *REVELADO*" }, { quoted: msg })
           else await sock.sendMessage(jid, { audio: buf, mimetype: "audio/mp4", ptt: false }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "❄️💢 " + e.message }, { quoted: msg })
         }
       }
     },
@@ -740,12 +550,12 @@ module.exports = {
       async executar({ sock, msg, args, db, isDono, isSubDono }) {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "❄️💠 Só nobres!" }, { quoted: msg })
 
         const t = args.join(" ").trim()
-        if (!t) return sock.sendMessage(jid, { text: "🌙🎨 `!brat <texto>`" }, { quoted: msg })
+        if (!t) return sock.sendMessage(jid, { text: "❄️🎨 `!brat <texto>`" }, { quoted: msg })
 
-        await sock.sendMessage(jid, { text: "🌙🎨 *CRIANDO...*" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "❄️🎨 *CRIANDO...*" }, { quoted: msg })
 
         try {
           const sharp = require("sharp")
@@ -772,7 +582,7 @@ module.exports = {
           const buf = await sharp(Buffer.from(svg)).webp({ quality: 90 }).toBuffer()
           await sock.sendMessage(jid, { sticker: buf }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "❄️💢 " + e.message }, { quoted: msg })
         }
       }
     },
@@ -783,15 +593,15 @@ module.exports = {
       async executar({ sock, msg, db, isDono, isSubDono, utils }) {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "❄️💠 Só nobres!" }, { quoted: msg })
 
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         const q = ctx.quotedMessage
         const eImg = q && q.imageMessage
         const eVid = q && q.videoMessage
-        if (!eImg && !eVid) return sock.sendMessage(jid, { text: "🌙🎨 Responda foto/vídeo!" }, { quoted: msg })
+        if (!eImg && !eVid) return sock.sendMessage(jid, { text: "❄️🎨 Responda foto/vídeo!" }, { quoted: msg })
 
-        await sock.sendMessage(jid, { text: "🌙🎨 *PREPARANDO...*" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "❄️🎨 *PREPARANDO...*" }, { quoted: msg })
 
         try {
           const sharp = require("sharp")
@@ -813,7 +623,7 @@ module.exports = {
           }
           await sock.sendMessage(jid, { sticker: wp }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "❄️💢 " + e.message }, { quoted: msg })
         }
       }
     },
@@ -824,18 +634,18 @@ module.exports = {
       async executar({ sock, msg, db, isDono, isSubDono, utils }) {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "❄️💠 Só nobres!" }, { quoted: msg })
 
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         const q = ctx.quotedMessage
-        if (!q) return sock.sendMessage(jid, { text: "🌙🎨 Responda figurinha, foto ou vídeo" }, { quoted: msg })
+        if (!q) return sock.sendMessage(jid, { text: "❄️🎨 Responda figurinha, foto ou vídeo" }, { quoted: msg })
 
         const eSti = q.stickerMessage
         const eImg = q.imageMessage
         const eVid = q.videoMessage
-        if (!eSti && !eImg && !eVid) return sock.sendMessage(jid, { text: "🌙🎨 Responda figurinha, foto ou vídeo!" }, { quoted: msg })
+        if (!eSti && !eImg && !eVid) return sock.sendMessage(jid, { text: "❄️🎨 Responda figurinha, foto ou vídeo!" }, { quoted: msg })
 
-        await sock.sendMessage(jid, { text: "🌙🎨 *ENGORDANDO 40%...*" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "❄️🎨 *ENGORDANDO 40%...*" }, { quoted: msg })
 
         try {
           const sharp = require("sharp")
@@ -867,7 +677,7 @@ module.exports = {
           }
           await sock.sendMessage(jid, { sticker: resultado }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "❄️💢 " + e.message }, { quoted: msg })
         }
       }
     },
@@ -878,23 +688,23 @@ module.exports = {
       async executar({ sock, msg, args, db, isDono, isSubDono, utils }) {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "❄️💠 Só nobres!" }, { quoted: msg })
 
         const t = args.join(" ").trim()
-        if (!t) return sock.sendMessage(jid, { text: "🌙🎨 `!smeme <texto>`" }, { quoted: msg })
+        if (!t) return sock.sendMessage(jid, { text: "❄️🎨 `!smeme <texto>`" }, { quoted: msg })
 
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         const q = ctx.quotedMessage
-        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: "🌙🎨 Responda figurinha!" }, { quoted: msg })
+        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: "❄️🎨 Responda figurinha!" }, { quoted: msg })
 
-        await sock.sendMessage(jid, { text: "🌙🎨 *CRIANDO...*" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "❄️🎨 *CRIANDO...*" }, { quoted: msg })
 
         try {
           const alvo = Object.assign({}, msg, { message: { stickerMessage: q.stickerMessage } })
           const buf = await utils.downloadMediaMessage(alvo, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
           await enviarFigTexto(sock, jid, buf, t, msg)
         } catch (e) {
-          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "❄️💢 " + e.message }, { quoted: msg })
         }
       }
     },
@@ -905,13 +715,13 @@ module.exports = {
       async executar({ sock, msg, db, isDono, isSubDono, utils }) {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "❄️💠 Só nobres!" }, { quoted: msg })
 
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         const q = ctx.quotedMessage
-        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: "🌙🎨 Responda figurinha!" }, { quoted: msg })
+        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: "❄️🎨 Responda figurinha!" }, { quoted: msg })
 
-        await sock.sendMessage(jid, { text: "🌙🎨 *CRIANDO CARTAZ...*" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "❄️🎨 *CRIANDO CARTAZ...*" }, { quoted: msg })
 
         try {
           const sharp = require("sharp")
@@ -924,7 +734,7 @@ module.exports = {
           const res = await sharp(cartaz).composite([{ input: foto, top: 138, left: Math.floor((T-(FT+12))/2) }]).webp({ quality: 92 }).toBuffer()
           await sock.sendMessage(jid, { sticker: res }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "❄️💢 " + e.message }, { quoted: msg })
         }
       }
     },
@@ -935,13 +745,13 @@ module.exports = {
       async executar({ sock, msg, db, isDono, isSubDono, utils }) {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "❄️💠 Só nobres!" }, { quoted: msg })
 
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         const q = ctx.quotedMessage
-        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: "🌙🎨 Responda figurinha!" }, { quoted: msg })
+        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: "❄️🎨 Responda figurinha!" }, { quoted: msg })
 
-        await sock.sendMessage(jid, { text: "🌙🎨 *APLICANDO WASTED...*" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "❄️🎨 *APLICANDO WASTED...*" }, { quoted: msg })
 
         try {
           const sharp = require("sharp")
@@ -955,7 +765,7 @@ module.exports = {
           const res = await sharp(baseGray).composite([{ input: ov, top: 0, left: 0 }]).webp({ quality: 92 }).toBuffer()
           await sock.sendMessage(jid, { sticker: res }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "❄️💢 " + e.message }, { quoted: msg })
         }
       }
     },
@@ -966,16 +776,16 @@ module.exports = {
       async executar({ sock, msg, args, db, isDono, isSubDono, utils }) {
         const jid = msg.key.remoteJid
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "🌙💜 Só nobres!" }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: "❄️💠 Só nobres!" }, { quoted: msg })
 
         const t = args.join(" ").trim()
-        if (!t) return sock.sendMessage(jid, { text: "🌙🎨 `!rename <texto>` (responda figurinha)" }, { quoted: msg })
+        if (!t) return sock.sendMessage(jid, { text: "❄️🎨 `!rename <texto>` (responda figurinha)" }, { quoted: msg })
 
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         const q = ctx.quotedMessage
-        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: "🌙🎨 Responda figurinha!" }, { quoted: msg })
+        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: "❄️🎨 Responda figurinha!" }, { quoted: msg })
 
-        await sock.sendMessage(jid, { text: "🌙🎨 *RENOMEANDO...*" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "❄️🎨 *RENOMEANDO...*" }, { quoted: msg })
 
         try {
           const alvo = Object.assign({}, msg, { message: { stickerMessage: q.stickerMessage } })
@@ -985,7 +795,7 @@ module.exports = {
             const { Image } = require("node-webpmux")
             const img = new Image()
             await img.load(buf)
-            const json = { "sticker-pack-id": "com.kokushibo." + Date.now(), "sticker-pack-name": t, "sticker-pack-publisher": t, "emojis": ["🌙"] }
+            const json = { "sticker-pack-id": "com.akaza." + Date.now(), "sticker-pack-name": t, "sticker-pack-publisher": t, "emojis": ["❄️", "♦️"] }
             const exifAttr = Buffer.from([0x49,0x49,0x2A,0x00,0x08,0x00,0x00,0x00,0x01,0x00,0x41,0x57,0x07,0x00,0x00,0x00,0x00,0x00,0x16,0x00,0x00,0x00])
             const jsonBuf = Buffer.from(JSON.stringify(json), "utf8")
             const exif = Buffer.concat([exifAttr, jsonBuf])
@@ -995,7 +805,7 @@ module.exports = {
           } catch (e) { console.log("Aviso exif:", e.message) }
           await sock.sendMessage(jid, { sticker: outBuf, packname: t, author: t }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: "🌙💢 " + e.message }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "❄️💢 " + e.message }, { quoted: msg })
         }
       }
     },
@@ -1019,10 +829,10 @@ module.exports = {
           if (info) break
         }
 
-        if (isDono || isSubDono) return sock.sendMessage(jid, { text: "🌙💜 *MEU VIP*\n\n👑 " + (isDono ? "IMPERADOR" : "LUA SUPERIOR") }, { quoted: msg })
-        if (!info) return sock.sendMessage(jid, { text: "🌙 Você não é nobre!" }, { quoted: msg })
+        if (isDono || isSubDono) return sock.sendMessage(jid, { text: "❄️💠 *MEU VIP*\n\n👑 " + (isDono ? "IMPERADOR" : "LUA SUPERIOR") }, { quoted: msg })
+        if (!info) return sock.sendMessage(jid, { text: "❄️ Você não é nobre!" }, { quoted: msg })
 
-        await sock.sendMessage(jid, { text: "🌙💜 *MEU VIP*\n\n👤 " + (info.expira === "inf" ? "INFINITO ♾️" : "expira em " + new Date(info.expira).toLocaleString("pt-BR")) }, { quoted: msg })
+        await sock.sendMessage(jid, { text: "❄️💠 *MEU VIP*\n\n👤 " + (info.expira === "inf" ? "INFINITO ♾️" : "expira em " + new Date(info.expira).toLocaleString("pt-BR")) }, { quoted: msg })
       }
     }
 
