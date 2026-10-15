@@ -41,48 +41,90 @@ function lineEmoji(emoji, label, valor) {
 }
 
 // ============================================================
-// 🎵 BAIXAR MÚSICA (via play-dl)
+// 🎵 BAIXAR MÚSICA (via API vevioz — sem bloqueio de IP)
 // ============================================================
 async function baixarMusica(busca, qualidade = 64) {
   try {
-    const playdl = require("play-dl")
-    const ff = require("@ffmpeg-installer/ffmpeg").path
-
-    const tmpDir = os.tmpdir()
-    const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
-    const tIn = path.join(tmpDir, "akaza_" + id + ".webm")
-    const tOut = path.join(tmpDir, "akaza_" + id + ".mp3")
-
-    let url = busca
-    if (!/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)/i.test(busca)) {
-      const results = await playdl.search(busca, { limit: 1 })
-      if (!results.length) throw new Error("Nenhum vídeo encontrado")
-      url = results[0].url
-    }
-
-    const stream = await playdl.stream(url, { quality: 2, discordPlayerCompatibility: false })
-
-    const chunks = []
-    for await (const chunk of stream.stream) {
-      chunks.push(chunk)
-      if (Buffer.concat(chunks).length > 20 * 1024 * 1024) {
-        stream.stream.destroy()
-        throw new Error("Arquivo muito grande (>20MB)")
+    // 🎯 TENTATIVA 1: API vevioz (não bloqueia VPS)
+    try {
+      const apiUrl = `https://api.vevioz.com/api/button/mp3/${encodeURIComponent(busca)}`
+      const r = await fetch(apiUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      })
+      const html = await r.text()
+      const match = html.match(/href="(https:\/\/[^"]+\.mp3[^"]*)"/)
+      if (match && match[1]) {
+        const audioRes = await fetch(match[1])
+        const buffer = Buffer.from(await audioRes.arrayBuffer())
+        if (buffer.length > 0 && buffer.length < 16 * 1024 * 1024) {
+          return { ok: true, buffer, titulo: busca }
+        }
+        if (buffer.length >= 16 * 1024 * 1024) {
+          return { ok: false, erro: "Música muito grande (limite 16MB do WhatsApp)" }
+        }
       }
+    } catch (e) {
+      console.log("🎵 Tentativa 1 (vevioz) falhou:", e.message)
     }
-    const buffer = Buffer.concat(chunks)
-    if (!buffer.length) throw new Error("Áudio vazio")
 
-    fs.writeFileSync(tIn, buffer)
-    execSync(`"${ff}" -y -i "${tIn}" -vn -ar 44100 -ac 2 -b:a ${qualidade}k "${tOut}"`, { stdio: "ignore", timeout: 120000 })
-    const mp3Buf = fs.readFileSync(tOut)
+    // 🎯 TENTATIVA 2: API workers
+    try {
+      const apiUrl = `https://cdn2.ytmp3.workers.dev/api/ytmp3?url=${encodeURIComponent(busca)}`
+      const r = await fetch(apiUrl)
+      const d = await r.json()
+      if (d && d.url) {
+        const audioRes = await fetch(d.url)
+        const buffer = Buffer.from(await audioRes.arrayBuffer())
+        if (buffer.length > 0 && buffer.length < 16 * 1024 * 1024) {
+          return { ok: true, buffer, titulo: busca }
+        }
+      }
+    } catch (e) {
+      console.log("🎵 Tentativa 2 (workers) falhou:", e.message)
+    }
 
-    try { fs.unlinkSync(tIn) } catch (_) {}
-    try { fs.unlinkSync(tOut) } catch (_) {}
+    // 🎯 TENTATIVA 3: youtube-dl-exec (se tudo falhar)
+    try {
+      const youtubeDl = require("youtube-dl-exec")
+      const tmpDir = os.tmpdir()
+      const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
+      const outTpl = path.join(tmpDir, "akaza_mus_" + id + ".%(ext)s")
 
-    if (mp3Buf.length > 16 * 1024 * 1024) return { ok: false, erro: "Arquivo muito grande (>16MB)" }
+      const ehUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(busca)
+      const alvo = ehUrl ? busca : "ytsearch1:" + busca
 
-    return { ok: true, buffer: mp3Buf, titulo: busca }
+      await youtubeDl(alvo, {
+        extractAudio: true,
+        audioFormat: "mp3",
+        audioQuality: qualidade + "K",
+        output: outTpl,
+        noPlaylist: true,
+        maxFilesize: "16M",
+        noWarnings: true,
+        noCheckCertificates: true,
+        extractorArgs: "youtube:player_client=web,web_safari,web_embedded",
+        noCacheDir: true
+      })
+
+      const prefixo = "akaza_mus_" + id
+      const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && (f.endsWith(".mp3") || f.endsWith(".m4a") || f.endsWith(".webm") || f.endsWith(".opus")))
+
+      if (arquivos.length > 0) {
+        const caminho = path.join(tmpDir, arquivos[0])
+        const buffer = fs.readFileSync(caminho)
+        try { fs.unlinkSync(caminho) } catch (_) {}
+        if (buffer.length < 16 * 1024 * 1024) {
+          return { ok: true, buffer, titulo: busca }
+        }
+        return { ok: false, erro: "Música muito grande (limite 16MB)" }
+      }
+    } catch (e) {
+      console.log("🎵 Tentativa 3 (youtube-dl-exec) falhou:", e.message)
+    }
+
+    return { ok: false, erro: "Todas as tentativas falharam. Tente outra música." }
   } catch (e) {
     console.log("🎵 Erro baixarMusica:", e.message)
     return { ok: false, erro: e.message }
@@ -90,26 +132,37 @@ async function baixarMusica(busca, qualidade = 64) {
 }
 
 // ============================================================
-// 🎥 BAIXAR VÍDEO (via play-dl)
+// 🎥 BAIXAR VÍDEO (via youtube-dl-exec)
 // ============================================================
 async function baixarVideoYoutube(link) {
   try {
-    const playdl = require("play-dl")
+    const youtubeDl = require("youtube-dl-exec")
+    const tmpDir = os.tmpdir()
+    const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
+    const outTpl = path.join(tmpDir, "akaza_vid_" + id + ".%(ext)s")
 
-    const stream = await playdl.stream(link, { quality: 1, discordPlayerCompatibility: false })
+    await youtubeDl(link, {
+      format: "best[ext=mp4][filesize<16M]/best[filesize<16M]",
+      output: outTpl,
+      noPlaylist: true,
+      maxFilesize: "16M",
+      noWarnings: true,
+      noCheckCertificates: true,
+      extractorArgs: "youtube:player_client=web,web_safari,web_embedded",
+      noCacheDir: true
+    })
 
-    const chunks = []
-    for await (const chunk of stream.stream) {
-      chunks.push(chunk)
-      if (Buffer.concat(chunks).length > 16 * 1024 * 1024) {
-        stream.stream.destroy()
-        throw new Error("Vídeo muito grande (>16MB)")
-      }
+    const prefixo = "akaza_vid_" + id
+    const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && f.endsWith(".mp4"))
+
+    if (arquivos.length > 0) {
+      const caminho = path.join(tmpDir, arquivos[0])
+      const buffer = fs.readFileSync(caminho)
+      try { fs.unlinkSync(caminho) } catch (_) {}
+      return { ok: true, buffer }
     }
-    const buffer = Buffer.concat(chunks)
-    if (!buffer.length) throw new Error("Vídeo vazio")
 
-    return { ok: true, buffer }
+    return { ok: false, erro: "Arquivo não encontrado" }
   } catch (e) {
     console.log("🎥 Erro baixarVideoYoutube:", e.message)
     return { ok: false, erro: e.message }
@@ -273,7 +326,7 @@ module.exports = {
         await sock.sendMessage(jid, { text: `❄️ • 𝐁𝐔𝐒𝐂𝐀𝐍𝐃𝐎 •\n\n╭─〔 ♦️ 𝐀𝐆𝐔𝐀𝐑𝐃𝐄 〕\n│ Procurando a música...\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
 
         try {
-          let res = await baixarMusica(busca, 64)
+          let res = await baixarMusica(busca, 32)
           if (!res.ok) return sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${res.erro}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           const buffer = res.buffer
           if (buffer.length > 16 * 1024 * 1024) return sock.sendMessage(jid, { text: `❄️ • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Limite: 16MB\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
