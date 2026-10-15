@@ -40,89 +40,127 @@ function lineEmoji(emoji, label, valor) {
   return `${emoji} ${label}:\n╰➜ ${valor}`
 }
 
-async function baixarTikTok(u) {
-  const r = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(u)}&hd=1`)
-  const d = await r.json()
-  if (d.code !== 0 || !d.data || !d.data.play) throw new Error("Falha no link.")
-  return d.data.play
-}
-
+// ============================================================
+// 🎵 BAIXAR MÚSICA (via youtube-dl-exec — sem depender do sistema)
+// ============================================================
 async function baixarMusica(busca, qualidade = 64) {
   try {
-    let videoUrl = null
-    let titulo = busca
-    if (/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(busca)) {
-      videoUrl = busca
-    } else {
-      const searchUrl = `https://www.tikwm.com/api/feed/search?keywords=${encodeURIComponent(busca)}&count=1`
-      const r = await fetch(searchUrl)
-      const d = await r.json()
-      if (d.code === 0 && d.data && d.data.videos && d.data.videos.length) {
-        const v = d.data.videos[0]
-        videoUrl = v.play || v.wmplay || v.hdplay
-        titulo = v.title || busca
-      }
+    const youtubeDl = require("youtube-dl-exec")
+    const tmpDir = os.tmpdir()
+    const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
+    const outTpl = path.join(tmpDir, "akaza_mus_" + id + ".%(ext)s")
+
+    const ehUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(busca)
+    const alvo = ehUrl ? busca : "ytsearch1:" + busca
+
+    await youtubeDl(alvo, {
+      extractAudio: true,
+      audioFormat: "mp3",
+      audioQuality: qualidade + "K",
+      output: outTpl,
+      noPlaylist: true,
+      maxFilesize: "16M",
+      noWarnings: true,
+      noCheckCertificates: true
+    })
+
+    const prefixo = "akaza_mus_" + id
+    const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && (f.endsWith(".mp3") || f.endsWith(".m4a") || f.endsWith(".webm") || f.endsWith(".opus")))
+
+    if (arquivos.length > 0) {
+      const caminho = path.join(tmpDir, arquivos[0])
+      const buffer = fs.readFileSync(caminho)
+      try { fs.unlinkSync(caminho) } catch (_) {}
+      return { ok: true, buffer, titulo: busca }
     }
-    if (!videoUrl) throw new Error("Nenhum resultado encontrado")
-    const dlUrl = `https://www.tikwm.com/api/?url=${encodeURIComponent(videoUrl)}&hd=1`
-    const dlRes = await fetch(dlUrl)
-    const dlData = await dlRes.json()
-    if (dlData.code !== 0 || !dlData.data) throw new Error("Falha ao baixar")
-    const audioUrl = dlData.data.music || dlData.data.play
-    if (!audioUrl) throw new Error("Sem áudio disponível")
-    const audioRes = await fetch(audioUrl)
-    const buffer = Buffer.from(await audioRes.arrayBuffer())
-    if (buffer.length > 16 * 1024 * 1024) return { ok: false, erro: "Arquivo muito grande (>16MB)" }
-    return { ok: true, buffer, titulo }
+
+    return { ok: false, erro: "Arquivo não encontrado" }
   } catch (e) {
     console.log("Erro baixarMusica:", e.message)
     return { ok: false, erro: e.message }
   }
 }
 
+// ============================================================
+// 🎥 BAIXAR VÍDEO (via youtube-dl-exec)
+// ============================================================
 async function baixarVideoYoutube(link) {
   try {
-    const dlUrl = `https://www.tikwm.com/api/?url=${encodeURIComponent(link)}&hd=1`
-    const r = await fetch(dlUrl)
-    const d = await r.json()
-    if (d.code !== 0 || !d.data) throw new Error("Falha ao baixar vídeo")
-    const videoUrl = d.data.hdplay || d.data.play
-    if (!videoUrl) throw new Error("Sem vídeo disponível")
-    const res = await fetch(videoUrl)
-    const buffer = Buffer.from(await res.arrayBuffer())
-    if (buffer.length > 16 * 1024 * 1024) return { ok: false, erro: "Vídeo muito grande (>16MB)" }
-    return { ok: true, buffer }
+    const youtubeDl = require("youtube-dl-exec")
+    const tmpDir = os.tmpdir()
+    const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
+    const outTpl = path.join(tmpDir, "akaza_vid_" + id + ".%(ext)s")
+
+    await youtubeDl(link, {
+      format: "best[ext=mp4][filesize<16M]/best[filesize<16M]",
+      output: outTpl,
+      noPlaylist: true,
+      maxFilesize: "16M",
+      noWarnings: true,
+      noCheckCertificates: true
+    })
+
+    const prefixo = "akaza_vid_" + id
+    const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && f.endsWith(".mp4"))
+
+    if (arquivos.length > 0) {
+      const caminho = path.join(tmpDir, arquivos[0])
+      const buffer = fs.readFileSync(caminho)
+      try { fs.unlinkSync(caminho) } catch (_) {}
+      return { ok: true, buffer }
+    }
+
+    return { ok: false, erro: "Arquivo não encontrado" }
   } catch (e) {
     console.log("Erro baixarVideoYoutube:", e.message)
     return { ok: false, erro: e.message }
   }
 }
 
-function baixarInstagram(link) {
-  const tmpDir = os.tmpdir()
-  const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
-  const outTpl = path.join(tmpDir, "akaza_insta_" + id + ".%(ext)s")
-  const cmds = [
-    `yt-dlp -o "${outTpl}" --no-playlist "${link}"`,
-    `python3 -m yt_dlp -o "${outTpl}" --no-playlist "${link}"`,
-    `python -m yt_dlp -o "${outTpl}" --no-playlist "${link}"`
-  ]
-  let ultimoErro = "yt-dlp não encontrado"
-  for (const cmd of cmds) {
-    try {
-      execSync(cmd, { stdio: "ignore", timeout: 90000 })
-      const prefixo = "akaza_insta_" + id
-      const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && !f.endsWith(".part") && !f.endsWith(".ytdl"))
-      if (arquivos.length > 0) {
-        const caminho = path.join(tmpDir, arquivos[0])
-        const buffer = fs.readFileSync(caminho)
-        const ehVideo = /\.(mp4|mov|webm|mkv)$/i.test(arquivos[0])
-        try { fs.unlinkSync(caminho) } catch (_) {}
-        return { ok: true, buffer, ehVideo }
-      }
-    } catch (e) { ultimoErro = e.message }
+// ============================================================
+// 📸 BAIXAR INSTAGRAM (via youtube-dl-exec)
+// ============================================================
+async function baixarInstagram(link) {
+  try {
+    const youtubeDl = require("youtube-dl-exec")
+    const tmpDir = os.tmpdir()
+    const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
+    const outTpl = path.join(tmpDir, "akaza_insta_" + id + ".%(ext)s")
+
+    await youtubeDl(link, {
+      output: outTpl,
+      noPlaylist: true,
+      noWarnings: true,
+      noCheckCertificates: true
+    })
+
+    const prefixo = "akaza_insta_" + id
+    const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && !f.endsWith(".part") && !f.endsWith(".ytdl"))
+
+    if (arquivos.length > 0) {
+      const caminho = path.join(tmpDir, arquivos[0])
+      const buffer = fs.readFileSync(caminho)
+      const ehVideo = /\.(mp4|mov|webm|mkv)$/i.test(arquivos[0])
+      try { fs.unlinkSync(caminho) } catch (_) {}
+      return { ok: true, buffer, ehVideo }
+    }
+
+    return { ok: false, erro: "Arquivo não encontrado" }
+  } catch (e) {
+    console.log("Erro baixarInstagram:", e.message)
+    return { ok: false, erro: e.message }
   }
-  return { ok: false, erro: ultimoErro }
+}
+
+async function baixarTikTok(u) {
+  try {
+    const r = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(u)}&hd=1`)
+    const d = await r.json()
+    if (d.code !== 0 || !d.data || !d.data.play) throw new Error("Falha no link.")
+    return d.data.play
+  } catch (e) {
+    throw new Error("Falha no TikTok: " + e.message)
+  }
 }
 
 async function enviarFigTexto(sock, jid, buf, texto, quoted) {
@@ -185,58 +223,10 @@ module.exports = {
         }
 
         if (!infoVip && !isDono && !isSubDono) {
-          return sock.sendMessage(jid, {
-            text:
-`❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •
-
-╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕
-│ Você não é nobre.
-╰──────────────
-
-『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
-
-❄️ _\"Meus olhos veem que você não tem poder.\"_
-❄️ _\"Vá embora.\"_
-
-"${nomeBot}"`
-          }, { quoted: msg })
+          return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Você não é nobre.\n╰──────────────\n\n_"Vá embora."_\n\n"${nomeBot}"` }, { quoted: msg })
         }
 
-        const texto =
-`❄️ • 𝐌𝐄𝐍𝐔 𝐕𝐈𝐏 •
-
-╭─〔 ♦️ 𝐀́𝐑𝐄𝐀 𝐍𝐎𝐁𝐑𝐄 〕
-│ Apenas nobres podem ver esses segredos.
-╰──────────────
-
-『 𝐂𝐚𝐭𝐞𝐠𝐨𝐫𝐢𝐚𝐬 』 ↴
-
-🎵 𝐌𝐔́𝐒𝐈𝐂𝐀
-╰➜ \`${p}play <nome ou link>\`
-╰➜ \`${p}spot <link>\`
-
-📥 𝐃𝐎𝐖𝐍𝐋𝐎𝐀𝐃𝐒
-╰➜ \`${p}insta <link>\`
-╰➜ \`${p}tiktok <link>\`
-
-🎨 𝐅𝐈𝐆𝐔𝐑𝐈𝐍𝐇𝐀𝐒
-╰➜ \`${p}brat / ${p}s / ${p}rename\`
-╰➜ \`${p}smeme / ${p}s3\`
-╰➜ \`${p}procurado / ${p}wasted / ${p}revela\`
-
-🎮 𝐉𝐎𝐆𝐎𝐒
-╰➜ \`${p}verdadedesafio\`
-╰➜ \`${p}bolavsbola\`
-╰➜ \`${p}jogodavelha\`
-
-♦️ 𝐄𝐗𝐓𝐑𝐀𝐒
-╰➜ \`${p}fraseprofunda\`
-╰➜ \`${p}mito\`
-╰➜ \`${p}napoleao\`
-
-💠 _\"A força recompensa os nobres.\"_
-
-"${nomeBot}"`
+        const texto = `❄️ • 𝐌𝐄𝐍𝐔 𝐕𝐈𝐏 •\n\n╭─〔 ♦️ 𝐀́𝐑𝐄𝐀 𝐍𝐎𝐁𝐑𝐄 〕\n│ Apenas nobres podem ver esses segredos.\n╰──────────────\n\n『 𝐂𝐚𝐭𝐞𝐠𝐨𝐫𝐢𝐚𝐬 』 ↴\n\n🎵 𝐌𝐔́𝐒𝐈𝐂𝐀\n╰➜ \`${p}play <nome ou link>\`\n╰➜ \`${p}spot <link>\`\n\n📥 𝐃𝐎𝐖𝐍𝐋𝐎𝐀𝐃𝐒\n╰➜ \`${p}insta <link>\`\n╰➜ \`${p}tiktok <link>\`\n\n🎨 𝐅𝐈𝐆𝐔𝐑𝐈𝐍𝐇𝐀𝐒\n╰➜ \`${p}brat / ${p}s / ${p}rename\`\n╰➜ \`${p}smeme / ${p}s3\`\n╰➜ \`${p}procurado / ${p}wasted / ${p}revela\`\n\n🎮 𝐉𝐎𝐆𝐎𝐒\n╰➜ \`${p}verdadedesafio\`\n╰➜ \`${p}bolavsbola\`\n╰➜ \`${p}jogodavelha\`\n\n♦️ 𝐄𝐗𝐓𝐑𝐀𝐒\n╰➜ \`${p}fraseprofunda\`\n╰➜ \`${p}mito\`\n╰➜ \`${p}napoleao\`\n\n💠 _"A força recompensa os nobres."_\n\n"${nomeBot}"`
 
         const cfg = db.config()
         if (cfg.fotoMenu) {
@@ -261,9 +251,7 @@ module.exports = {
 
         const busca = args.join(" ").trim()
         if (!busca) {
-          return sock.sendMessage(jid, {
-            text: `❄️ • 𝐏𝐋𝐀𝐘 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Me diga o que quer ouvir.\n╰──────────────\n\n💡 \`!play <nome>\`\n💡 \`!play <link yt>\` _(vídeo)_\n\n"${nomeBot}"`
-          }, { quoted: msg })
+          return sock.sendMessage(jid, { text: `❄️ • 𝐏𝐋𝐀𝐘 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Me diga o que quer ouvir.\n╰──────────────\n\n💡 \`!play <nome>\`\n💡 \`!play <link yt>\` _(vídeo)_\n\n"${nomeBot}"` }, { quoted: msg })
         }
 
         const ehLinkVideo = /(youtube\.com\/(watch|shorts|live)|youtu\.be\/|music\.youtube\.com)/i.test(busca)
@@ -275,7 +263,7 @@ module.exports = {
             if (!res.ok) throw new Error(res.erro)
             const buffer = res.buffer
             const tamanhoMB = (buffer.length / 1024 / 1024).toFixed(2)
-            if (buffer.length > 16 * 1024 * 1024) return sock.sendMessage(jid, { text: `❄️ • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${tamanhoMB}MB (limite 16MB)\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+            if (buffer.length > 16 * 1024 * 1024) return sock.sendMessage(jid, { text: `❄️ • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${tamanhoMB}MB\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
             await sock.sendMessage(jid, { video: buffer, mimetype: "video/mp4", fileName: "youtube.mp4" }, { quoted: msg })
           } catch (e) {
             await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
@@ -345,12 +333,32 @@ module.exports = {
         if (!link || !/instagram\.com|instagr\.am/i.test(link)) return sock.sendMessage(jid, { text: `❄️ • 𝐈𝐍𝐒𝐓𝐀 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe um link do Instagram.\n╰──────────────\n\n💡 \`!insta <link>\`\n\n"${nomeBot}"` }, { quoted: msg })
         await sock.sendMessage(jid, { text: `❄️ • 𝐈𝐍𝐒𝐓𝐀𝐆𝐑𝐀𝐌 •\n\n╭─〔 ♦️ 𝐁𝐀𝐈𝐗𝐀𝐍𝐃𝐎 〕\n│ Baixando do Instagram...\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         try {
-          const res = baixarInstagram(link)
+          const res = await baixarInstagram(link)
           if (!res.ok) return sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${res.erro}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           const buffer = res.buffer
           if (buffer.length > 16 * 1024 * 1024) return sock.sendMessage(jid, { text: `❄️ • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Limite: 16MB\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           if (res.ehVideo) await sock.sendMessage(jid, { video: buffer, mimetype: "video/mp4", fileName: "instagram.mp4" }, { quoted: msg })
           else await sock.sendMessage(jid, { image: buffer, caption: `❄️ • 𝐈𝐍𝐒𝐓𝐀𝐆𝐑𝐀𝐌 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Mídia baixada.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+      }
+    },
+
+    tiktok: {
+      aliases: ["tt", "ttk"],
+      async executar({ sock, msg, args, db, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        const link = args[0]
+        if (!link || !/tiktok\.com|vm\.tiktok|vt\.tiktok/i.test(link)) return sock.sendMessage(jid, { text: `❄️ • 𝐓𝐈𝐊𝐓𝐎𝐊 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe um link do TikTok.\n╰──────────────\n\n💡 \`!tiktok <link>\`\n\n"${nomeBot}"` }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐓𝐈𝐊𝐓𝐎𝐊 •\n\n╭─〔 ♦️ 𝐁𝐀𝐈𝐗𝐀𝐍𝐃𝐎 〕\n│ Baixando o vídeo...\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        try {
+          const url = await baixarTikTok(link)
+          const r = await fetch(url)
+          await sock.sendMessage(jid, { video: Buffer.from(await r.arrayBuffer()), mimetype: "video/mp4", fileName: "tiktok.mp4" }, { quoted: msg })
         } catch (e) {
           await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
@@ -375,7 +383,7 @@ module.exports = {
         }
         ac.grupos[jid].autofig = op === "on"
         dbSalvar("autocfg.json", ac)
-        await sock.sendMessage(jid, { text: `❄️ • 𝐀𝐔𝐓𝐎𝐅𝐈𝐆 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Configuração atualizada.\n╰──────────────\n\n⚙️ 𝐒𝐭𝐚𝐭𝐮𝐬:\n╰➜ ${op.toUpperCase()}\n\n"${nomeBot}"` }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐀𝐔𝐓𝐎𝐅𝐈𝐆 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Configuração atualizada.\n╰──────────────\n\n⚙️ ${op.toUpperCase()}\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -397,27 +405,7 @@ module.exports = {
         }
         ac.grupos[jid].autottk = op === "on"
         dbSalvar("autocfg.json", ac)
-        await sock.sendMessage(jid, { text: `❄️ • 𝐀𝐔𝐓𝐎𝐓𝐓𝐊 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Configuração atualizada.\n╰──────────────\n\n⚙️ 𝐒𝐭𝐚𝐭𝐮𝐬:\n╰➜ ${op.toUpperCase()}\n\n"${nomeBot}"` }, { quoted: msg })
-      }
-    },
-
-    tiktok: {
-      aliases: ["tt", "ttk"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
-        const link = args[0]
-        if (!link || !/tiktok\.com|vm\.tiktok|vt\.tiktok/i.test(link)) return sock.sendMessage(jid, { text: `❄️ • 𝐓𝐈𝐊𝐓𝐎𝐊 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe um link do TikTok.\n╰──────────────\n\n💡 \`!tiktok <link>\`\n\n"${nomeBot}"` }, { quoted: msg })
-        await sock.sendMessage(jid, { text: `❄️ • 𝐓𝐈𝐊𝐓𝐎𝐊 •\n\n╭─〔 ♦️ 𝐁𝐀𝐈𝐗𝐀𝐍𝐃𝐎 〕\n│ Baixando o vídeo...\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
-        try {
-          const url = await baixarTikTok(link)
-          const r = await fetch(url)
-          await sock.sendMessage(jid, { video: Buffer.from(await r.arrayBuffer()), mimetype: "video/mp4", fileName: "tiktok.mp4" }, { quoted: msg })
-        } catch (e) {
-          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
-        }
+        await sock.sendMessage(jid, { text: `❄️ • 𝐀𝐔𝐓𝐎𝐓𝐓𝐊 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Configuração atualizada.\n╰──────────────\n\n⚙️ ${op.toUpperCase()}\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
