@@ -41,144 +41,104 @@ function lineEmoji(emoji, label, valor) {
 }
 
 // ============================================================
-// 🎵 BAIXAR MÚSICA (com múltiplos fallbacks)
+// 🎵 BAIXAR MÚSICA (via @distube/ytdl-core)
 // ============================================================
 async function baixarMusica(busca, qualidade = 64) {
-  // 🎯 TENTATIVA 1: youtube-dl-exec
   try {
-    const youtubeDl = require("youtube-dl-exec")
+    const ytdl = require("@distube/ytdl-core")
+    const ff = require("@ffmpeg-installer/ffmpeg").path
+
     const tmpDir = os.tmpdir()
     const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
-    const outTpl = path.join(tmpDir, "akaza_mus_" + id + ".%(ext)s")
+    const tIn = path.join(tmpDir, "akaza_" + id + ".webm")
+    const tOut = path.join(tmpDir, "akaza_" + id + ".mp3")
 
-    const ehUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(busca)
-    const alvo = ehUrl ? busca : "ytsearch1:" + busca
+    let url = busca
+    if (!/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)/i.test(busca)) {
+      const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(busca)}`
+      const r = await fetch(searchUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      })
+      const html = await r.text()
+      const match = html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/)
+      if (!match) throw new Error("Nenhum vídeo encontrado")
+      url = "https://www.youtube.com/watch?v=" + match[1]
+    }
 
-    await youtubeDl(alvo, {
-      extractAudio: true,
-      audioFormat: "mp3",
-      audioQuality: qualidade + "K",
-      output: outTpl,
-      noPlaylist: true,
-      maxFilesize: "16M",
-      noWarnings: true,
-      noCheckCertificates: true,
-      preferFreeFormats: true,
-      youtubeSkipDashManifest: true
+    const stream = ytdl(url, {
+      filter: "audioonly",
+      quality: "lowestaudio",
+      highWaterMark: 1 << 25,
+      requestOptions: {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      }
     })
 
-    const prefixo = "akaza_mus_" + id
-    const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && (f.endsWith(".mp3") || f.endsWith(".m4a") || f.endsWith(".webm") || f.endsWith(".opus")))
-
-    if (arquivos.length > 0) {
-      const caminho = path.join(tmpDir, arquivos[0])
-      const buffer = fs.readFileSync(caminho)
-      try { fs.unlinkSync(caminho) } catch (_) {}
-      return { ok: true, buffer, titulo: busca }
-    }
-  } catch (e) {
-    console.log("🎵 Tentativa 1 falhou (youtube-dl-exec):", e.message)
-  }
-
-  // 🎯 TENTATIVA 2: API vreden
-  try {
-    const ehUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(busca)
-
-    let apiUrl
-    if (ehUrl) apiUrl = `https://api.vreden.my.id/api/ytmp3?url=${encodeURIComponent(busca)}`
-    else apiUrl = `https://api.vreden.my.id/api/ytplaymp3?query=${encodeURIComponent(busca)}`
-
-    const r = await fetch(apiUrl)
-    const d = await r.json()
-
-    let dlUrl = null
-    if (d && d.result) {
-      if (d.result.download) dlUrl = d.result.download.url || d.result.download
-      else if (d.result.url) dlUrl = d.result.url
-    }
-
-    if (dlUrl) {
-      const audioRes = await fetch(dlUrl)
-      const buffer = Buffer.from(await audioRes.arrayBuffer())
-      if (buffer.length > 0 && buffer.length < 16 * 1024 * 1024) {
-        return { ok: true, buffer, titulo: (d.result && d.result.title) || busca }
+    const chunks = []
+    for await (const chunk of stream) {
+      chunks.push(chunk)
+      if (Buffer.concat(chunks).length > 20 * 1024 * 1024) {
+        stream.destroy()
+        throw new Error("Arquivo muito grande (>20MB)")
       }
     }
+    const buffer = Buffer.concat(chunks)
+    if (!buffer.length) throw new Error("Áudio vazio")
+
+    fs.writeFileSync(tIn, buffer)
+    execSync(`"${ff}" -y -i "${tIn}" -vn -ar 44100 -ac 2 -b:a ${qualidade}k "${tOut}"`, { stdio: "ignore", timeout: 120000 })
+    const mp3Buf = fs.readFileSync(tOut)
+
+    try { fs.unlinkSync(tIn) } catch (_) {}
+    try { fs.unlinkSync(tOut) } catch (_) {}
+
+    if (mp3Buf.length > 16 * 1024 * 1024) return { ok: false, erro: "Arquivo muito grande (>16MB)" }
+
+    return { ok: true, buffer: mp3Buf, titulo: busca }
   } catch (e) {
-    console.log("🎵 Tentativa 2 falhou (vreden):", e.message)
+    console.log("🎵 Erro baixarMusica:", e.message)
+    return { ok: false, erro: e.message }
   }
-
-  // 🎯 TENTATIVA 3: API ryzendesu
-  try {
-    const searchUrl = `https://api.ryzendesu.vip/api/downloader/ytplay?query=${encodeURIComponent(busca)}`
-    const r = await fetch(searchUrl)
-    const d = await r.json()
-
-    if (d && d.result && d.result.url) {
-      const audioRes = await fetch(d.result.url)
-      const buffer = Buffer.from(await audioRes.arrayBuffer())
-      if (buffer.length > 0 && buffer.length < 16 * 1024 * 1024) {
-        return { ok: true, buffer, titulo: d.result.title || busca }
-      }
-    }
-  } catch (e) {
-    console.log("🎵 Tentativa 3 falhou (ryzendesu):", e.message)
-  }
-
-  return { ok: false, erro: "Todas as tentativas falharam. Tente novamente em alguns segundos." }
 }
 
 // ============================================================
-// 🎥 BAIXAR VÍDEO (com fallback)
+// 🎥 BAIXAR VÍDEO (via @distube/ytdl-core)
 // ============================================================
 async function baixarVideoYoutube(link) {
-  // Tentativa 1: youtube-dl-exec
   try {
-    const youtubeDl = require("youtube-dl-exec")
-    const tmpDir = os.tmpdir()
-    const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
-    const outTpl = path.join(tmpDir, "akaza_vid_" + id + ".%(ext)s")
+    const ytdl = require("@distube/ytdl-core")
 
-    await youtubeDl(link, {
-      format: "best[ext=mp4][filesize<16M]/best[filesize<16M]",
-      output: outTpl,
-      noPlaylist: true,
-      maxFilesize: "16M",
-      noWarnings: true,
-      noCheckCertificates: true
+    const stream = ytdl(link, {
+      filter: "audioandvideo",
+      quality: "lowest",
+      highWaterMark: 1 << 25,
+      requestOptions: {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      }
     })
 
-    const prefixo = "akaza_vid_" + id
-    const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && f.endsWith(".mp4"))
-
-    if (arquivos.length > 0) {
-      const caminho = path.join(tmpDir, arquivos[0])
-      const buffer = fs.readFileSync(caminho)
-      try { fs.unlinkSync(caminho) } catch (_) {}
-      return { ok: true, buffer }
-    }
-  } catch (e) {
-    console.log("🎥 Tentativa 1 falhou (youtube-dl-exec):", e.message)
-  }
-
-  // Tentativa 2: API vreden
-  try {
-    const apiUrl = `https://api.vreden.my.id/api/ytmp4?url=${encodeURIComponent(link)}`
-    const r = await fetch(apiUrl)
-    const d = await r.json()
-    if (d && d.result && d.result.download) {
-      const dlUrl = d.result.download.url || d.result.download
-      const vidRes = await fetch(dlUrl)
-      const buffer = Buffer.from(await vidRes.arrayBuffer())
-      if (buffer.length > 0 && buffer.length < 16 * 1024 * 1024) {
-        return { ok: true, buffer }
+    const chunks = []
+    for await (const chunk of stream) {
+      chunks.push(chunk)
+      if (Buffer.concat(chunks).length > 16 * 1024 * 1024) {
+        stream.destroy()
+        throw new Error("Vídeo muito grande (>16MB)")
       }
     }
-  } catch (e) {
-    console.log("🎥 Tentativa 2 falhou (vreden):", e.message)
-  }
+    const buffer = Buffer.concat(chunks)
+    if (!buffer.length) throw new Error("Vídeo vazio")
 
-  return { ok: false, erro: "Não consegui baixar o vídeo. Tente outro link." }
+    return { ok: true, buffer }
+  } catch (e) {
+    console.log("🎥 Erro baixarVideoYoutube:", e.message)
+    return { ok: false, erro: e.message }
+  }
 }
 
 // ============================================================
