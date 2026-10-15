@@ -41,9 +41,10 @@ function lineEmoji(emoji, label, valor) {
 }
 
 // ============================================================
-// 🎵 BAIXAR MÚSICA (via youtube-dl-exec — sem depender do sistema)
+// 🎵 BAIXAR MÚSICA (com múltiplos fallbacks)
 // ============================================================
 async function baixarMusica(busca, qualidade = 64) {
+  // 🎯 TENTATIVA 1: youtube-dl-exec
   try {
     const youtubeDl = require("youtube-dl-exec")
     const tmpDir = os.tmpdir()
@@ -61,7 +62,9 @@ async function baixarMusica(busca, qualidade = 64) {
       noPlaylist: true,
       maxFilesize: "16M",
       noWarnings: true,
-      noCheckCertificates: true
+      noCheckCertificates: true,
+      preferFreeFormats: true,
+      youtubeSkipDashManifest: true
     })
 
     const prefixo = "akaza_mus_" + id
@@ -73,18 +76,63 @@ async function baixarMusica(busca, qualidade = 64) {
       try { fs.unlinkSync(caminho) } catch (_) {}
       return { ok: true, buffer, titulo: busca }
     }
-
-    return { ok: false, erro: "Arquivo não encontrado" }
   } catch (e) {
-    console.log("Erro baixarMusica:", e.message)
-    return { ok: false, erro: e.message }
+    console.log("🎵 Tentativa 1 falhou (youtube-dl-exec):", e.message)
   }
+
+  // 🎯 TENTATIVA 2: API vreden
+  try {
+    const ehUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(busca)
+
+    let apiUrl
+    if (ehUrl) apiUrl = `https://api.vreden.my.id/api/ytmp3?url=${encodeURIComponent(busca)}`
+    else apiUrl = `https://api.vreden.my.id/api/ytplaymp3?query=${encodeURIComponent(busca)}`
+
+    const r = await fetch(apiUrl)
+    const d = await r.json()
+
+    let dlUrl = null
+    if (d && d.result) {
+      if (d.result.download) dlUrl = d.result.download.url || d.result.download
+      else if (d.result.url) dlUrl = d.result.url
+    }
+
+    if (dlUrl) {
+      const audioRes = await fetch(dlUrl)
+      const buffer = Buffer.from(await audioRes.arrayBuffer())
+      if (buffer.length > 0 && buffer.length < 16 * 1024 * 1024) {
+        return { ok: true, buffer, titulo: (d.result && d.result.title) || busca }
+      }
+    }
+  } catch (e) {
+    console.log("🎵 Tentativa 2 falhou (vreden):", e.message)
+  }
+
+  // 🎯 TENTATIVA 3: API ryzendesu
+  try {
+    const searchUrl = `https://api.ryzendesu.vip/api/downloader/ytplay?query=${encodeURIComponent(busca)}`
+    const r = await fetch(searchUrl)
+    const d = await r.json()
+
+    if (d && d.result && d.result.url) {
+      const audioRes = await fetch(d.result.url)
+      const buffer = Buffer.from(await audioRes.arrayBuffer())
+      if (buffer.length > 0 && buffer.length < 16 * 1024 * 1024) {
+        return { ok: true, buffer, titulo: d.result.title || busca }
+      }
+    }
+  } catch (e) {
+    console.log("🎵 Tentativa 3 falhou (ryzendesu):", e.message)
+  }
+
+  return { ok: false, erro: "Todas as tentativas falharam. Tente novamente em alguns segundos." }
 }
 
 // ============================================================
-// 🎥 BAIXAR VÍDEO (via youtube-dl-exec)
+// 🎥 BAIXAR VÍDEO (com fallback)
 // ============================================================
 async function baixarVideoYoutube(link) {
+  // Tentativa 1: youtube-dl-exec
   try {
     const youtubeDl = require("youtube-dl-exec")
     const tmpDir = os.tmpdir()
@@ -109,12 +157,28 @@ async function baixarVideoYoutube(link) {
       try { fs.unlinkSync(caminho) } catch (_) {}
       return { ok: true, buffer }
     }
-
-    return { ok: false, erro: "Arquivo não encontrado" }
   } catch (e) {
-    console.log("Erro baixarVideoYoutube:", e.message)
-    return { ok: false, erro: e.message }
+    console.log("🎥 Tentativa 1 falhou (youtube-dl-exec):", e.message)
   }
+
+  // Tentativa 2: API vreden
+  try {
+    const apiUrl = `https://api.vreden.my.id/api/ytmp4?url=${encodeURIComponent(link)}`
+    const r = await fetch(apiUrl)
+    const d = await r.json()
+    if (d && d.result && d.result.download) {
+      const dlUrl = d.result.download.url || d.result.download
+      const vidRes = await fetch(dlUrl)
+      const buffer = Buffer.from(await vidRes.arrayBuffer())
+      if (buffer.length > 0 && buffer.length < 16 * 1024 * 1024) {
+        return { ok: true, buffer }
+      }
+    }
+  } catch (e) {
+    console.log("🎥 Tentativa 2 falhou (vreden):", e.message)
+  }
+
+  return { ok: false, erro: "Não consegui baixar o vídeo. Tente outro link." }
 }
 
 // ============================================================
