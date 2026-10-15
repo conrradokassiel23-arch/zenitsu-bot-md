@@ -110,6 +110,7 @@ module.exports = {
 ╰➜ \`${p}setfoto\` (reply)
 ╰➜ \`${p}fotocmd\` (reply)
 ╰➜ \`${p}nomebot <nome>\`
+╰➜ \`${p}teste\` (reply)
 
 🌙 𝐒𝐈𝐒𝐓𝐄𝐌𝐀
 ╰➜ \`${p}atualizar\`
@@ -161,6 +162,86 @@ module.exports = {
           }
         }
         await sock.sendMessage(jid, { text: texto, mentions }, { quoted: msg })
+      }
+    },
+
+    // ============ TESTE (JSON da mensagem citada) ============
+    teste: {
+      aliases: ["json", "debugmsg", "verbot"],
+      async executar({ sock, msg, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+
+        // 🎯 Pega a mensagem citada
+        const ctx = (msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo)
+                 || (msg.message && msg.message.imageMessage && msg.message.imageMessage.contextInfo)
+                 || (msg.message && msg.message.videoMessage && msg.message.videoMessage.contextInfo)
+                 || (msg.message && msg.message.stickerMessage && msg.message.stickerMessage.contextInfo)
+                 || {}
+
+        const quoted = ctx.quotedMessage
+        if (!quoted) {
+          return sock.sendMessage(jid, {
+            text:
+`❄️ • 𝐓𝐄𝐒𝐓𝐄 •
+
+╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕
+│ Responda uma mensagem.
+╰──────────────
+
+💡 Use \`!teste\` respondendo alguém.
+
+"${nomeBot}"`
+          }, { quoted: msg })
+        }
+
+        // 🔍 Monta o "info" igual o código de referência
+        const info = {
+          key: {
+            remoteJid: jid,
+            fromMe: false,
+            id: ctx.stanzaId || "",
+            participant: ctx.participant || ""
+          },
+          messageTimestamp: msg.messageTimestamp,
+          pushName: msg.pushName || "",
+          broadcast: false,
+          message: quoted
+        }
+
+        // 🔧 Quebra em pedaços de 4000 caracteres (limite do WhatsApp)
+        const jsonStr = JSON.stringify(info, null, 3)
+        const pedacos = []
+        const tamanhoMax = 3900
+        for (let i = 0; i < jsonStr.length; i += tamanhoMax) {
+          pedacos.push(jsonStr.slice(i, i + tamanhoMax))
+        }
+
+        // 📤 Manda o primeiro pedaço com cabeçalho bonito
+        await sock.sendMessage(jid, {
+          text:
+`❄️ • 𝐉𝐒𝐎𝐍 𝐃𝐀 𝐌𝐄𝐍𝐒𝐀𝐆𝐄𝐌 •
+
+╭─〔 ♦️ 𝐃𝐄𝐁𝐔𝐆 〕
+│ JSON completo da mensagem citada.
+╰──────────────
+
+📊 𝐓𝐨𝐭𝐚𝐥:
+╰➜ ${jsonStr.length} caracteres
+
+📦 𝐏𝐞𝐝𝐚𝐜̧𝐨𝐬:
+╰➜ ${pedacos.length}
+
+\`\`\`json
+${pedacos[0]}\`\`\``
+        }, { quoted: msg })
+
+        // 📤 Manda os pedaços restantes
+        for (let i = 1; i < pedacos.length; i++) {
+          await sock.sendMessage(jid, {
+            text: `\`\`\`json\n${pedacos[i]}\`\`\``
+          }, { quoted: msg })
+        }
       }
     },
 
