@@ -1,5 +1,5 @@
 /* ============================================================
-   ⚡ MENU RPG - ZENITSU BOT MD
+   ❄️ MENU RPG - AKAZA BOT MD
    ============================================================ */
 
 const fs = require("fs")
@@ -60,6 +60,14 @@ function sanearNum(v, max = 999999999999) {
   if (v < 0) return 0
   if (v > max) return max
   return Math.floor(v)
+}
+
+function nomeBotDb(db) {
+  try { return db.config().nomeBot || "Akaza Bot" } catch { return "Akaza Bot" }
+}
+
+function lineEmoji(emoji, label, valor) {
+  return `${emoji} ${label}:\n╰➜ ${valor}`
 }
 
 const lidCache = new Map()
@@ -281,9 +289,7 @@ function getRpg(num) {
   return { r, u }
 }
 
-function salvarRpg(r) {
-  dbSalvar("rpg.json", r)
-}
+function salvarRpg(r) { dbSalvar("rpg.json", r) }
 
 function ehVip(db, sender, isDono, isSubDono) {
   if (isDono || isSubDono) return true
@@ -332,34 +338,23 @@ module.exports = {
       const petInfo = PETS.find(p => p.id === u.pet)
       if (!petInfo || !petInfo.rouboAuto) continue
       if ((agora - (u.ultimoRouboPet || 0)) < petInfo.rouboAuto.intervalo) continue
-
       const grupoPet = u.petGrupo
       if (!grupoPet) continue
-
       const grupos = db.grupos()
       if (grupos[grupoPet]?.rpgAtivo !== true) continue
-
       const { numeros } = await coletarMembros(sock, grupoPet)
       const membrosArr = Array.from(numeros)
-
-      const vitimas = membrosArr
-        .filter(n => n !== num)
-        .map(n => ({ num: n, u: r.usuarios[n] }))
-        .filter(x => x.u && sanearNum(x.u.moedas) > 100 && x.u.pet !== "unicornio")
-
+      const vitimas = membrosArr.filter(n => n !== num).map(n => ({ num: n, u: r.usuarios[n] })).filter(x => x.u && sanearNum(x.u.moedas) > 100 && x.u.pet !== "unicornio")
       if (!vitimas.length) continue
-
       const vitima = vitimas[Math.floor(Math.random() * vitimas.length)]
       const moedasVitima = sanearNum(vitima.u.moedas)
       const roubado = Math.min(Math.floor(moedasVitima * (petInfo.rouboAuto.chance > 0.10 ? 0.12 : 0.08)), 10000)
       if (roubado <= 0) continue
-
       vitima.u.moedas = sanearNum(moedasVitima - roubado)
       r.usuarios[num].moedas = sanearNum(sanearNum(r.usuarios[num].moedas) + roubado)
       r.usuarios[num].ultimoRouboPet = agora
       r.usuarios[num].petFome = Math.min(100, sanearNum(r.usuarios[num].petFome) + 20)
       alterou = true
-
       try {
         await sock.sendMessage(grupoPet, {
           text: petInfo.emoji + " O *" + petInfo.nome + "* de @" + num + " roubou *" + fmt(roubado) + " gold* de @" + vitima.num + "!",
@@ -377,61 +372,58 @@ module.exports = {
       async executar({ sock, msg, prefixoAtivo, db }) {
         const jid = msg.key.remoteJid
         const p = prefixoAtivo || "!"
+        const nomeBot = nomeBotDb(db)
         const cfg = db.config()
         const texto =
-`╔══════════════════════════════╗
-║   ⚡⚔️  𝐌𝐄𝐍𝐔 𝐑𝐏𝐆  ⚔️⚡
-╚══════════════════════════════╝
+`❄️ • 𝐌𝐄𝐍𝐔 𝐑𝐏𝐆 •
 
-🦅 *Zenitsu apresenta:*
-⚡ *o mundo do trovão!*
+╭─〔 ♦️ 𝐌𝐔𝐍𝐃𝐎 𝐋𝐔𝐍𝐀𝐑 〕
+│ O mundo do caos e da estratégia.
+╰──────────────
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡💰 *ECONOMIA*
-▸ ${p}daily
-▸ ${p}trabalhar
-▸ ${p}cassino <valor>
-▸ ${p}crime
-▸ ${p}roubar @user
+『 𝐂𝐚𝐭𝐞𝐠𝐨𝐫𝐢𝐚𝐬 』 ↴
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡⛏️ *FERRAMENTAS*
-▸ ${p}comprarpicareta
-▸ ${p}minerar
-▸ ${p}comprarvara
-▸ ${p}pescar
+💰 𝐄𝐂𝐎𝐍𝐎𝐌𝐈𝐀
+╰➜ \`${p}daily\`
+╰➜ \`${p}trabalhar\`
+╰➜ \`${p}cassino <valor>\`
+╰➜ \`${p}crime\`
+╰➜ \`${p}roubar @user\`
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡🗺️ *EXPLORAÇÃO* (Nv. 3+)
-▸ ${p}explorar
+⛏️ 𝐅𝐄𝐑𝐑𝐀𝐌𝐄𝐍𝐓𝐀𝐒
+╰➜ \`${p}comprarpicareta\`
+╰➜ \`${p}minerar\`
+╰➜ \`${p}comprarvara\`
+╰➜ \`${p}pescar\`
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡🐾 *PETS*
-▸ ${p}lojapet
-▸ ${p}comprarpet <nome>
-▸ ${p}meupet
-▸ ${p}alimentarpet
-▸ ${p}curarpet
-▸ ${p}batalhapet @user
-▸ ${p}corridapet @user
-▸ ${p}venderpet <nome>
-▸ ${p}doarpet <nome> @user
+🗺️ 𝐄𝐗𝐏𝐋𝐎𝐑𝐀𝐂̧𝐀̃𝐎 (Nv. 3+)
+╰➜ \`${p}explorar\`
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡👤 *PERFIL*
-▸ ${p}perfil
-▸ ${p}rank
+🐾 𝐏𝐄𝐓𝐒
+╰➜ \`${p}lojapet\`
+╰➜ \`${p}comprarpet <nome>\`
+╰➜ \`${p}meupet\`
+╰➜ \`${p}alimentarpet\`
+╰➜ \`${p}curarpet\`
+╰➜ \`${p}batalhapet @user\`
+╰➜ \`${p}corridapet @user\`
+╰➜ \`${p}venderpet <nome>\`
+╰➜ \`${p}doarpet <nome> @user\`
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡💤 *AFK*
-▸ ${p}afk <motivo>
+👤 𝐏𝐄𝐑𝐅𝐈𝐋
+╰➜ \`${p}perfil\`
+╰➜ \`${p}rank\`
 
-━━━━━━━━━━━━━━━━━━━━━━━━━
+💤 𝐀𝐅𝐊
+╰➜ \`${p}afk <motivo>\`
 
-⚡ _"O trovão recompensa os fortes."_`
+❄️ _"O caos recompensa os fortes."_
+
+"${nomeBot}"`
+
         if (cfg.fotoMenu) {
           const buf = Buffer.from(cfg.fotoMenu, "base64")
-          if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "zenitsu.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
+          if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "akaza.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
           return sock.sendMessage(jid, { image: buf, caption: texto }, { quoted: msg })
         }
         await sock.sendMessage(jid, { text: texto }, { quoted: msg })
@@ -443,84 +435,82 @@ module.exports = {
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
         const opcao = (args[0] || "").toLowerCase()
         if (!["on", "off"].includes(opcao)) {
           const g = db.grupos(); const ativo = g[jid]?.rpgAtivo === true
-          return sock.sendMessage(jid, { text: "⚡⚔️ *RPG DO GRUPO*\n\n📊 Status: *" + (ativo ? "ON ✅" : "OFF ❌") + "*\n\n⚡ Use *!rpg on* ou *!rpg off*" }, { quoted: msg })
+          return sock.sendMessage(jid, { text: `❄️ • 𝐑𝐏𝐆 𝐃𝐎 𝐆𝐑𝐔𝐏𝐎 •\n\n╭─〔 ⚔️ 𝐒𝐓𝐀𝐓𝐔𝐒 〕\n│ Sistema RPG no grupo.\n╰──────────────\n\n📊 𝐀𝐭𝐢𝐯𝐨:\n╰➜ ${ativo ? "ON ✅" : "OFF ❌"}\n\n💡 \`!rpg on\` ou \`!rpg off\`\n\n"${nomeBot}"` }, { quoted: msg })
         }
         const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].rpgAtivo = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: opcao === "on" ? "⚡⚔️ RPG ATIVADO!" : "⚡💤 RPG DESATIVADO!" }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐑𝐏𝐆 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐃𝐎 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Configuração salva.\n╰──────────────\n\n⚙️ 𝐒𝐭𝐚𝐭𝐮𝐬:\n╰➜ ${opcao.toUpperCase()}\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
     daily: { aliases: ["diario"], async executar({ sock, msg, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { r, u } = getRpg(num)
       const hoje = new Date().toISOString().slice(0, 10)
-      if (u.daily === hoje) return sock.sendMessage(jid, { text: "⚡⏰ Você já pegou o *daily* hoje!" }, { quoted: msg })
+      if (u.daily === hoje) return sock.sendMessage(jid, { text: `❄️ • 𝐃𝐀𝐈𝐋𝐘 •\n\n╭─〔 ⏰ 𝐀𝐆𝐔𝐀𝐑𝐃𝐄 〕\n│ Você já pegou o daily hoje.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       let valor = 200 + u.nivel * 50
       let extra = ""
-      if (u.pet === "unicornio" && Math.random() < 0.01) { const s = ganharXp(u, xpNecessario(u.nivel)); valor += 500; extra = "\n\n🦄 *BÔNUS UNICÓRNIO!*\n⬆️ Subiu *" + s + "* nível!\n💰 +500 gold" }
+      if (u.pet === "unicornio" && Math.random() < 0.01) { const s = ganharXp(u, xpNecessario(u.nivel)); valor += 500; extra = "\n\n🦄 𝐁𝐎̂𝐍𝐔𝐒 𝐔𝐍𝐈𝐂𝐎́𝐑𝐍𝐈𝐎!\n╰➜ Subiu *" + s + "* nível\n╰➜ +500 gold" }
       u.moedas = sanearNum(u.moedas + valor); u.daily = hoje
       const subiuNivel = ganharXp(u, 25); salvarRpg(r)
-      let txt = "⚡💰 *DAILY*\n\n👤 @" + num + "\n💰 *+" + fmt(valor) + " gold*\n🎯 *+25 XP*"
-      if (subiuNivel) txt += "\n⬆️ Subiu *" + subiuNivel + "* nível!"
-      txt += extra
-      await sock.sendMessage(jid, { text: txt, mentions: [mJid(num)] }, { quoted: msg })
+      await sock.sendMessage(jid, { text: `❄️ • 𝐃𝐀𝐈𝐋𝐘 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Daily coletado.\n╰──────────────\n\n👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:\n╰➜ @${num}\n\n💰 𝐆𝐚𝐧𝐡𝐨:\n╰➜ +${fmt(valor)} gold\n\n🎯 𝐗𝐏:\n╰➜ +25${subiuNivel ? "\n\n⬆️ Subiu *" + subiuNivel + "* nível!" : ""}${extra}\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
     }},
 
     trabalhar: { aliases: ["work", "trampar"], async executar({ sock, msg, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { r, u } = getRpg(num)
       const cooldown = COOLDOWN_TRABALHO - (Date.now() - u.ultimoTrabalho)
-      if (cooldown > 0) return sock.sendMessage(jid, { text: "⚡⏰ Espere *" + formatarTempo(cooldown) + "*!" }, { quoted: msg })
+      if (cooldown > 0) return sock.sendMessage(jid, { text: `❄️ • 𝐓𝐑𝐀𝐁𝐀𝐋𝐇𝐎 •\n\n╭─〔 ⏰ 𝐀𝐆𝐔𝐀𝐑𝐃𝐄 〕\n│ Espere ${formatarTempo(cooldown)}.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const trabalhos = ["entregador", "pedreiro", "motoqueiro", "vendedor", "programador", "garçom", "motorista"]
       const trabalho = trabalhos[Math.floor(Math.random() * trabalhos.length)]
       let salario = 100 + u.nivel * 30 + Math.floor(Math.random() * 100)
       let bonus = ""
-      if (u.pet === "unicornio") { salario = Math.floor(salario * 1.05); bonus = "\n🦄 *Bônus Unicórnio: +5%*" }
+      if (u.pet === "unicornio") { salario = Math.floor(salario * 1.05); bonus = "\n🦄 Bônus Unicórnio: +5%" }
       u.moedas = sanearNum(u.moedas + salario); u.ultimoTrabalho = Date.now()
       const subiu = ganharXp(u, 15); salvarRpg(r)
-      let txt = "⚡💼 *TRABALHO*\n\n👤 @" + num + "\n⚒️ Trabalhou como *" + trabalho + "*\n💰 *+" + fmt(salario) + " gold*"
-      if (bonus) txt += bonus
-      txt += "\n🎯 *+15 XP*"
-      if (subiu) txt += "\n⬆️ Subiu *" + subiu + "* nível!"
-      await sock.sendMessage(jid, { text: txt, mentions: [mJid(num)] }, { quoted: msg })
+      await sock.sendMessage(jid, { text: `❄️ • 𝐓𝐑𝐀𝐁𝐀𝐋𝐇𝐎 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Trabalho concluído.\n╰──────────────\n\n👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:\n╰➜ @${num}\n\n⚒️ 𝐅𝐮𝐧𝐜̧𝐚̃𝐨:\n╰➜ ${trabalho}\n\n💰 𝐒𝐚𝐥𝐚́𝐫𝐢𝐨:\n╰➜ +${fmt(salario)} gold${bonus}\n\n🎯 𝐗𝐏:\n╰➜ +15${subiu ? "\n\n⬆️ Subiu *" + subiu + "* nível!" : ""}\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
     }},
 
     cassino: { aliases: ["bet", "apostar"], async executar({ sock, msg, args, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { r, u } = getRpg(num)
       const valor = Math.floor(parseInt(args[0]) || 0)
-      if (!valor || valor <= 0) return sock.sendMessage(jid, { text: "⚡🎰 Use *!cassino <valor>*" }, { quoted: msg })
-      if (valor > u.moedas) return sock.sendMessage(jid, { text: "⚡💢 Você só tem *" + fmt(u.moedas) + "* gold!" }, { quoted: msg })
+      if (!valor || valor <= 0) return sock.sendMessage(jid, { text: `❄️ • 𝐂𝐀𝐒𝐒𝐈𝐍𝐎 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe o valor.\n╰──────────────\n\n💡 \`!cassino <valor>\`\n\n"${nomeBot}"` }, { quoted: msg })
+      if (valor > u.moedas) return sock.sendMessage(jid, { text: `❄️ • 𝐂𝐀𝐒𝐒𝐈𝐍𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Você só tem ${fmt(u.moedas)} gold.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const ganhou = Math.random() < 0.48
       const emoji = ["🎰", "🎲", "🃏"][Math.floor(Math.random() * 3)]
       if (ganhou) {
         u.moedas = sanearNum(u.moedas + valor); ganharXp(u, 10); salvarRpg(r)
-        await sock.sendMessage(jid, { text: emoji + " *VOCÊ GANHOU!*\n\n👤 @" + num + "\n💰 *+" + fmt(valor) + "*\n💼 Total: *" + fmt(u.moedas) + "*", mentions: [mJid(num)] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `${emoji} • 𝐕𝐎𝐂𝐄̂ 𝐆𝐀𝐍𝐇𝐎𝐔 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ A sorte sorriu pra você.\n╰──────────────\n\n👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:\n╰➜ @${num}\n\n💰 𝐆𝐚𝐧𝐡𝐨:\n╰➜ +${fmt(valor)}\n\n💼 𝐓𝐨𝐭𝐚𝐥:\n╰➜ ${fmt(u.moedas)}\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
       } else {
         u.moedas = sanearNum(u.moedas - valor); salvarRpg(r)
-        await sock.sendMessage(jid, { text: emoji + " *VOCÊ PERDEU!*\n\n👤 @" + num + "\n💸 *-" + fmt(valor) + "*\n💼 Total: *" + fmt(u.moedas) + "*", mentions: [mJid(num)] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `${emoji} • 𝐕𝐎𝐂𝐄̂ 𝐏𝐄𝐑𝐃𝐄𝐔 •\n\n╭─〔 ❌ 𝐃𝐄𝐑𝐑𝐎𝐓𝐀 〕\n│ A sorte não estava do seu lado.\n╰──────────────\n\n👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:\n╰➜ @${num}\n\n💸 𝐏𝐞𝐫𝐝𝐚:\n╰➜ -${fmt(valor)}\n\n💼 𝐓𝐨𝐭𝐚𝐥:\n╰➜ ${fmt(u.moedas)}\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
       }
     }},
 
     roubar: { aliases: ["assaltar", "roub4r"], async executar({ sock, msg, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const alvo = utils.getAlvo(msg)
-      if (!alvo) return sock.sendMessage(jid, { text: "⚡🔫 Use *!roubar @user*" }, { quoted: msg })
+      if (!alvo) return sock.sendMessage(jid, { text: `❄️ • 𝐑𝐎𝐔𝐁𝐀𝐑 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Marque um usuário.\n╰──────────────\n\n💡 \`!roubar @user\`\n\n"${nomeBot}"` }, { quoted: msg })
       const numReal = await resolverNumero(sock, jid, sender)
       const numAlvoReal = await resolverNumero(sock, jid, alvo)
-      if (!numReal || !numAlvoReal) return sock.sendMessage(jid, { text: "⚡💢 Não consegui identificar!" }, { quoted: msg })
-      if (numAlvoReal === numReal) return sock.sendMessage(jid, { text: "⚡❓ Não pode roubar você mesmo!" }, { quoted: msg })
+      if (!numReal || !numAlvoReal) return sock.sendMessage(jid, { text: `❄️ • 𝐑𝐎𝐔𝐁𝐀𝐑 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Não consegui identificar.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+      if (numAlvoReal === numReal) return sock.sendMessage(jid, { text: `❄️ • 𝐑𝐎𝐔𝐁𝐀𝐑 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Não pode roubar você mesmo.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const { r, u } = getRpg(numReal)
       const { r: rAlvo, u: uAlvo } = getRpg(numAlvoReal)
       const cooldown = COOLDOWN_ROUBO - (Date.now() - u.ultimoRoubo)
-      if (cooldown > 0) return sock.sendMessage(jid, { text: "⚡⏰ Espere *" + formatarTempo(cooldown) + "*!" }, { quoted: msg })
-      if (uAlvo.moedas < 100) return sock.sendMessage(jid, { text: "⚡💢 @" + numAlvoReal + " é pobre demais!", mentions: [mJid(numAlvoReal)] }, { quoted: msg })
+      if (cooldown > 0) return sock.sendMessage(jid, { text: `❄️ • 𝐑𝐎𝐔𝐁𝐀𝐑 •\n\n╭─〔 ⏰ 𝐀𝐆𝐔𝐀𝐑𝐃𝐄 〕\n│ Espere ${formatarTempo(cooldown)}.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+      if (uAlvo.moedas < 100) return sock.sendMessage(jid, { text: `❄️ • 𝐑𝐎𝐔𝐁𝐀𝐑 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ @${numAlvoReal} é pobre demais.\n╰──────────────\n\n"${nomeBot}"`, mentions: [mJid(numAlvoReal)] }, { quoted: msg })
       u.ultimoRoubo = Date.now()
       let chance = 0.45
       if (uAlvo.pet === "unicornio") chance -= 0.10
@@ -529,20 +519,21 @@ module.exports = {
       if (sucesso) {
         u.moedas = sanearNum(u.moedas + valor); uAlvo.moedas = sanearNum(uAlvo.moedas - valor); ganharXp(u, 20)
         salvarRpg(r); salvarRpg(rAlvo)
-        await sock.sendMessage(jid, { text: "⚡🦹 *ROUBO BEM-SUCEDIDO!*\n\n👤 @" + numReal + "\n🎯 Alvo: @" + numAlvoReal + "\n💰 *+" + fmt(valor) + "*", mentions: [mJid(numReal), mJid(numAlvoReal)] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐑𝐎𝐔𝐁𝐎 𝐁𝐄𝐌-𝐒𝐔𝐂𝐄𝐃𝐈𝐃𝐎 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Você levou a melhor.\n╰──────────────\n\n👤 𝐋𝐚𝐝𝐫𝐚̃𝐨:\n╰➜ @${numReal}\n\n🎯 𝐀𝐥𝐯𝐨:\n╰➜ @${numAlvoReal}\n\n💰 𝐁𝐨𝐭𝐢𝐦:\n╰➜ +${fmt(valor)} gold\n\n"${nomeBot}"`, mentions: [mJid(numReal), mJid(numAlvoReal)] }, { quoted: msg })
       } else {
         const multa = Math.floor(valor * 0.5)
         u.moedas = sanearNum(Math.max(0, u.moedas - multa)); salvarRpg(r)
-        await sock.sendMessage(jid, { text: "⚡🚨 *ROUBO FALHOU!*\n\n👤 @" + numReal + "\n🎯 Alvo: @" + numAlvoReal + "\n💸 Multa: *-" + fmt(multa) + "*", mentions: [mJid(numReal), mJid(numAlvoReal)] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐑𝐎𝐔𝐁𝐎 𝐅𝐀𝐋𝐇𝐎𝐔 •\n\n╭─〔 ❌ 𝐅𝐀𝐋𝐇𝐀 〕\n│ A polícia te pegou.\n╰──────────────\n\n👤 𝐋𝐚𝐝𝐫𝐚̃𝐨:\n╰➜ @${numReal}\n\n🎯 𝐀𝐥𝐯𝐨:\n╰➜ @${numAlvoReal}\n\n💸 𝐌𝐮𝐥𝐭𝐚:\n╰➜ -${fmt(multa)} gold\n\n"${nomeBot}"`, mentions: [mJid(numReal), mJid(numAlvoReal)] }, { quoted: msg })
       }
     }},
 
     crime: { aliases: ["crimeurbano"], async executar({ sock, msg, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { r, u } = getRpg(num)
       const cooldown = COOLDOWN_CRIME - (Date.now() - u.ultimoCrime)
-      if (cooldown > 0) return sock.sendMessage(jid, { text: "⚡⏰ Espere *" + formatarTempo(cooldown) + "*!" }, { quoted: msg })
+      if (cooldown > 0) return sock.sendMessage(jid, { text: `❄️ • 𝐂𝐑𝐈𝐌𝐄 •\n\n╭─〔 ⏰ 𝐀𝐆𝐔𝐀𝐑𝐃𝐄 〕\n│ Espere ${formatarTempo(cooldown)}.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       u.ultimoCrime = Date.now()
       const crimes = [
         { nome: "Assalto a banco", min: 500, max: 2000, risco: 0.55 },
@@ -556,208 +547,200 @@ module.exports = {
       if (ganhou) {
         const valor = Math.floor(crime.min + Math.random() * (crime.max - crime.min))
         u.moedas = sanearNum(u.moedas + valor); ganharXp(u, 25); salvarRpg(r)
-        await sock.sendMessage(jid, { text: "⚡🦹 *" + crime.nome.toUpperCase() + "*\n\n👤 @" + num + "\n💰 Botim: *+" + fmt(valor) + "*", mentions: [mJid(num)] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • ${crime.nome.toUpperCase()} •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Crime executado com sucesso.\n╰──────────────\n\n👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:\n╰➜ @${num}\n\n💰 𝐁𝐨𝐭𝐢𝐦:\n╰➜ +${fmt(valor)} gold\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
       } else {
         const multa = Math.floor(crime.min * 1.5)
         u.moedas = sanearNum(Math.max(0, u.moedas - multa)); salvarRpg(r)
-        await sock.sendMessage(jid, { text: "⚡🚨 *" + crime.nome.toUpperCase() + "*\n\n👤 @" + num + "\n💸 Multa: *-" + fmt(multa) + "*", mentions: [mJid(num)] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • ${crime.nome.toUpperCase()} •\n\n╭─〔 ❌ 𝐅𝐀𝐋𝐇𝐀 〕\n│ Você foi pego.\n╰──────────────\n\n👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:\n╰➜ @${num}\n\n💸 𝐌𝐮𝐥𝐭𝐚:\n╰➜ -${fmt(multa)} gold\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
       }
     }},
 
     comprarpicareta: { aliases: ["buypicareta", "picareta"], async executar({ sock, msg, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { r, u } = getRpg(num)
-      if (u.temPicareta) return sock.sendMessage(jid, { text: "⚡⛏️ Você já tem uma *picareta*!" }, { quoted: msg })
-      if (u.moedas < PRECO_PICARETA) return sock.sendMessage(jid, { text: "⚡💢 Faltam *" + fmt(PRECO_PICARETA - u.moedas) + "* gold!" }, { quoted: msg })
+      if (u.temPicareta) return sock.sendMessage(jid, { text: `❄️ • 𝐏𝐈𝐂𝐀𝐑𝐄𝐓𝐀 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Você já tem uma picareta.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+      if (u.moedas < PRECO_PICARETA) return sock.sendMessage(jid, { text: `❄️ • 𝐏𝐈𝐂𝐀𝐑𝐄𝐓𝐀 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Faltam ${fmt(PRECO_PICARETA - u.moedas)} gold.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       u.moedas = sanearNum(u.moedas - PRECO_PICARETA); u.temPicareta = true; salvarRpg(r)
-      await sock.sendMessage(jid, { text: "⚡⛏️ *PICARETA COMPRADA!*\n\n💰 *-" + fmt(PRECO_PICARETA) + "*", mentions: [mJid(num)] }, { quoted: msg })
+      await sock.sendMessage(jid, { text: `❄️ • 𝐏𝐈𝐂𝐀𝐑𝐄𝐓𝐀 𝐂𝐎𝐌𝐏𝐑𝐀𝐃𝐀 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Ferramenta adquirida.\n╰──────────────\n\n💸 𝐏𝐚𝐠𝐨:\n╰➜ -${fmt(PRECO_PICARETA)} gold\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
     }},
 
     minerar: { aliases: ["mine", "mineracao"], async executar({ sock, msg, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { r, u } = getRpg(num)
-      if (!u.temPicareta) return sock.sendMessage(jid, { text: "⚡💢 Você precisa de uma *picareta*!" }, { quoted: msg })
+      if (!u.temPicareta) return sock.sendMessage(jid, { text: `❄️ • 𝐌𝐈𝐍𝐄𝐑𝐀𝐑 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Você precisa de uma picareta.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const cooldown = COOLDOWN_MINERAR - (Date.now() - u.ultimoMinerar)
-      if (cooldown > 0) return sock.sendMessage(jid, { text: "⚡⏰ Espere *" + formatarTempo(cooldown) + "*!" }, { quoted: msg })
+      if (cooldown > 0) return sock.sendMessage(jid, { text: `❄️ • 𝐌𝐈𝐍𝐄𝐑𝐀𝐑 •\n\n╭─〔 ⏰ 𝐀𝐆𝐔𝐀𝐑𝐃𝐄 〕\n│ Espere ${formatarTempo(cooldown)}.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       u.ultimoMinerar = Date.now()
       const minerio = sortearPorChance(MINERIOS)
       u.moedas = sanearNum(u.moedas + minerio.valor); ganharXp(u, 10); salvarRpg(r)
-      await sock.sendMessage(jid, { text: "⚡⛏️ *MINERAÇÃO*\n\n👤 @" + num + "\n" + minerio.emoji + " Achou: *" + minerio.nome + "*\n💰 *+" + fmt(minerio.valor) + "*", mentions: [mJid(num)] }, { quoted: msg })
+      await sock.sendMessage(jid, { text: `❄️ • 𝐌𝐈𝐍𝐄𝐑𝐀𝐂̧𝐀̃𝐎 •\n\n╭─〔 ⛏️ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Minério encontrado.\n╰──────────────\n\n👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:\n╰➜ @${num}\n\n${minerio.emoji} 𝐌𝐢𝐧𝐞́𝐫𝐢𝐨:\n╰➜ ${minerio.nome}\n\n💰 𝐕𝐚𝐥𝐨𝐫:\n╰➜ +${fmt(minerio.valor)} gold\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
     }},
 
     comprarvara: { aliases: ["buyvara", "vara"], async executar({ sock, msg, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { r, u } = getRpg(num)
-      if (u.temVara) return sock.sendMessage(jid, { text: "⚡🎣 Você já tem uma *vara*!" }, { quoted: msg })
-      if (u.moedas < PRECO_VARA) return sock.sendMessage(jid, { text: "⚡💢 Faltam *" + fmt(PRECO_VARA - u.moedas) + "* gold!" }, { quoted: msg })
+      if (u.temVara) return sock.sendMessage(jid, { text: `❄️ • 𝐕𝐀𝐑𝐀 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Você já tem uma vara.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+      if (u.moedas < PRECO_VARA) return sock.sendMessage(jid, { text: `❄️ • 𝐕𝐀𝐑𝐀 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Faltam ${fmt(PRECO_VARA - u.moedas)} gold.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       u.moedas = sanearNum(u.moedas - PRECO_VARA); u.temVara = true; salvarRpg(r)
-      await sock.sendMessage(jid, { text: "⚡🎣 *VARA COMPRADA!*\n\n💰 *-" + fmt(PRECO_VARA) + "*", mentions: [mJid(num)] }, { quoted: msg })
+      await sock.sendMessage(jid, { text: `❄️ • 𝐕𝐀𝐑𝐀 𝐂𝐎𝐌𝐏𝐑𝐀𝐃𝐀 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Ferramenta adquirida.\n╰──────────────\n\n💸 𝐏𝐚𝐠𝐨:\n╰➜ -${fmt(PRECO_VARA)} gold\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
     }},
 
     pescar: { aliases: ["pesca", "fish"], async executar({ sock, msg, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { r, u } = getRpg(num)
-      if (!u.temVara) return sock.sendMessage(jid, { text: "⚡💢 Você precisa de uma *vara*!" }, { quoted: msg })
+      if (!u.temVara) return sock.sendMessage(jid, { text: `❄️ • 𝐏𝐄𝐒𝐂𝐀𝐑 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Você precisa de uma vara.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const cooldown = COOLDOWN_PESCAR - (Date.now() - u.ultimoPescar)
-      if (cooldown > 0) return sock.sendMessage(jid, { text: "⚡⏰ Espere *" + formatarTempo(cooldown) + "*!" }, { quoted: msg })
+      if (cooldown > 0) return sock.sendMessage(jid, { text: `❄️ • 𝐏𝐄𝐒𝐂𝐀𝐑 •\n\n╭─〔 ⏰ 𝐀𝐆𝐔𝐀𝐑𝐃𝐄 〕\n│ Espere ${formatarTempo(cooldown)}.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       u.ultimoPescar = Date.now()
       const peixe = sortearPorChance(PEIXES)
       let valor = peixe.valor
       let bonus = ""
-      if (u.pet === "ursoPolar") { valor = Math.floor(valor * 1.10); bonus = "\n🐻‍❄️ *Bônus Urso Polar: +10%*" }
+      if (u.pet === "ursoPolar") { valor = Math.floor(valor * 1.10); bonus = "\n🐻‍❄️ Bônus Urso Polar: +10%" }
       u.moedas = sanearNum(u.moedas + valor); ganharXp(u, 12); salvarRpg(r)
-      await sock.sendMessage(jid, { text: "⚡🎣 *PESCARIA*\n\n👤 @" + num + "\n" + peixe.emoji + " Pescou: *" + peixe.nome + "*\n💰 *+" + fmt(valor) + "*" + bonus, mentions: [mJid(num)] }, { quoted: msg })
+      await sock.sendMessage(jid, { text: `❄️ • 𝐏𝐄𝐒𝐂𝐀𝐑𝐈𝐀 •\n\n╭─〔 🎣 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Peixe fisgado.\n╰──────────────\n\n👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:\n╰➜ @${num}\n\n${peixe.emoji} 𝐏𝐞𝐢𝐱𝐞:\n╰➜ ${peixe.nome}\n\n💰 𝐕𝐚𝐥𝐨𝐫:\n╰➜ +${fmt(valor)} gold${bonus}\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
     }},
 
     lojapet: { aliases: ["petshop", "lojapets"], async executar({ sock, msg, db, utils, sender, isDono, isSubDono }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { u } = getRpg(num)
       const temUrso = u.pet === "ursoPolar"
       const ehVipUser = ehVip(db, sender, isDono, isSubDono)
-      let txt = "⚡🐾 *LOJA DE PETS*\n\n"
+      let txt = `❄️ • 𝐋𝐎𝐉𝐀 𝐃𝐄 𝐏𝐄𝐓𝐒 •\n\n╭─〔 🐾 𝐀𝐍𝐈𝐌𝐀𝐈𝐒 〕\n│ Adquira seu companheiro.\n╰──────────────\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
       for (const pet of PETS) {
         const preco = precoComDesconto(pet.preco, temUrso && pet.id !== "unicornio")
-        const tag = pet.vip ? " 💎VIP" : ""
-        txt += pet.emoji + " *" + pet.nome + "*" + tag + "\n💰 " + fmt(preco) + " gold\n📜 " + pet.buff + "\n\n"
+        const tag = pet.vip ? " 💠VIP" : ""
+        txt += `${pet.emoji} ${pet.nome}${tag}\n`
+        txt += `╰➜ 💰 ${fmt(preco)} gold\n`
+        txt += `╰➜ ${pet.buff}\n\n`
       }
-      txt += "━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-      if (temUrso) txt += "🐻‍❄️ *Urso Polar ativo: -15% em todos!*\n"
-      if (ehVipUser) txt += "💎 *Você é VIP!*\n"
-      txt += "\n💡 Use *!comprarpet <nome>*"
+      if (temUrso) txt += "🐻‍❄️ Urso Polar ativo: -15% em todos!\n"
+      if (ehVipUser) txt += "💠 Você é VIP!\n"
+      txt += `\n💡 \`!comprarpet <nome>\`\n\n"${nomeBot}"`
       await sock.sendMessage(jid, { text: txt }, { quoted: msg })
     }},
 
     comprarpet: { aliases: ["buypet", "adotarpet"], async executar({ sock, msg, args, db, utils, sender, isDono, isSubDono }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { r, u } = getRpg(num)
-      if (u.pet) return sock.sendMessage(jid, { text: "⚡🐾 Você já tem um pet!" }, { quoted: msg })
+      if (u.pet) return sock.sendMessage(jid, { text: `❄️ • 𝐏𝐄𝐓 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Você já tem um pet.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const pet = acharPet(args.join(" "))
-      if (!pet) return sock.sendMessage(jid, { text: "⚡❌ Pet não achado!" }, { quoted: msg })
-      if (pet.vip && !ehVip(db, sender, isDono, isSubDono)) return sock.sendMessage(jid, { text: "⚡💎 O *" + pet.nome + "* é exclusivo VIP!" }, { quoted: msg })
+      if (!pet) return sock.sendMessage(jid, { text: `❄️ • 𝐏𝐄𝐓 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Pet não encontrado.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+      if (pet.vip && !ehVip(db, sender, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐏𝐄𝐓 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ O ${pet.nome} é exclusivo VIP.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const preco = precoComDesconto(pet.preco, u.pet === "ursoPolar" && pet.id !== "unicornio")
-      if (u.moedas < preco) return sock.sendMessage(jid, { text: "⚡💢 Faltam *" + fmt(preco - u.moedas) + "* gold!" }, { quoted: msg })
+      if (u.moedas < preco) return sock.sendMessage(jid, { text: `❄️ • 𝐏𝐄𝐓 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Faltam ${fmt(preco - u.moedas)} gold.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       u.moedas = sanearNum(u.moedas - preco); u.pet = pet.id
       u.petGrupo = jid.endsWith("@g.us") ? jid : null
       u.petFome = 100; u.petSede = 100; u.petFelicidade = 100
       u.petVida = pet.forca * 10; u.petVidaMax = pet.forca * 10
       u.ultimoRouboPet = Date.now(); salvarRpg(r)
-      await sock.sendMessage(jid, { text: "⚡🐾 *PET ADOTADO!*\n\n👤 @" + num + "\n" + pet.emoji + " *" + pet.nome + "*\n💰 *-" + fmt(preco) + "*\n\n📜 " + pet.buff, mentions: [mJid(num)] }, { quoted: msg })
+      await sock.sendMessage(jid, { text: `❄️ • 𝐏𝐄𝐓 𝐀𝐃𝐎𝐓𝐀𝐃𝐎 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Novo companheiro adquirido.\n╰──────────────\n\n👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:\n╰➜ @${num}\n\n${pet.emoji} 𝐏𝐞𝐭:\n╰➜ ${pet.nome}\n\n💸 𝐏𝐚𝐠𝐨:\n╰➜ -${fmt(preco)} gold\n\n📜 𝐁𝐮𝐟𝐟:\n╰➜ ${pet.buff}\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
     }},
 
     meupet: { aliases: ["pet", "statuspet"], async executar({ sock, msg, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { u } = getRpg(num)
-      if (!u.pet) return sock.sendMessage(jid, { text: "⚡🐾 Você não tem pet!" }, { quoted: msg })
+      if (!u.pet) return sock.sendMessage(jid, { text: `❄️ • 𝐌𝐄𝐔 𝐏𝐄𝐓 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Você não tem pet.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const pet = PETS.find(p => p.id === u.pet)
-      if (!pet) return sock.sendMessage(jid, { text: "⚡❌ Pet bugado!" }, { quoted: msg })
-      const barra = (v) => { const c = Math.max(0, Math.min(10, Math.round(v / 10))); return "🟩".repeat(c) + "⬛".repeat(10 - c) }
+      if (!pet) return sock.sendMessage(jid, { text: `❄️ • 𝐌𝐄𝐔 𝐏𝐄𝐓 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Pet corrompido.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+      const barra = (v) => { const c = Math.max(0, Math.min(10, Math.round(v / 10))); return "🟦".repeat(c) + "⬛".repeat(10 - c) }
       const ic = (v) => v > 70 ? "🟢" : v > 40 ? "🟡" : "🔴"
-      const txt =
-`╔══════════════════════════════╗
-║   ${pet.emoji} 𝐌𝐄𝐔 𝐏𝐄𝐓 ${pet.emoji}
-╚══════════════════════════════╝
-
-👤 @${num}
-🐾 *${pet.nome}*
-
-🍖 Fome: ${ic(u.petFome)} *${u.petFome}%*
-${barra(u.petFome)}
-
-💧 Sede: ${ic(u.petSede)} *${u.petSede}%*
-${barra(u.petSede)}
-
-😊 Felicidade: ${ic(u.petFelicidade)} *${u.petFelicidade}%*
-${barra(u.petFelicidade)}
-
-❤️ Vida: ${ic(u.petVida / u.petVidaMax * 100)} *${u.petVida}/${u.petVidaMax}*
-${barra(u.petVida / u.petVidaMax * 100)}
-
-⚔️ Força: *${pet.forca}*
-🏃 Velocidade: *${pet.velocidade}*`
-      await sock.sendMessage(jid, { text: txt, mentions: [mJid(num)] }, { quoted: msg })
+      const texto = `❄️ • 𝐌𝐄𝐔 𝐏𝐄𝐓 ${pet.emoji} •\n\n╭─〔 ♦️ 𝐒𝐓𝐀𝐓𝐔𝐒 〕\n│ ${pet.nome}\n╰──────────────\n\n👤 @${num}\n\n🍖 𝐅𝐨𝐦𝐞:\n${ic(u.petFome)} ${u.petFome}%\n${barra(u.petFome)}\n\n💧 𝐒𝐞𝐝𝐞:\n${ic(u.petSede)} ${u.petSede}%\n${barra(u.petSede)}\n\n😊 𝐅𝐞𝐥𝐢𝐜𝐢𝐝𝐚𝐝𝐞:\n${ic(u.petFelicidade)} ${u.petFelicidade}%\n${barra(u.petFelicidade)}\n\n❤️ 𝐕𝐢𝐝𝐚:\n${ic(u.petVida / u.petVidaMax * 100)} ${u.petVida}/${u.petVidaMax}\n${barra(u.petVida / u.petVidaMax * 100)}\n\n⚔️ 𝐅𝐨𝐫𝐜̧𝐚:\n╰➜ ${pet.forca}\n\n🏃 𝐕𝐞𝐥𝐨𝐜𝐢𝐝𝐚𝐝𝐞:\n╰➜ ${pet.velocidade}\n\n"${nomeBot}"`
+      await sock.sendMessage(jid, { text: texto, mentions: [mJid(num)] }, { quoted: msg })
     }},
 
     alimentarpet: { aliases: ["feedpet", "darpet"], async executar({ sock, msg, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { r, u } = getRpg(num)
-      if (!u.pet) return sock.sendMessage(jid, { text: "⚡🐾 Sem pet!" }, { quoted: msg })
+      if (!u.pet) return sock.sendMessage(jid, { text: `❄️ • 𝐀𝐋𝐈𝐌𝐄𝐍𝐓𝐀𝐑 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Você não tem pet.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const custo = 50
-      if (u.moedas < custo) return sock.sendMessage(jid, { text: "⚡💢 Precisa *" + fmt(custo) + "* gold!" }, { quoted: msg })
+      if (u.moedas < custo) return sock.sendMessage(jid, { text: `❄️ • 𝐀𝐋𝐈𝐌𝐄𝐍𝐓𝐀𝐑 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Precisa de ${fmt(custo)} gold.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       u.moedas = sanearNum(u.moedas - custo)
       u.petFome = Math.min(100, u.petFome + 30); u.petSede = Math.min(100, u.petSede + 20); u.petFelicidade = Math.min(100, u.petFelicidade + 10)
       salvarRpg(r)
       const pet = PETS.find(p => p.id === u.pet)
-      await sock.sendMessage(jid, { text: pet.emoji + " *PET ALIMENTADO!*\n\n🍖 " + u.petFome + "%\n💧 " + u.petSede + "%\n💰 *-" + fmt(custo) + "*", mentions: [mJid(num)] }, { quoted: msg })
+      await sock.sendMessage(jid, { text: `❄️ • 𝐏𝐄𝐓 𝐀𝐋𝐈𝐌𝐄𝐍𝐓𝐀𝐃𝐎 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ ${pet.emoji} ${pet.nome}\n╰──────────────\n\n🍖 𝐅𝐨𝐦𝐞:\n╰➜ ${u.petFome}%\n\n💧 𝐒𝐞𝐝𝐞:\n╰➜ ${u.petSede}%\n\n💸 𝐏𝐚𝐠𝐨:\n╰➜ -${fmt(custo)} gold\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
     }},
 
     curarpet: { aliases: ["healpet", "curar"], async executar({ sock, msg, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { r, u } = getRpg(num)
-      if (!u.pet) return sock.sendMessage(jid, { text: "⚡🐾 Sem pet!" }, { quoted: msg })
-      if (u.petVida >= u.petVidaMax) return sock.sendMessage(jid, { text: "⚡❤️ Vida cheia!" }, { quoted: msg })
+      if (!u.pet) return sock.sendMessage(jid, { text: `❄️ • 𝐂𝐔𝐑𝐀𝐑 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Você não tem pet.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+      if (u.petVida >= u.petVidaMax) return sock.sendMessage(jid, { text: `❄️ • 𝐂𝐔𝐑𝐀𝐑 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Vida já está cheia.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const custo = (u.petVidaMax - u.petVida) * 3
-      if (u.moedas < custo) return sock.sendMessage(jid, { text: "⚡💢 Precisa *" + fmt(custo) + "* gold!" }, { quoted: msg })
+      if (u.moedas < custo) return sock.sendMessage(jid, { text: `❄️ • 𝐂𝐔𝐑𝐀𝐑 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Precisa de ${fmt(custo)} gold.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       u.moedas = sanearNum(u.moedas - custo); u.petVida = u.petVidaMax; salvarRpg(r)
       const pet = PETS.find(p => p.id === u.pet)
-      await sock.sendMessage(jid, { text: pet.emoji + " *PET CURADO!*\n\n❤️ " + u.petVida + "/" + u.petVidaMax + "\n💰 *-" + fmt(custo) + "*", mentions: [mJid(num)] }, { quoted: msg })
+      await sock.sendMessage(jid, { text: `❄️ • 𝐏𝐄𝐓 𝐂𝐔𝐑𝐀𝐃𝐎 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ ${pet.emoji} ${pet.nome}\n╰──────────────\n\n❤️ 𝐕𝐢𝐝𝐚:\n╰➜ ${u.petVida}/${u.petVidaMax}\n\n💸 𝐏𝐚𝐠𝐨:\n╰➜ -${fmt(custo)} gold\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
     }},
 
     venderpet: { aliases: ["sellpet"], async executar({ sock, msg, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { r, u } = getRpg(num)
-      if (!u.pet) return sock.sendMessage(jid, { text: "⚡🐾 Sem pet!" }, { quoted: msg })
+      if (!u.pet) return sock.sendMessage(jid, { text: `❄️ • 𝐕𝐄𝐍𝐃𝐄𝐑 𝐏𝐄𝐓 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Você não tem pet.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const pet = PETS.find(p => p.id === u.pet)
-      if (pet.vip) return sock.sendMessage(jid, { text: "⚡💎 Pets VIP não podem ser vendidos!" }, { quoted: msg })
+      if (pet.vip) return sock.sendMessage(jid, { text: `❄️ • 𝐕𝐄𝐍𝐃𝐄𝐑 𝐏𝐄𝐓 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Pets VIP não podem ser vendidos.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const valor = Math.floor(pet.preco * 0.6)
       u.moedas = sanearNum(u.moedas + valor); u.pet = null; u.petGrupo = null; salvarRpg(r)
-      await sock.sendMessage(jid, { text: pet.emoji + " *PET VENDIDO!*\n\n" + pet.nome + "\n💰 *+" + fmt(valor) + "*", mentions: [mJid(num)] }, { quoted: msg })
+      await sock.sendMessage(jid, { text: `❄️ • 𝐏𝐄𝐓 𝐕𝐄𝐍𝐃𝐈𝐃𝐎 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ ${pet.emoji} ${pet.nome}\n╰──────────────\n\n💰 𝐕𝐚𝐥𝐨𝐫:\n╰➜ +${fmt(valor)} gold\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
     }},
 
     doarpet: { aliases: ["givepet", "presentepet"], async executar({ sock, msg, args, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const alvo = utils.getAlvo(msg)
-      if (!alvo) return sock.sendMessage(jid, { text: "⚡🎁 Use *!doarpet @user*" }, { quoted: msg })
+      if (!alvo) return sock.sendMessage(jid, { text: `❄️ • 𝐃𝐎𝐀𝐑 𝐏𝐄𝐓 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Marque um usuário.\n╰──────────────\n\n💡 \`!doarpet @user\`\n\n"${nomeBot}"` }, { quoted: msg })
       const numReal = await resolverNumero(sock, jid, sender)
       const numAlvoReal = await resolverNumero(sock, jid, alvo)
-      if (!numReal || !numAlvoReal) return sock.sendMessage(jid, { text: "⚡💢 Não identifiquei!" }, { quoted: msg })
-      if (numAlvoReal === numReal) return sock.sendMessage(jid, { text: "⚡❓ Não pode doar pra você!" }, { quoted: msg })
+      if (!numReal || !numAlvoReal) return sock.sendMessage(jid, { text: `❄️ • 𝐃𝐎𝐀𝐑 𝐏𝐄𝐓 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Não consegui identificar.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+      if (numAlvoReal === numReal) return sock.sendMessage(jid, { text: `❄️ • 𝐃𝐎𝐀𝐑 𝐏𝐄𝐓 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Não pode doar pra você mesmo.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const { r, u } = getRpg(numReal)
       const { r: rAlvo, u: uAlvo } = getRpg(numAlvoReal)
-      if (!u.pet) return sock.sendMessage(jid, { text: "⚡🐾 Sem pet!" }, { quoted: msg })
-      if (uAlvo.pet) return sock.sendMessage(jid, { text: "⚡💢 @" + numAlvoReal + " já tem pet!", mentions: [mJid(numAlvoReal)] }, { quoted: msg })
+      if (!u.pet) return sock.sendMessage(jid, { text: `❄️ • 𝐃𝐎𝐀𝐑 𝐏𝐄𝐓 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Você não tem pet.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+      if (uAlvo.pet) return sock.sendMessage(jid, { text: `❄️ • 𝐃𝐎𝐀𝐑 𝐏𝐄𝐓 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ @${numAlvoReal} já tem pet.\n╰──────────────\n\n"${nomeBot}"`, mentions: [mJid(numAlvoReal)] }, { quoted: msg })
       const pet = PETS.find(p => p.id === u.pet)
-      if (pet.vip) return sock.sendMessage(jid, { text: "⚡💎 Pets VIP não podem ser doados!" }, { quoted: msg })
+      if (pet.vip) return sock.sendMessage(jid, { text: `❄️ • 𝐃𝐎𝐀𝐑 𝐏𝐄𝐓 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Pets VIP não podem ser doados.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       uAlvo.pet = pet.id; uAlvo.petGrupo = u.petGrupo
       uAlvo.petFome = u.petFome; uAlvo.petSede = u.petSede; uAlvo.petFelicidade = u.petFelicidade
       uAlvo.petVida = u.petVida; uAlvo.petVidaMax = u.petVidaMax; uAlvo.ultimoRouboPet = Date.now()
       u.pet = null; u.petGrupo = null
       salvarRpg(r); salvarRpg(rAlvo)
-      await sock.sendMessage(jid, { text: pet.emoji + " *PET DOADO!*\n\n👤 De: @" + numReal + "\n🎁 Para: @" + numAlvoReal + "\n🐾 *" + pet.nome + "*", mentions: [mJid(numReal), mJid(numAlvoReal)] }, { quoted: msg })
+      await sock.sendMessage(jid, { text: `❄️ • 𝐏𝐄𝐓 𝐃𝐎𝐀𝐃𝐎 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ ${pet.emoji} ${pet.nome}\n╰──────────────\n\n👤 𝐃𝐞:\n╰➜ @${numReal}\n\n🎁 𝐏𝐚𝐫𝐚:\n╰➜ @${numAlvoReal}\n\n"${nomeBot}"`, mentions: [mJid(numReal), mJid(numAlvoReal)] }, { quoted: msg })
     }},
 
     batalhapet: { aliases: ["batalhar", "petbatalha"], async executar({ sock, msg, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const alvo = utils.getAlvo(msg)
-      if (!alvo) return sock.sendMessage(jid, { text: "⚡⚔️ Use *!batalhapet @user*" }, { quoted: msg })
+      if (!alvo) return sock.sendMessage(jid, { text: `❄️ • 𝐁𝐀𝐓𝐀𝐋𝐇𝐀 𝐏𝐄𝐓 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Marque um usuário.\n╰──────────────\n\n💡 \`!batalhapet @user\`\n\n"${nomeBot}"` }, { quoted: msg })
       const numReal = await resolverNumero(sock, jid, sender)
       const numAlvoReal = await resolverNumero(sock, jid, alvo)
-      if (!numReal || !numAlvoReal) return sock.sendMessage(jid, { text: "⚡💢 Não identifiquei!" }, { quoted: msg })
-      if (numAlvoReal === numReal) return sock.sendMessage(jid, { text: "⚡❓ Não pode batalhar consigo!" }, { quoted: msg })
+      if (!numReal || !numAlvoReal) return sock.sendMessage(jid, { text: `❄️ • 𝐁𝐀𝐓𝐀𝐋𝐇𝐀 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Não consegui identificar.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+      if (numAlvoReal === numReal) return sock.sendMessage(jid, { text: `❄️ • 𝐁𝐀𝐓𝐀𝐋𝐇𝐀 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Não pode batalhar consigo mesmo.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const { r, u } = getRpg(numReal)
       const { r: rAlvo, u: uAlvo } = getRpg(numAlvoReal)
-      if (!u.pet || !uAlvo.pet) return sock.sendMessage(jid, { text: "⚡🐾 Um dos dois não tem pet!" }, { quoted: msg })
+      if (!u.pet || !uAlvo.pet) return sock.sendMessage(jid, { text: `❄️ • 𝐁𝐀𝐓𝐀𝐋𝐇𝐀 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Um dos dois não tem pet.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const cooldown = COOLDOWN_BATALHA - (Date.now() - u.ultimoBatalha)
-      if (cooldown > 0) return sock.sendMessage(jid, { text: "⚡⏰ Espere *" + formatarTempo(cooldown) + "*!" }, { quoted: msg })
+      if (cooldown > 0) return sock.sendMessage(jid, { text: `❄️ • 𝐁𝐀𝐓𝐀𝐋𝐇𝐀 •\n\n╭─〔 ⏰ 𝐀𝐆𝐔𝐀𝐑𝐃𝐄 〕\n│ Espere ${formatarTempo(cooldown)}.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       u.ultimoBatalha = Date.now()
       const pet1 = PETS.find(p => p.id === u.pet)
       const pet2 = PETS.find(p => p.id === uAlvo.pet)
@@ -771,29 +754,30 @@ ${barra(u.petVida / u.petVidaMax * 100)}
         uAlvo.petVida = Math.max(0, uAlvo.petVida - dano)
         u.moedas = sanearNum(u.moedas + premio); ganharXp(u, 20)
         salvarRpg(r); salvarRpg(rAlvo)
-        await sock.sendMessage(jid, { text: "⚡⚔️ *BATALHA*\n\n" + pet1.emoji + " @" + numReal + " VS " + pet2.emoji + " @" + numAlvoReal + "\n\n🏆 *@" + numReal + " VENCEU!*\n💰 *+" + premio + "*", mentions: [mJid(numReal), mJid(numAlvoReal)] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐁𝐀𝐓𝐀𝐋𝐇𝐀 𝐃𝐄 𝐏𝐄𝐓𝐒 •\n\n╭─〔 ⚔️ 𝐑𝐄𝐒𝐔𝐋𝐓𝐀𝐃𝐎 〕\n│ ${pet1.emoji} @${numReal} VS ${pet2.emoji} @${numAlvoReal}\n╰──────────────\n\n🏆 𝐕𝐞𝐧𝐜𝐞𝐝𝐨𝐫:\n╰➜ @${numReal}\n\n💰 𝐏𝐫𝐞̂𝐦𝐢𝐨:\n╰➜ +${premio} gold\n\n"${nomeBot}"`, mentions: [mJid(numReal), mJid(numAlvoReal)] }, { quoted: msg })
       } else {
         const dano = Math.floor(u.petVidaMax * 0.3)
         u.petVida = Math.max(0, u.petVida - dano)
         uAlvo.moedas = sanearNum(uAlvo.moedas + premio); ganharXp(uAlvo, 20)
         salvarRpg(r); salvarRpg(rAlvo)
-        await sock.sendMessage(jid, { text: "⚡⚔️ *BATALHA*\n\n" + pet1.emoji + " @" + numReal + " VS " + pet2.emoji + " @" + numAlvoReal + "\n\n🏆 *@" + numAlvoReal + " VENCEU!*\n💰 *+" + premio + "*", mentions: [mJid(numReal), mJid(numAlvoReal)] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐁𝐀𝐓𝐀𝐋𝐇𝐀 𝐃𝐄 𝐏𝐄𝐓𝐒 •\n\n╭─〔 ⚔️ 𝐑𝐄𝐒𝐔𝐋𝐓𝐀𝐃𝐎 〕\n│ ${pet1.emoji} @${numReal} VS ${pet2.emoji} @${numAlvoReal}\n╰──────────────\n\n🏆 𝐕𝐞𝐧𝐜𝐞𝐝𝐨𝐫:\n╰➜ @${numAlvoReal}\n\n💰 𝐏𝐫𝐞̂𝐦𝐢𝐨:\n╰➜ +${premio} gold\n\n"${nomeBot}"`, mentions: [mJid(numReal), mJid(numAlvoReal)] }, { quoted: msg })
       }
     }},
 
     corridapet: { aliases: ["corrida", "racepet"], async executar({ sock, msg, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const alvo = utils.getAlvo(msg)
-      if (!alvo) return sock.sendMessage(jid, { text: "⚡🏁 Use *!corridapet @user*" }, { quoted: msg })
+      if (!alvo) return sock.sendMessage(jid, { text: `❄️ • 𝐂𝐎𝐑𝐑𝐈𝐃𝐀 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Marque um usuário.\n╰──────────────\n\n💡 \`!corridapet @user\`\n\n"${nomeBot}"` }, { quoted: msg })
       const numReal = await resolverNumero(sock, jid, sender)
       const numAlvoReal = await resolverNumero(sock, jid, alvo)
-      if (!numReal || !numAlvoReal) return sock.sendMessage(jid, { text: "⚡💢 Não identifiquei!" }, { quoted: msg })
-      if (numAlvoReal === numReal) return sock.sendMessage(jid, { text: "⚡❓ Não pode correr consigo!" }, { quoted: msg })
+      if (!numReal || !numAlvoReal) return sock.sendMessage(jid, { text: `❄️ • 𝐂𝐎𝐑𝐑𝐈𝐃𝐀 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Não consegui identificar.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+      if (numAlvoReal === numReal) return sock.sendMessage(jid, { text: `❄️ • 𝐂𝐎𝐑𝐑𝐈𝐃𝐀 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Não pode correr consigo mesmo.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const { r, u } = getRpg(numReal)
       const { r: rAlvo, u: uAlvo } = getRpg(numAlvoReal)
-      if (!u.pet || !uAlvo.pet) return sock.sendMessage(jid, { text: "⚡🐾 Um dos dois não tem pet!" }, { quoted: msg })
+      if (!u.pet || !uAlvo.pet) return sock.sendMessage(jid, { text: `❄️ • 𝐂𝐎𝐑𝐑𝐈𝐃𝐀 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Um dos dois não tem pet.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const cooldown = COOLDOWN_CORRIDA - (Date.now() - u.ultimoCorrida)
-      if (cooldown > 0) return sock.sendMessage(jid, { text: "⚡⏰ Espere *" + formatarTempo(cooldown) + "*!" }, { quoted: msg })
+      if (cooldown > 0) return sock.sendMessage(jid, { text: `❄️ • 𝐂𝐎𝐑𝐑𝐈𝐃𝐀 •\n\n╭─〔 ⏰ 𝐀𝐆𝐔𝐀𝐑𝐃𝐄 〕\n│ Espere ${formatarTempo(cooldown)}.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       u.ultimoCorrida = Date.now()
       const pet1 = PETS.find(p => p.id === u.pet)
       const pet2 = PETS.find(p => p.id === uAlvo.pet)
@@ -807,20 +791,21 @@ ${barra(u.petVida / u.petVidaMax * 100)}
       const premio = 150
       if (venceu) {
         u.moedas = sanearNum(u.moedas + premio); ganharXp(u, 15); salvarRpg(r)
-        await sock.sendMessage(jid, { text: "⚡🏁 *CORRIDA*\n\n" + pet1.emoji + " @" + numReal + " VS " + pet2.emoji + " @" + numAlvoReal + "\n\n🏆 *@" + numReal + " VENCEU!*\n💰 *+" + premio + "*", mentions: [mJid(numReal), mJid(numAlvoReal)] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐂𝐎𝐑𝐑𝐈𝐃𝐀 𝐃𝐄 𝐏𝐄𝐓𝐒 •\n\n╭─〔 🏁 𝐑𝐄𝐒𝐔𝐋𝐓𝐀𝐃𝐎 〕\n│ ${pet1.emoji} @${numReal} VS ${pet2.emoji} @${numAlvoReal}\n╰──────────────\n\n🏆 𝐕𝐞𝐧𝐜𝐞𝐝𝐨𝐫:\n╰➜ @${numReal}\n\n💰 𝐏𝐫𝐞̂𝐦𝐢𝐨:\n╰➜ +${premio} gold\n\n"${nomeBot}"`, mentions: [mJid(numReal), mJid(numAlvoReal)] }, { quoted: msg })
       } else {
         uAlvo.moedas = sanearNum(uAlvo.moedas + premio); ganharXp(uAlvo, 15); salvarRpg(rAlvo)
-        await sock.sendMessage(jid, { text: "⚡🏁 *CORRIDA*\n\n" + pet1.emoji + " @" + numReal + " VS " + pet2.emoji + " @" + numAlvoReal + "\n\n🏆 *@" + numAlvoReal + " VENCEU!*\n💰 *+" + premio + "*", mentions: [mJid(numReal), mJid(numAlvoReal)] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐂𝐎𝐑𝐑𝐈𝐃𝐀 𝐃𝐄 𝐏𝐄𝐓𝐒 •\n\n╭─〔 🏁 𝐑𝐄𝐒𝐔𝐋𝐓𝐀𝐃𝐎 〕\n│ ${pet1.emoji} @${numReal} VS ${pet2.emoji} @${numAlvoReal}\n╰──────────────\n\n🏆 𝐕𝐞𝐧𝐜𝐞𝐝𝐨𝐫:\n╰➜ @${numAlvoReal}\n\n💰 𝐏𝐫𝐞̂𝐦𝐢𝐨:\n╰➜ +${premio} gold\n\n"${nomeBot}"`, mentions: [mJid(numReal), mJid(numAlvoReal)] }, { quoted: msg })
       }
     }},
 
     explorar: { aliases: ["exploracao", "aventura", "exp"], async executar({ sock, msg, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { r, u } = getRpg(num)
-      if (u.nivel < NIVEL_MIN_EXPLORAR) return sock.sendMessage(jid, { text: "⚡🗺️ *EXPLORAR*\n\n💢 Precisa Nível *" + NIVEL_MIN_EXPLORAR + "*+\n📊 Você: *" + u.nivel + "*" }, { quoted: msg })
+      if (u.nivel < NIVEL_MIN_EXPLORAR) return sock.sendMessage(jid, { text: `❄️ • 𝐄𝐗𝐏𝐋𝐎𝐑𝐀𝐑 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Precisa nível ${NIVEL_MIN_EXPLORAR}+.\n╰──────────────\n\n📊 Você:\n╰➜ ${u.nivel}\n\n"${nomeBot}"` }, { quoted: msg })
       const cooldown = COOLDOWN_EXPLORAR - (Date.now() - u.ultimoExplorar)
-      if (cooldown > 0) return sock.sendMessage(jid, { text: "⚡⏰ Espere *" + formatarTempo(cooldown) + "*!" }, { quoted: msg })
+      if (cooldown > 0) return sock.sendMessage(jid, { text: `❄️ • 𝐄𝐗𝐏𝐋𝐎𝐑𝐀𝐑 •\n\n╭─〔 ⏰ 𝐀𝐆𝐔𝐀𝐑𝐃𝐄 〕\n│ Espere ${formatarTempo(cooldown)}.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       u.ultimoExplorar = Date.now()
       const local = EXPLORAR[Math.floor(Math.random() * EXPLORAR.length)]
       const sucesso = Math.random() < 0.75
@@ -829,79 +814,61 @@ ${barra(u.petVida / u.petVidaMax * 100)}
         const xp = local.xp + Math.floor(Math.random() * 20)
         u.moedas = sanearNum(u.moedas + valor)
         const subiu = ganharXp(u, xp); salvarRpg(r)
-        let txt = "⚡🗺️ *EXPLORAÇÃO*\n\n👤 @" + num + "\n" + local.emoji + " *" + local.nome + "*\n\n💰 *+" + fmt(valor) + " gold*\n🎯 *+" + xp + " XP*"
-        if (subiu) txt += "\n⬆️ Subiu *" + subiu + "* nível!"
-        await sock.sendMessage(jid, { text: txt, mentions: [mJid(num)] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐗𝐏𝐋𝐎𝐑𝐀𝐂̧𝐀̃𝐎 •\n\n╭─〔 🗺️ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ ${local.emoji} ${local.nome}\n╰──────────────\n\n👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:\n╰➜ @${num}\n\n💰 𝐆𝐚𝐧𝐡𝐨:\n╰➜ +${fmt(valor)} gold\n\n🎯 𝐗𝐏:\n╰➜ +${xp}${subiu ? "\n\n⬆️ Subiu *" + subiu + "* nível!" : ""}\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
       } else {
         const perda = Math.floor((u.moedas || 0) * 0.05)
         u.moedas = sanearNum(Math.max(0, u.moedas - perda)); ganharXp(u, 5); salvarRpg(r)
-        await sock.sendMessage(jid, { text: "⚡🗺️ *EXPLORAÇÃO*\n\n👤 @" + num + "\n" + local.emoji + " *" + local.nome + "*\n\n💢 Se perdeu!\n💸 *-" + fmt(perda) + " gold*\n🎯 *+5 XP*", mentions: [mJid(num)] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐗𝐏𝐋𝐎𝐑𝐀𝐂̧𝐀̃𝐎 •\n\n╭─〔 ❌ 𝐅𝐀𝐋𝐇𝐀 〕\n│ ${local.emoji} ${local.nome}\n╰──────────────\n\n👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:\n╰➜ @${num}\n\n💸 𝐏𝐞𝐫𝐝𝐚:\n╰➜ -${fmt(perda)} gold\n\n🎯 𝐗𝐏:\n╰➜ +5\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
       }
     }},
 
     perfil: { aliases: ["meuperfil", "rpgperfil"], async executar({ sock, msg, db, utils, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { u } = getRpg(num)
       const xpNec = xpNecessario(u.nivel)
       const pct = Math.floor(u.xp / xpNec * 10)
-      const barra = "🟨".repeat(Math.min(10, pct)) + "⬛".repeat(Math.max(0, 10 - pct))
+      const barra = "🟦".repeat(Math.min(10, pct)) + "⬛".repeat(Math.max(0, 10 - pct))
       const pet = u.pet ? PETS.find(p => p.id === u.pet) : null
       const petTxt = pet ? pet.emoji + " " + pet.nome : "❌ Sem pet"
-      const txt =
-`╔══════════════════════════════╗
-║   ⚡👤 𝐏𝐄𝐑𝐅𝐈𝐋 👤⚡
-╚══════════════════════════════╝
-
-👤 @${num}
-
-🎖️ Nível: *${u.nivel}*
-${barra} ${u.xp}/${xpNec} XP
-
-💰 Carteira: *${fmt(u.moedas)}*
-🐾 Pet: ${petTxt}
-⛏️ Picareta: ${u.temPicareta ? "✅" : "❌"}
-🎣 Vara: ${u.temVara ? "✅" : "❌"}
-
-⚡ _"O trovão reconhece os fortes."_`
+      const texto = `❄️ • 𝐏𝐄𝐑𝐅𝐈𝐋 •\n\n╭─〔 👤 𝐔𝐒𝐔𝐀́𝐑𝐈𝐎 〕\n│ @${num}\n╰──────────────\n\n🎖️ 𝐍𝐢́𝐯𝐞𝐥:\n╰➜ ${u.nivel}\n${barra} ${u.xp}/${xpNec} XP\n\n💰 𝐂𝐚𝐫𝐭𝐞𝐢𝐫𝐚:\n╰➜ ${fmt(u.moedas)} gold\n\n🐾 𝐏𝐞𝐭:\n╰➜ ${petTxt}\n\n⛏️ 𝐏𝐢𝐜𝐚𝐫𝐞𝐭𝐚:\n╰➜ ${u.temPicareta ? "✅" : "❌"}\n\n🎣 𝐕𝐚𝐫𝐚:\n╰➜ ${u.temVara ? "✅" : "❌"}\n\n❄️ _"O caos reconhece os fortes."_\n\n"${nomeBot}"`
       let fotoUrl = null
       try { fotoUrl = await sock.profilePictureUrl(mJid(num), "image") } catch (_) {}
       if (!fotoUrl) { try { fotoUrl = await sock.profilePictureUrl(sender, "image") } catch (_) {} }
-      if (fotoUrl) {
-        await sock.sendMessage(jid, { image: { url: fotoUrl }, caption: txt, mentions: [mJid(num)] }, { quoted: msg })
-      } else {
-        await sock.sendMessage(jid, { text: txt, mentions: [mJid(num)] }, { quoted: msg })
-      }
+      if (fotoUrl) await sock.sendMessage(jid, { image: { url: fotoUrl }, caption: texto, mentions: [mJid(num)] }, { quoted: msg })
+      else await sock.sendMessage(jid, { text: texto, mentions: [mJid(num)] }, { quoted: msg })
     }},
 
     rank: { aliases: ["ranking", "top"], async executar({ sock, msg, db, utils }) {
       const jid = msg.key.remoteJid
-      if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: "⚡📊 Só em grupos!" }, { quoted: msg })
+      const nomeBot = nomeBotDb(db)
+      if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: `❄️ • 𝐑𝐀𝐍𝐊 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só em grupos.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const { numeros } = await coletarMembros(sock, jid)
-      if (numeros.size === 0) return sock.sendMessage(jid, { text: "⚡💢 Não identifiquei membros!" }, { quoted: msg })
+      if (numeros.size === 0) return sock.sendMessage(jid, { text: `❄️ • 𝐑𝐀𝐍𝐊 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Não identifiquei membros.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const r = dbLer("rpg.json", { usuarios: {} })
-      const lista = Object.entries(r.usuarios || {})
-        .filter(([num]) => numeros.has(num))
-        .map(([num, u]) => {
-          let moedas = u.moedas || 0
-          if (typeof moedas !== "number" || !isFinite(moedas) || moedas < 0) moedas = 0
-          if (moedas > 999999999999) moedas = 999999999999
-          return { num, moedas, nivel: u.nivel || 1 }
-        })
+      const lista = Object.entries(r.usuarios || {}).filter(([num]) => numeros.has(num)).map(([num, u]) => {
+        let moedas = u.moedas || 0
+        if (typeof moedas !== "number" || !isFinite(moedas) || moedas < 0) moedas = 0
+        if (moedas > 999999999999) moedas = 999999999999
+        return { num, moedas, nivel: u.nivel || 1 }
+      })
       lista.sort((a, b) => b.moedas - a.moedas)
       const top = lista.slice(0, 10)
-      if (!top.length) return sock.sendMessage(jid, { text: "⚡📊 Ninguém do grupo tá no RPG!" }, { quoted: msg })
-      let txt = "⚡🏆 *RANKING*\n\n"
+      if (!top.length) return sock.sendMessage(jid, { text: `❄️ • 𝐑𝐀𝐍𝐊 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Ninguém do grupo tá no RPG.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+      let txt = `❄️ • 𝐑𝐀𝐍𝐊𝐈𝐍𝐆 •\n\n╭─〔 🏆 𝐓𝐎𝐏 𝟏𝟎 〕\n│ Os mais ricos do grupo.\n╰──────────────\n\n`
       top.forEach((p, i) => {
         const medalha = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "▸"
-        txt += medalha + " @" + p.num + "\n💰 *" + fmt(p.moedas) + "* | 🎖️ Nv " + p.nivel + "\n\n"
+        txt += `${medalha} @${p.num}\n╰➜ 💰 ${fmt(p.moedas)} | 🎖️ Nv ${p.nivel}\n\n`
       })
+      txt += `"${nomeBot}"`
       await sock.sendMessage(jid, { text: txt, mentions: top.map(p => mJid(p.num)) }, { quoted: msg })
     }},
 
     afk: { aliases: ["ausente"], async executar({ sock, msg, args, db, utils, sender }) {
       const jid = msg.key.remoteJid
-      if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: "⚡💤 Só em grupos!" }, { quoted: msg })
+      const nomeBot = nomeBotDb(db)
+      if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: `❄️ • 𝐀𝐅𝐊 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só em grupos.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const motivo = args.join(" ").trim() || "Sem motivo"
       const afks = db.afk()
@@ -909,38 +876,41 @@ ${barra} ${u.xp}/${xpNec} XP
       afks[jid][sender] = { desde: Date.now(), motivo }
       afks[jid][mJid(num)] = { desde: Date.now(), motivo }
       db.salvarAfk(afks)
-      await sock.sendMessage(jid, { text: "⚡💤 *AFK ATIVADO*\n\n👤 @" + num + "\n📝 *" + motivo + "*", mentions: [mJid(num)] }, { quoted: msg })
+      await sock.sendMessage(jid, { text: `❄️ • 𝐀𝐅𝐊 𝐀𝐓𝐈𝐕𝐀𝐃𝐎 •\n\n╭─〔 💤 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Modo ausente ativo.\n╰──────────────\n\n👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:\n╰➜ @${num}\n\n📝 𝐌𝐨𝐭𝐢𝐯𝐨:\n╰➜ ${motivo}\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
     }},
 
-    mito: { aliases: ["mitos", "fato", "espaco"], async executar({ sock, msg, db, isDono, isSubDono }) {
+    mito: { aliases: ["mitos", "fato", "espaco"], async executar({ sock, msg, db, isDono, isSubDono, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-      if (!ehVip(db, sJ[0] || msg.key.remoteJid, isDono, isSubDono)) return sock.sendMessage(jid, { text: "⚡ Só nobres!" }, { quoted: msg })
+      if (!ehVip(db, sender || sJ[0], isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const f = MITOS[Math.floor(Math.random() * MITOS.length)]
       const uN = msg.key.participant || jid
       const h = new Date().toLocaleTimeString("pt-BR")
-      await sock.sendMessage(jid, { text: "⚡🌌 *FATO*\n\n🛸 _" + f + "_\n\n👤 @" + soNumero(uN) + "\n⏰ " + h, mentions: [uN] }, { quoted: msg })
+      await sock.sendMessage(jid, { text: `❄️ • 𝐅𝐀𝐓𝐎 •\n\n╭─〔 🌌 𝐂𝐔𝐑𝐈𝐎𝐒𝐈𝐃𝐀𝐃𝐄 〕\n│ ${f}\n╰──────────────\n\n👤 @${soNumero(uN)}\n⏰ ${h}\n\n"${nomeBot}"`, mentions: [uN] }, { quoted: msg })
     }},
 
-    napoleao: { async executar({ sock, msg, db, isDono, isSubDono }) {
+    napoleao: { async executar({ sock, msg, db, isDono, isSubDono, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-      if (!ehVip(db, sJ[0] || msg.key.remoteJid, isDono, isSubDono)) return sock.sendMessage(jid, { text: "⚡ Só nobres!" }, { quoted: msg })
+      if (!ehVip(db, sender || sJ[0], isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const f = NAPOLEAO[Math.floor(Math.random() * NAPOLEAO.length)]
       const uN = msg.key.participant || jid
       const h = new Date().toLocaleTimeString("pt-BR")
-      await sock.sendMessage(jid, { text: "⚡⚔️ *NAPOLEÃO*\n\n🔥 _" + f + "_\n\n👤 @" + soNumero(uN) + "\n⏰ " + h, mentions: [uN] }, { quoted: msg })
+      await sock.sendMessage(jid, { text: `❄️ • 𝐍𝐀𝐏𝐎𝐋𝐄𝐀̃𝐎 •\n\n╭─〔 ⚔️ 𝐒𝐀𝐁𝐄𝐃𝐎𝐑𝐈𝐀 〕\n│ ${f}\n╰──────────────\n\n👤 @${soNumero(uN)}\n⏰ ${h}\n\n"${nomeBot}"`, mentions: [uN] }, { quoted: msg })
     }},
 
-    fraseprofunda: { aliases: ["frase", "motivacao"], async executar({ sock, msg, db, isDono, isSubDono }) {
+    fraseprofunda: { aliases: ["frase", "motivacao"], async executar({ sock, msg, db, isDono, isSubDono, sender }) {
       const jid = msg.key.remoteJid
+      const nomeBot = nomeBotDb(db)
       const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-      if (!ehVip(db, sJ[0] || msg.key.remoteJid, isDono, isSubDono)) return sock.sendMessage(jid, { text: "⚡ Só nobres!" }, { quoted: msg })
+      if (!ehVip(db, sender || sJ[0], isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       const f = FRASES[Math.floor(Math.random() * FRASES.length)]
       const uN = msg.key.participant || jid
       const h = new Date().toLocaleTimeString("pt-BR")
-      await sock.sendMessage(jid, { text: "⚡🌙 *FRASE*\n\n💭 _" + f + "_\n\n👤 @" + soNumero(uN) + "\n⏰ " + h, mentions: [uN] }, { quoted: msg })
+      await sock.sendMessage(jid, { text: `❄️ • 𝐅𝐑𝐀𝐒𝐄 •\n\n╭─〔 💭 𝐑𝐄𝐅𝐋𝐄𝐗𝐀̃𝐎 〕\n│ ${f}\n╰──────────────\n\n👤 @${soNumero(uN)}\n⏰ ${h}\n\n"${nomeBot}"`, mentions: [uN] }, { quoted: msg })
     }}
 
   }
-    }
+}
