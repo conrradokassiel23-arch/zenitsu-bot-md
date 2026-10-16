@@ -548,16 +548,11 @@ ${numerosTxt}
 📌 𝐂𝐨𝐦𝐦𝐢𝐭:
 ╰➜ \`${commitHash.slice(0, 7)}\`
 
-📝 𝐔́𝐥𝐭𝐢𝐦𝐚 𝐦𝐮𝐝𝐚𝐧𝐜̧𝐚:
-╰➜ _${commitMsg}_
-
 📅 𝐃𝐚𝐭𝐚:
 ╰➜ ${formatarDataHora(commitData)}
 
 📊 𝐂𝐨𝐦𝐚𝐧𝐝𝐨𝐬:
 ╰➜ ${global.totalComandos || 0} carregados
-
-💡 Use \`!changelog\` pra ver as novidades.
 
 "${nomeBot}"`,
               edit: sent.key
