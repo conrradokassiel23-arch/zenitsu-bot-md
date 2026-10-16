@@ -73,6 +73,16 @@ module.exports = {
         const mentions = sender ? [sender] : []
         const nomeBot = nomeBotDb(db)
 
+        // 🎯 Lê a versão atual
+        const commitPath = path.join(DATA_DIR, "ultimo_commit.json")
+        let versaoAtual = 0
+        if (fs.existsSync(commitPath)) {
+          try {
+            const c = JSON.parse(fs.readFileSync(commitPath, "utf8"))
+            versaoAtual = c.versao || 0
+          } catch (_) {}
+        }
+
         const texto =
 `❄️ • 𝐏𝐀𝐈𝐍𝐄𝐋 𝐃𝐎 𝐌𝐄𝐒𝐓𝐑𝐄 •
 
@@ -93,6 +103,9 @@ module.exports = {
 
 📅 𝐃𝐚𝐭𝐚:
 ╰➜ ${data}
+
+🔥 𝐕𝐞𝐫𝐬𝐚̃𝐨:
+╰➜ *V${versaoAtual}*
 
 ❄️ 𝐂𝐚𝐫𝐠𝐨:
 ╰➜ 𝐌𝐄𝐒𝐓𝐑𝐄
@@ -416,21 +429,46 @@ ${numerosTxt}
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
-        let zipPath, extractDir
-        await sock.sendMessage(jid, {
+
+        const sent = await sock.sendMessage(jid, {
           text:
 `❄️ • 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐍𝐃𝐎 •
 
-╭─〔 📡 𝐕𝐄𝐑𝐈𝐅𝐈𝐂𝐀𝐍𝐃𝐎 〕
-│ Buscando atualizações...
+╭─〔 📡 𝐕𝐄𝐑𝐈𝐅𝐈𝐂𝐀𝐍𝐃𝐎 𝐆𝐈𝐓𝐇𝐔𝐁 〕
+│ Buscando commits novos...
 ╰──────────────
 
-💡 _Aguarde alguns segundos._
+👁️ [░░░░░░░░░░] 0%
 
 "${nomeBot}"`
         }, { quoted: msg })
 
+        const atualizarProgresso = async (pct, titulo, msg) => {
+          const cheios = Math.floor(pct / 10)
+          const barra = "🟦".repeat(cheios) + "⬛".repeat(10 - cheios)
+          try {
+            await sock.sendMessage(jid, {
+              text:
+`❄️ • 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐍𝐃𝐎 •
+
+╭─〔 ${titulo} 〕
+│ ${msg}
+╰──────────────
+
+👁️ [${barra}] ${pct}%
+
+"${nomeBot}"`,
+              edit: sent.key
+            })
+          } catch (_) {}
+        }
+
+        let zipPath, extractDir
+
         try {
+          await new Promise(r => setTimeout(r, 800))
+          await atualizarProgresso(15, "📡 𝐕𝐄𝐑𝐈𝐅𝐈𝐂𝐀𝐍𝐃𝐎", "Buscando commit mais recente...")
+
           if (!fs.existsSync(DATA_DIR)) {
             try { fs.mkdirSync(DATA_DIR, { recursive: true }) } catch (e) {}
           }
@@ -441,58 +479,59 @@ ${numerosTxt}
           const commitHash = apiData.sha
           const commitMsg = (apiData.commit && apiData.commit.message || "").split("\n")[0]
           const commitData = apiData.commit && apiData.commit.author && apiData.commit.author.date
+          const autorCommit = apiData.commit && apiData.commit.author && apiData.commit.author.name || "?"
 
-          const commitSalvo = dbLer("ultimo_commit.json", { hash: null })
+          await atualizarProgresso(30, "📡 𝐕𝐄𝐑𝐈𝐅𝐈𝐂𝐀𝐍𝐃𝐎", "Comparando com versão local...")
 
+          const commitSalvo = dbLer("ultimo_commit.json", { hash: null, versao: 0 })
+          const versaoAtual = commitSalvo.versao || 0
+
+          // 🎯 Já tá atualizado?
           if (commitSalvo.hash === commitHash) {
+            await new Promise(r => setTimeout(r, 500))
             return sock.sendMessage(jid, {
               text:
 `❄️ • 𝐓𝐔𝐃𝐎 𝐄𝐌 𝐎𝐑𝐃𝐄𝐌 •
 
 ╭─〔 ✅ 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐃𝐎 〕
-│ Já está na última versão.
+│ Sua versão está em dia.
 ╰──────────────
 
-『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
+『 𝐕𝐞𝐫𝐬𝐚̃𝐨 𝐀𝐭𝐮𝐚𝐥 』 ↴
 
-📌 𝐕𝐞𝐫𝐬𝐚̃𝐨:
+🔥 𝐕𝐞𝐫𝐬𝐚̃𝐨:
+╰➜ *V${versaoAtual}*
+
+📌 𝐂𝐨𝐦𝐦𝐢𝐭:
 ╰➜ \`${commitHash.slice(0, 7)}\`
 
-📝 𝐌𝐮𝐝𝐚𝐧𝐜̧𝐚:
+📝 𝐔́𝐥𝐭𝐢𝐦𝐚 𝐦𝐮𝐝𝐚𝐧𝐜̧𝐚:
 ╰➜ _${commitMsg}_
+
+👤 𝐀𝐮𝐭𝐨𝐫:
+╰➜ ${autorCommit}
 
 📅 𝐃𝐚𝐭𝐚:
 ╰➜ ${formatarDataHora(commitData)}
+
+📊 𝐂𝐨𝐦𝐚𝐧𝐝𝐨𝐬:
+╰➜ ${global.totalComandos || 0} carregados
 
 💡 Use \`!changelog\` pra ver as novidades.
 
-"${nomeBot}"`
-            }, { quoted: msg })
+"${nomeBot}"`,
+              edit: sent.key
+            })
           }
 
-          await sock.sendMessage(jid, {
-            text:
-`❄️ • 𝐍𝐎𝐕𝐀 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐂̧𝐀̃𝐎 •
+          // 🎯 NOVA VERSÃO: incrementa +1
+          const versaoNova = versaoAtual + 1
+          const cat = categorizarCommit(commitMsg)
 
-╭─〔 ♦️ 𝐃𝐄𝐓𝐄𝐂𝐓𝐀𝐃𝐀 〕
-│ Baixando arquivos novos...
-╰──────────────
+          await atualizarProgresso(40, "🔥 𝐍𝐎𝐕𝐀 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐂̧𝐀̃𝐎", `V${versaoAtual} → V${versaoNova}`)
+          await new Promise(r => setTimeout(r, 800))
 
-『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
-
-📌 𝐕𝐞𝐫𝐬𝐚̃𝐨:
-╰➜ \`${commitHash.slice(0, 7)}\`
-
-📝 𝐌𝐮𝐝𝐚𝐧𝐜̧𝐚:
-╰➜ _${commitMsg}_
-
-📅 𝐃𝐚𝐭𝐚:
-╰➜ ${formatarDataHora(commitData)}
-
-📥 _Baixando..._
-
-"${nomeBot}"`
-          }, { quoted: msg })
+          await atualizarProgresso(55, "📥 𝐁𝐀𝐈𝐗𝐀𝐍𝐃𝐎", "Baixando arquivos do GitHub...")
 
           const tmp = os.tmpdir()
           const id = Date.now()
@@ -504,6 +543,8 @@ ${numerosTxt}
           if (!r.ok) throw new Error("Download falhou: HTTP " + r.status)
           const buffer = Buffer.from(await r.arrayBuffer())
           fs.writeFileSync(zipPath, buffer)
+
+          await atualizarProgresso(70, "📦 𝐄𝐗𝐓𝐑𝐀𝐈𝐍𝐃𝐎", "Descompactando arquivos...")
 
           if (!fs.existsSync(extractDir)) fs.mkdirSync(extractDir, { recursive: true })
 
@@ -517,6 +558,8 @@ ${numerosTxt}
           const pastas = fs.readdirSync(extractDir).filter(f => fs.statSync(path.join(extractDir, f)).isDirectory())
           if (!pastas.length) throw new Error("Zip vazio")
           const raiz = path.join(extractDir, pastas[0])
+
+          await atualizarProgresso(85, "🔧 𝐀𝐏𝐋𝐈𝐂𝐀𝐍𝐃𝐎", "Copiando arquivos novos...")
 
           const preservar = ["auth", "data", "node_modules", ".git", "config.js"]
 
@@ -539,49 +582,70 @@ ${numerosTxt}
 
           copiarRecursivo(raiz, BOT_DIR)
 
+          // 🎯 Salva versão NOVA
           const commitPath = path.join(DATA_DIR, "ultimo_commit.json")
           fs.writeFileSync(commitPath, JSON.stringify({
             hash: commitHash,
+            versao: versaoNova,
             msg: commitMsg,
             data: commitData,
+            autor: autorCommit,
             atualizadoEm: Date.now()
           }, null, 2))
 
           try { fs.unlinkSync(zipPath) } catch (_) {}
           try { fs.rmSync(extractDir, { recursive: true, force: true }) } catch (_) {}
 
+          await atualizarProgresso(95, "♻️ 𝐑𝐄𝐂𝐀𝐑𝐑𝐄𝐆𝐀𝐍𝐃𝐎", "Recarregando menus...")
           try { if (global.__carregarMenus) global.__carregarMenus() } catch (e) { console.log("Aviso reload:", e.message) }
+
+          await atualizarProgresso(100, "✅ 𝐂𝐎𝐍𝐂𝐋𝐔𝐈́𝐃𝐎", "Tudo aplicado!")
+          await new Promise(r => setTimeout(r, 1000))
 
           await sock.sendMessage(jid, {
             text:
 `❄️ • 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐃𝐎 •
 
-╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕
-│ Tudo assimilado com sucesso.
+╭─〔 🚀 𝐍𝐎𝐕𝐀 𝐕𝐄𝐑𝐒𝐀̃𝐎 〕
+│ V${versaoAtual} → *V${versaoNova}*
 ╰──────────────
 
-『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
+『 𝐎 𝐐𝐔𝐄 𝐌𝐔𝐃𝐎𝐔 』 ↴
 
-📌 𝐕𝐞𝐫𝐬𝐚̃𝐨:
+🔥 𝐕𝐞𝐫𝐬𝐚̃𝐨 𝐧𝐨𝐯𝐚:
+╰➜ *V${versaoNova}*
+
+📌 𝐂𝐨𝐦𝐦𝐢𝐭:
 ╰➜ \`${commitHash.slice(0, 7)}\`
 
-📝 𝐌𝐮𝐝𝐚𝐧𝐜̧𝐚:
+${cat.emoji} 𝐓𝐢𝐩𝐨:
+╰➜ ${cat.tipo}
+
+📝 𝐃𝐞𝐬𝐜𝐫𝐢𝐜̧𝐚̃𝐨:
 ╰➜ _${commitMsg}_
+
+👤 𝐀𝐮𝐭𝐨𝐫:
+╰➜ ${autorCommit}
 
 📅 𝐃𝐚𝐭𝐚:
 ╰➜ ${formatarDataHora(commitData)}
 
+━━━━━━━━━━━━━━━━━━━━━━
 🔒 𝐏𝐫𝐞𝐬𝐞𝐫𝐯𝐚𝐝𝐨:
 ╰➜ auth/ (sessão)
 ╰➜ data/ (dados)
 ╰➜ config.js
 
+📊 𝐂𝐨𝐦𝐚𝐧𝐝𝐨𝐬:
+╰➜ ${global.totalComandos || 0} carregados
+
 ♦️ 𝐑𝐞𝐢𝐧𝐢𝐜𝐢𝐚𝐧𝐝𝐨 𝐞𝐦 3𝐬...
 
-"${nomeBot}"`
-          }, { quoted: msg })
+"${nomeBot}"`,
+            edit: sent.key
+          })
 
-          console.log("❄️ ATUALIZAÇÃO concluída. Reiniciando com código 99...")
+          console.log(`❄️ ATUALIZAÇÃO V${versaoNova} concluída. Reiniciando...`)
           setTimeout(() => process.exit(99), 3000)
 
         } catch (e) {
@@ -598,8 +662,9 @@ ${numerosTxt}
 
 ⚠️ \`${e.message}\`
 
-"${nomeBot}"`
-          }, { quoted: msg })
+"${nomeBot}"`,
+            edit: sent.key
+          })
         }
       }
     },
@@ -1163,7 +1228,7 @@ ${typeof info === "string" ? "🔗 `" + info + "`" : "✅ Entrada realizada"}
         const cfg = db.config()
         cfg.slow = opcao === "on"
         db.salvarConfig(cfg)
-        await sock.sendMessage(jid, { text: `❄️ • 𝐌𝐎𝐃𝐎 𝐋𝐄𝐍𝐓𝐎 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Configuração atualizada.\n╰──────────────\n\n⚙️ 𝐒𝐭𝐚𝐭𝐮𝐬:\n╰➜ ${opcao.toUpperCase()}\n\n"${nomeBot}"` }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐌𝐎𝐃𝐎 𝐋𝐄𝐍𝐓𝐎 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ ${opcao.toUpperCase()}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -1174,10 +1239,10 @@ ${typeof info === "string" ? "🔗 `" + info + "`" : "✅ Entrada realizada"}
         const nomeBot = nomeBotDb(db)
         const opcao = (args[0] || "").toLowerCase()
         const a = db.aluguel()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: `❄️ • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Status atual.\n╰──────────────\n\n⚙️ 𝐀𝐭𝐢𝐯𝐨:\n╰➜ ${a.ativo ? "ON ✅" : "OFF ❌"}\n\n💡 \`!aluguel on/off\`\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: `❄️ • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Status: ${a.ativo ? "ON ✅" : "OFF ❌"}\n╰──────────────\n\n💡 \`!aluguel on/off\`\n\n"${nomeBot}"` }, { quoted: msg })
         a.ativo = opcao === "on"
         db.salvarAluguel(a)
-        await sock.sendMessage(jid, { text: `❄️ • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ ${opcao === "on" ? "Sistema ativado." : "Sistema desativado."}\n╰──────────────\n\n⚙️ ${opcao.toUpperCase()}\n\n"${nomeBot}"` }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ ${opcao.toUpperCase()}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -1205,7 +1270,7 @@ ${typeof info === "string" ? "🔗 `" + info + "`" : "✅ Entrada realizada"}
           else if (u === "ano") ms = v * 365 * 24 * 60 * 60 * 1000
           totalMs += ms
         }
-        if (totalMs <= 0) return sock.sendMessage(jid, { text: `❄️ • 𝐀𝐃𝐃𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Formato inválido.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (totalMs <= 0) return sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Formato inválido.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         const a = db.aluguel()
         a.grupos = a.grupos || {}
         const agora = Date.now()
@@ -1213,7 +1278,7 @@ ${typeof info === "string" ? "🔗 `" + info + "`" : "✅ Entrada realizada"}
         a.grupos[jid] = atual + totalMs
         if (!a.ativo) a.ativo = true
         db.salvarAluguel(a)
-        await sock.sendMessage(jid, { text: `❄️ • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 𝐀𝐃𝐈𝐂𝐈𝐎𝐍𝐀𝐃𝐎 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Pague em dia, mortal.\n╰──────────────\n\n⏰ 𝐄𝐱𝐩𝐢𝐫𝐚 𝐞𝐦:\n╰➜ ${utils.formatarTempo(a.grupos[jid] - agora)}\n\n"${nomeBot}"` }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 𝐀𝐃𝐈𝐂𝐈𝐎𝐍𝐀𝐃𝐎 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Expira em: *${utils.formatarTempo(a.grupos[jid] - agora)}*\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -1225,7 +1290,7 @@ ${typeof info === "string" ? "🔗 `" + info + "`" : "✅ Entrada realizada"}
         const a = db.aluguel()
         const agora = Date.now()
         const entradas = Object.entries(a.grupos || {}).filter(e => e[1] > agora)
-        if (!entradas.length) return sock.sendMessage(jid, { text: `❄️ • 𝐍𝐀𝐃𝐀 𝐀𝐋𝐔𝐆𝐀𝐃𝐎 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Nem eu cobro nada hoje.\n╰──────────────\n\n"Aproveitem."\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!entradas.length) return sock.sendMessage(jid, { text: `❄️ • 𝐍𝐀𝐃𝐀 𝐀𝐋𝐔𝐆𝐀𝐃𝐎 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Nada alugado.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         let txt = `❄️ • 𝐓𝐄𝐑𝐑𝐈𝐓𝐎́𝐑𝐈𝐎𝐒 𝐀𝐋𝐔𝐆𝐀𝐃𝐎𝐒 •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
         for (const [jidG, exp] of entradas) {
           try {
@@ -1248,12 +1313,12 @@ ${typeof info === "string" ? "🔗 `" + info + "`" : "✅ Entrada realizada"}
         const a = db.aluguel()
         a.grupos = a.grupos || {}
         if (!args.length && jid.endsWith("@g.us")) {
-          if (!a.grupos[jid]) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐄𝐌 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Meus olhos veem que tá vazio.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          if (!a.grupos[jid]) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐄𝐌 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Vazio.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           delete a.grupos[jid]
           db.salvarAluguel(a)
           return sock.sendMessage(jid, { text: `❄️ • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐎 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Libertado.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
-        await sock.sendMessage(jid, { text: `❄️ • 𝐃𝐄𝐋𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Use o comando certo.\n╰──────────────\n\n💡 \`!delaluguel <nome>\`\n╰➜ Ou em grupo: \`!delaluguel\`\n\n"${nomeBot}"` }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐃𝐄𝐋𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Use em grupo: \`!delaluguel\`\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -1279,7 +1344,7 @@ ${typeof info === "string" ? "🔗 `" + info + "`" : "✅ Entrada realizada"}
         if (b.grupos && b.grupos[jid]) {
           delete b.grupos[jid]
           db.salvarBangp(b)
-          return sock.sendMessage(jid, { text: `❄️ • 𝐋𝐈𝐁𝐄𝐑𝐀𝐃𝐎 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Perdoado... uma vez.\n╰──────────────\n\n_"Aproveitem."_\n\n"${nomeBot}"` }, { quoted: msg })
+          return sock.sendMessage(jid, { text: `❄️ • 𝐋𝐈𝐁𝐄𝐑𝐀𝐃𝐎 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Perdoado... uma vez.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
         await sock.sendMessage(jid, { text: `❄️ • 𝐍𝐀̃𝐎 𝐓𝐀́ 𝐁𝐀𝐍𝐈𝐃𝐎 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Você não presta atenção.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       }
@@ -1292,7 +1357,7 @@ ${typeof info === "string" ? "🔗 `" + info + "`" : "✅ Entrada realizada"}
         const nomeBot = nomeBotDb(db)
         const b = db.bangp()
         const grupos = Object.keys(b.grupos || {})
-        if (!grupos.length) return sock.sendMessage(jid, { text: `❄️ • 𝐍𝐀𝐃𝐀 𝐁𝐀𝐍𝐈𝐃𝐎 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Por enquanto.\n╰──────────────\n\n_"Mas fica de olho."_\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!grupos.length) return sock.sendMessage(jid, { text: `❄️ • 𝐍𝐀𝐃𝐀 𝐁𝐀𝐍𝐈𝐃𝐎 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Por enquanto.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         let txt = `❄️ • 𝐁𝐀𝐍𝐈𝐃𝐎𝐒 •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
         grupos.forEach((g, i) => { txt += `╰➜ ${i + 1}. \`${g}\`\n` })
         txt += `\n📊 𝐓𝐨𝐭𝐚𝐥: ${grupos.length}\n\n"${nomeBot}"`
