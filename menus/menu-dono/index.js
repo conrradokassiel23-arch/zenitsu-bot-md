@@ -47,6 +47,52 @@ function nomeBotDb(db) {
   try { return db.config().nomeBot || "Akaza Bot" } catch { return "Akaza Bot" }
 }
 
+// 🆕 Extrai comandos novos da MENSAGEM do commit
+function extrairComandosDaMsg(mensagem) {
+  if (!mensagem) return []
+  const encontrados = []
+
+  const padroes = [
+    /\b(?:add|adicionado|adiciona|novo|nova|criado|criada|feat|feature|comando[s]?[:\s]+)\s*[:\-]?\s*(.+)/gi,
+  ]
+
+  let trecho = ""
+  for (const re of padroes) {
+    let m
+    while ((m = re.exec(mensagem)) !== null) {
+      trecho += " " + m[1]
+    }
+  }
+
+  if (!trecho) return []
+
+  const bruto = trecho
+    .replace(/[\(\)\[\]\{\}\.,;!?"']/g, " ")
+    .replace(/\s+/g, " ")
+    .split(/[\s,e\+]+/i)
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean)
+
+  const blacklist = [
+    "o", "a", "os", "as", "um", "uma", "de", "do", "da", "dos", "das",
+    "e", "ou", "para", "com", "sem", "no", "na", "em", "por",
+    "comando", "comandos", "novo", "nova", "novos", "novas",
+    "add", "adicionado", "adiciona", "criado", "criada",
+    "feat", "feature", "fix", "bug", "corrigido", "correcao",
+    "sistema", "sistemas", "funcao", "funcoes", "arquivo", "arquivos"
+  ]
+
+  for (const p of bruto) {
+    if (blacklist.includes(p)) continue
+    if (p.length < 3) continue
+    if (p.length > 30) continue
+    if (!/^[a-z][a-z0-9_-]*$/.test(p)) continue
+    if (!encontrados.includes(p)) encontrados.push(p)
+  }
+
+  return encontrados.slice(0, 10)
+}
+
 module.exports = {
   menu: "menu-dono",
   grupoOnly: false,
@@ -73,7 +119,6 @@ module.exports = {
         const mentions = sender ? [sender] : []
         const nomeBot = nomeBotDb(db)
 
-        // 🎯 Lê a versão atual
         const commitPath = path.join(DATA_DIR, "ultimo_commit.json")
         let versaoAtual = 0
         if (fs.existsSync(commitPath)) {
@@ -479,14 +524,12 @@ ${numerosTxt}
           const commitHash = apiData.sha
           const commitMsg = (apiData.commit && apiData.commit.message || "").split("\n")[0]
           const commitData = apiData.commit && apiData.commit.author && apiData.commit.author.date
-          const autorCommit = apiData.commit && apiData.commit.author && apiData.commit.author.name || "?"
 
           await atualizarProgresso(30, "📡 𝐕𝐄𝐑𝐈𝐅𝐈𝐂𝐀𝐍𝐃𝐎", "Comparando com versão local...")
 
           const commitSalvo = dbLer("ultimo_commit.json", { hash: null, versao: 0 })
           const versaoAtual = commitSalvo.versao || 0
 
-          // 🎯 Já tá atualizado?
           if (commitSalvo.hash === commitHash) {
             await new Promise(r => setTimeout(r, 500))
             return sock.sendMessage(jid, {
@@ -508,9 +551,6 @@ ${numerosTxt}
 📝 𝐔́𝐥𝐭𝐢𝐦𝐚 𝐦𝐮𝐝𝐚𝐧𝐜̧𝐚:
 ╰➜ _${commitMsg}_
 
-👤 𝐀𝐮𝐭𝐨𝐫:
-╰➜ ${autorCommit}
-
 📅 𝐃𝐚𝐭𝐚:
 ╰➜ ${formatarDataHora(commitData)}
 
@@ -524,14 +564,13 @@ ${numerosTxt}
             })
           }
 
-          // 🎯 NOVA VERSÃO: incrementa +1
           const versaoNova = versaoAtual + 1
           const cat = categorizarCommit(commitMsg)
 
-          await atualizarProgresso(40, "🔥 𝐍𝐎𝐕𝐀 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐂̧𝐀̃𝐎", `V${versaoAtual} → V${versaoNova}`)
-          await new Promise(r => setTimeout(r, 800))
+          await atualizarProgresso(45, "🔥 𝐍𝐎𝐕𝐀 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐂̧𝐀̃𝐎", `V${versaoAtual} → V${versaoNova}`)
+          await new Promise(r => setTimeout(r, 700))
 
-          await atualizarProgresso(55, "📥 𝐁𝐀𝐈𝐗𝐀𝐍𝐃𝐎", "Baixando arquivos do GitHub...")
+          await atualizarProgresso(60, "📥 𝐁𝐀𝐈𝐗𝐀𝐍𝐃𝐎", "Baixando arquivos do GitHub...")
 
           const tmp = os.tmpdir()
           const id = Date.now()
@@ -544,7 +583,7 @@ ${numerosTxt}
           const buffer = Buffer.from(await r.arrayBuffer())
           fs.writeFileSync(zipPath, buffer)
 
-          await atualizarProgresso(70, "📦 𝐄𝐗𝐓𝐑𝐀𝐈𝐍𝐃𝐎", "Descompactando arquivos...")
+          await atualizarProgresso(72, "📦 𝐄𝐗𝐓𝐑𝐀𝐈𝐍𝐃𝐎", "Descompactando arquivos...")
 
           if (!fs.existsSync(extractDir)) fs.mkdirSync(extractDir, { recursive: true })
 
@@ -582,14 +621,12 @@ ${numerosTxt}
 
           copiarRecursivo(raiz, BOT_DIR)
 
-          // 🎯 Salva versão NOVA
           const commitPath = path.join(DATA_DIR, "ultimo_commit.json")
           fs.writeFileSync(commitPath, JSON.stringify({
             hash: commitHash,
             versao: versaoNova,
             msg: commitMsg,
             data: commitData,
-            autor: autorCommit,
             atualizadoEm: Date.now()
           }, null, 2))
 
@@ -600,7 +637,28 @@ ${numerosTxt}
           try { if (global.__carregarMenus) global.__carregarMenus() } catch (e) { console.log("Aviso reload:", e.message) }
 
           await atualizarProgresso(100, "✅ 𝐂𝐎𝐍𝐂𝐋𝐔𝐈́𝐃𝐎", "Tudo aplicado!")
-          await new Promise(r => setTimeout(r, 1000))
+          await new Promise(r => setTimeout(r, 1200))
+
+          const comandosNovos = extrairComandosDaMsg(commitMsg)
+
+          let blocoComandos = ""
+          if (comandosNovos.length) {
+            blocoComandos = `\n\n✨ 𝐍𝐨𝐯𝐨𝐬 𝐜𝐨𝐦𝐚𝐧𝐝𝐨𝐬:\n`
+            comandosNovos.forEach(c => {
+              blocoComandos += `╰➜ \`!${c}\`\n`
+            })
+          }
+
+          const explicacao = (() => {
+            const m = commitMsg.toLowerCase()
+            if (m.includes("fix") || m.includes("corrig") || m.includes("bug") || m.includes("arrum")) return "Correção de bugs e ajustes internos."
+            if (m.includes("add") || m.includes("novo") || m.includes("cria") || m.includes("feat") || m.includes("adicionado")) return "Novos recursos e funcionalidades adicionadas."
+            if (m.includes("remove") || m.includes("delet")) return "Recursos antigos foram removidos."
+            if (m.includes("update") || m.includes("atualiz") || m.includes("melhor")) return "Melhorias de desempenho e ajustes."
+            if (m.includes("rename") || m.includes("nome") || m.includes("tema")) return "Alterações visuais e de identidade."
+            if (m.includes("doc") || m.includes("readme")) return "Atualização da documentação."
+            return "Melhorias gerais aplicadas ao bot."
+          })()
 
           await sock.sendMessage(jid, {
             text:
@@ -612,23 +670,17 @@ ${numerosTxt}
 
 『 𝐎 𝐐𝐔𝐄 𝐌𝐔𝐃𝐎𝐔 』 ↴
 
-🔥 𝐕𝐞𝐫𝐬𝐚̃𝐨 𝐧𝐨𝐯𝐚:
-╰➜ *V${versaoNova}*
-
-📌 𝐂𝐨𝐦𝐦𝐢𝐭:
-╰➜ \`${commitHash.slice(0, 7)}\`
+📝 𝐃𝐞𝐬𝐜𝐫𝐢𝐜̧𝐚̃𝐨:
+╰➜ _${commitMsg}_${blocoComandos}
 
 ${cat.emoji} 𝐓𝐢𝐩𝐨:
 ╰➜ ${cat.tipo}
 
-📝 𝐃𝐞𝐬𝐜𝐫𝐢𝐜̧𝐚̃𝐨:
-╰➜ _${commitMsg}_
-
-👤 𝐀𝐮𝐭𝐨𝐫:
-╰➜ ${autorCommit}
-
 📅 𝐃𝐚𝐭𝐚:
 ╰➜ ${formatarDataHora(commitData)}
+
+💡 𝐄𝐱𝐩𝐥𝐢𝐜𝐚𝐜̧𝐚̃𝐨:
+╰➜ ${explicacao}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 🔒 𝐏𝐫𝐞𝐬𝐞𝐫𝐯𝐚𝐝𝐨:
