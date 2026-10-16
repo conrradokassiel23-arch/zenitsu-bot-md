@@ -3,10 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "while true; do node index.js; code=$?; if [ $code -eq 2 ]; then echo '🛑 Bot desligado.'; break; fi; echo '🔥 Reiniciando em 2s...'; sleep 2; done"
+    "start": "while true; do node index.js; code=$?; if [ $code -eq 2 ]; then echo '🛑 Bot desligado pelo dono.'; break; fi; echo '🔥 Reiniciando em 2s (código: '$code')...'; sleep 2; done"
   },
   "dependencies": {
-    "@distube/ytdl-core": "^4.16.4",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@hapi/boom": "^10.0.1",
     "@itsliaaa/baileys": "^0.3.18-final",
