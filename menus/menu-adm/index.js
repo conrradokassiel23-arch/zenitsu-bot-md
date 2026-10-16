@@ -414,6 +414,9 @@ ${listaCat || "╰➜ _nenhuma_"}
 ╰➜ \`${p}fechargp hh:mm\`
 ╰➜ \`${p}fotoabrir\` (reply)
 ╰➜ \`${p}fotofechar\` (reply)
+╰➜ \`${p}legendaabrir <texto>\`
+╰➜ \`${p}legendafechar <texto>\`
+╰➜ \`${p}limparfotos\`
 
 🎁 𝐒𝐎𝐑𝐓𝐄𝐈𝐎
 ╰➜ \`${p}sorteio <prêmio> <tempo>\`
@@ -1122,9 +1125,10 @@ ${listaCat || "╰➜ _nenhuma_"}
           g[jid].fotoAbrir = buffer.toString("base64")
           if (legenda) g[jid].legendaAbrir = legenda
           db.salvarGrupos(g)
-          return sock.sendMessage(jid, { image: buffer, caption: msgSucesso("𝐅𝐎𝐓𝐎 𝐀𝐁𝐑𝐈𝐑 𝐒𝐀𝐋𝐕𝐀", "Imagem de abertura salva.", "🖼️ _Aplicada ao grupo._", null, nomeBot) }, { quoted: msg })
+          return sock.sendMessage(jid, { image: buffer, caption: msgSucesso("𝐅𝐎𝐓𝐎 𝐀𝐁𝐑𝐈𝐑 𝐒𝐀𝐋𝐕𝐀", "Imagem de abertura salva.", (legenda ? lineEmoji("📝", "𝐋𝐞𝐠𝐞𝐧𝐝𝐚", legenda) : "🖼️ _Aplicada ao grupo._"), null, nomeBot) }, { quoted: msg })
         }
         if (legenda) { g[jid].legendaAbrir = legenda; db.salvarGrupos(g); return sock.sendMessage(jid, { text: msgSucesso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀 𝐒𝐀𝐋𝐕𝐀", "Legenda salva.", lineEmoji("📝", "𝐓𝐞𝐱𝐭𝐨", legenda), null, nomeBot) }, { quoted: msg }) }
+        return sock.sendMessage(jid, { text: msgAviso("𝐅𝐎𝐓𝐎 𝐀𝐁𝐑𝐈𝐑", "Envie ou responda uma imagem.", "💡 `!fotoabrir` (reply imagem)", null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -1144,11 +1148,85 @@ ${listaCat || "╰➜ _nenhuma_"}
           g[jid].fotoFechar = buffer.toString("base64")
           if (legenda) g[jid].legendaFechar = legenda
           db.salvarGrupos(g)
-          return sock.sendMessage(jid, { image: buffer, caption: msgSucesso("𝐅𝐎𝐓𝐎 𝐅𝐄𝐂𝐇𝐀𝐑 𝐒𝐀𝐋𝐕𝐀", "Imagem de fechamento salva.", "🖼️ _Aplicada ao grupo._", null, nomeBot) }, { quoted: msg })
+          return sock.sendMessage(jid, { image: buffer, caption: msgSucesso("𝐅𝐎𝐓𝐎 𝐅𝐄𝐂𝐇𝐀𝐑 𝐒𝐀𝐋𝐕𝐀", "Imagem de fechamento salva.", (legenda ? lineEmoji("📝", "𝐋𝐞𝐠𝐞𝐧𝐝𝐚", legenda) : "🖼️ _Aplicada ao grupo._"), null, nomeBot) }, { quoted: msg })
         }
         if (legenda) { g[jid].legendaFechar = legenda; db.salvarGrupos(g); return sock.sendMessage(jid, { text: msgSucesso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀 𝐒𝐀𝐋𝐕𝐀", "Legenda salva.", lineEmoji("📝", "𝐓𝐞𝐱𝐭𝐨", legenda), null, nomeBot) }, { quoted: msg }) }
+        return sock.sendMessage(jid, { text: msgAviso("𝐅𝐎𝐓𝐎 𝐅𝐄𝐂𝐇𝐀𝐑", "Envie ou responda uma imagem.", "💡 `!fotofechar` (reply imagem)", null, nomeBot) }, { quoted: msg })
       }
     },
+
+    // ============================================================
+    // 🆕 NOVOS COMANDOS DE LEGENDA (separados)
+    // ============================================================
+
+    legendaabrir: {
+      aliases: ["setlegendaabrir", "legendabrir", "legendaabrirgp"],
+      adminOnly: true, grupoOnly: true,
+      async executar({ sock, msg, args, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        let t = args.join(" ").trim()
+        if (!t) {
+          const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
+          const q = ctx.quotedMessage
+          if (q) t = q.conversation || (q.extendedTextMessage && q.extendedTextMessage.text) || (q.imageMessage && q.imageMessage.caption) || ""
+        }
+        if (!t) return sock.sendMessage(jid, { text: msgAviso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀 𝐀𝐁𝐑𝐈𝐑", "Informe o texto.", "💡 `!legendaabrir <texto>`\n╰➜ ou responda uma msg", null, nomeBot) }, { quoted: msg })
+        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].legendaAbrir = t; db.salvarGrupos(g)
+        await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀 𝐀𝐁𝐑𝐈𝐑 𝐒𝐀𝐋𝐕𝐀", "Será enviada junto com a foto ao abrir o grupo.", lineEmoji("📝", "𝐓𝐞𝐱𝐭𝐨", t), null, nomeBot) }, { quoted: msg })
+      }
+    },
+
+    legendafechar: {
+      aliases: ["setlegendafechar", "legendfechar", "legendafechargp"],
+      adminOnly: true, grupoOnly: true,
+      async executar({ sock, msg, args, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        let t = args.join(" ").trim()
+        if (!t) {
+          const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
+          const q = ctx.quotedMessage
+          if (q) t = q.conversation || (q.extendedTextMessage && q.extendedTextMessage.text) || (q.imageMessage && q.imageMessage.caption) || ""
+        }
+        if (!t) return sock.sendMessage(jid, { text: msgAviso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀 𝐅𝐄𝐂𝐇𝐀𝐑", "Informe o texto.", "💡 `!legendafechar <texto>`\n╰➜ ou responda uma msg", null, nomeBot) }, { quoted: msg })
+        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].legendaFechar = t; db.salvarGrupos(g)
+        await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀 𝐅𝐄𝐂𝐇𝐀𝐑 𝐒𝐀𝐋𝐕𝐀", "Será enviada junto com a foto ao fechar o grupo.", lineEmoji("📝", "𝐓𝐞𝐱𝐭𝐨", t), null, nomeBot) }, { quoted: msg })
+      }
+    },
+
+    limparfotos: {
+      aliases: ["rmsfotos", "resetfotos", "limparfoto"],
+      adminOnly: true, grupoOnly: true,
+      async executar({ sock, msg, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const g = db.grupos(); g[jid] = g[jid] || {}
+        const tinha = {
+          fotoAbrir: !!g[jid].fotoAbrir,
+          fotoFechar: !!g[jid].fotoFechar,
+          legendaAbrir: !!g[jid].legendaAbrir,
+          legendaFechar: !!g[jid].legendaFechar
+        }
+        delete g[jid].fotoAbrir
+        delete g[jid].fotoFechar
+        delete g[jid].legendaAbrir
+        delete g[jid].legendaFechar
+        db.salvarGrupos(g)
+        await sock.sendMessage(jid, {
+          text: msgSucesso("𝐋𝐈𝐌𝐏𝐄𝐙𝐀 𝐅𝐄𝐈𝐓𝐀", "Fotos e legendas de abrir/fechar foram removidas.", 
+            lineEmoji("🖼️", "𝐅𝐨𝐭𝐨 𝐚𝐛𝐫𝐢𝐫", tinha.fotoAbrir ? "removida" : "não tinha") + "\n" +
+            lineEmoji("🖼️", "𝐅𝐨𝐭𝐨 𝐟𝐞𝐜𝐡𝐚𝐫", tinha.fotoFechar ? "removida" : "não tinha") + "\n" +
+            lineEmoji("📝", "𝐋𝐞𝐠𝐞𝐧𝐝𝐚 𝐚𝐛𝐫𝐢𝐫", tinha.legendaAbrir ? "removida" : "não tinha") + "\n" +
+            lineEmoji("📝", "𝐋𝐞𝐠𝐞𝐧𝐝𝐚 𝐟𝐞𝐜𝐡𝐚𝐫", tinha.legendaFechar ? "removida" : "não tinha"),
+            null, nomeBot)
+        }, { quoted: msg })
+      }
+    },
+
+    // ============================================================
+    // FIM DOS NOVOS COMANDOS
+    // ============================================================
 
     sorteio: {
       adminOnly: true, grupoOnly: true,
@@ -1246,10 +1324,6 @@ ${listaCat || "╰➜ _nenhuma_"}
         await sock.sendMessage(jid, { text: txt, mentions: mentions }, { quoted: msg })
       }
     },
-
-    // ============================================================
-    // 🎴 FIGURINHAS COMANDO
-    // ============================================================
 
     rgfig: {
       aliases: ["registrarfig", "addfigcmd", "savefig"],
