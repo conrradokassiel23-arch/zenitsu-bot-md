@@ -111,6 +111,7 @@ module.exports = {
 ╰➜ \`${p}fotocmd\` (reply)
 ╰➜ \`${p}nomebot <nome>\`
 ╰➜ \`${p}teste\` (reply)
+╰➜ \`${p}sora <descrição>\`
 
 🌙 𝐒𝐈𝐒𝐓𝐄𝐌𝐀
 ╰➜ \`${p}atualizar\`
@@ -165,14 +166,12 @@ module.exports = {
       }
     },
 
-    // ============ TESTE (JSON da mensagem citada) ============
     teste: {
       aliases: ["json", "debugmsg", "verbot"],
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
 
-        // 🎯 Pega a mensagem citada
         const ctx = (msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo)
                  || (msg.message && msg.message.imageMessage && msg.message.imageMessage.contextInfo)
                  || (msg.message && msg.message.videoMessage && msg.message.videoMessage.contextInfo)
@@ -195,7 +194,6 @@ module.exports = {
           }, { quoted: msg })
         }
 
-        // 🔍 Monta o "info" igual o código de referência
         const info = {
           key: {
             remoteJid: jid,
@@ -209,7 +207,6 @@ module.exports = {
           message: quoted
         }
 
-        // 🔧 Quebra em pedaços de 4000 caracteres (limite do WhatsApp)
         const jsonStr = JSON.stringify(info, null, 3)
         const pedacos = []
         const tamanhoMax = 3900
@@ -217,7 +214,6 @@ module.exports = {
           pedacos.push(jsonStr.slice(i, i + tamanhoMax))
         }
 
-        // 📤 Manda o primeiro pedaço com cabeçalho bonito
         await sock.sendMessage(jid, {
           text:
 `❄️ • 𝐉𝐒𝐎𝐍 𝐃𝐀 𝐌𝐄𝐍𝐒𝐀𝐆𝐄𝐌 •
@@ -236,10 +232,126 @@ module.exports = {
 ${pedacos[0]}\`\`\``
         }, { quoted: msg })
 
-        // 📤 Manda os pedaços restantes
         for (let i = 1; i < pedacos.length; i++) {
           await sock.sendMessage(jid, {
             text: `\`\`\`json\n${pedacos[i]}\`\`\``
+          }, { quoted: msg })
+        }
+      }
+    },
+
+    sora: {
+      aliases: ["gerarvideo", "iavideo"],
+      async executar({ sock, msg, args, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const prompt = args.join(" ").trim()
+
+        if (!prompt) {
+          return sock.sendMessage(jid, {
+            text:
+`❄️ • 𝐒𝐎𝐑𝐀 𝐕𝐈́𝐃𝐄𝐎 •
+
+╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕
+│ Informe a descrição do vídeo.
+╰──────────────
+
+💡 Use:
+╰➜ \`!sora <descrição>\`
+
+📌 Exemplo:
+╰➜ \`!sora um gato voando no espaço\`
+
+⚠️ _Pode levar até 2 minutos._
+
+"${nomeBot}"`
+          }, { quoted: msg })
+        }
+
+        await sock.sendMessage(jid, {
+          text:
+`❄️ • 𝐒𝐎𝐑𝐀 𝐕𝐈́𝐃𝐄𝐎 •
+
+╭─〔 ♦️ 𝐆𝐄𝐑𝐀𝐍𝐃𝐎 〕
+│ Isso pode levar até 2 minutos...
+╰──────────────
+
+🎬 𝐏𝐫𝐨𝐦𝐩𝐭:
+╰➜ ${prompt}
+
+⏳ _Aguarde._
+
+"${nomeBot}"`
+        }, { quoted: msg })
+
+        try {
+          const r = await fetch(`https://obanai-apis.eu.cc/api/ias/sora?prompt=${encodeURIComponent(prompt)}&apitoken=rj8SpI`, { signal: AbortSignal.timeout(120000) })
+          const data = await r.json()
+
+          if (!data?.success || !data.data?.url) {
+            return sock.sendMessage(jid, {
+              text:
+`❄️ • 𝐒𝐎𝐑𝐀 𝐕𝐈́𝐃𝐄𝐎 •
+
+╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕
+│ Não foi possível gerar o vídeo.
+╰──────────────
+
+⚠️ \`${data?.message || "sem resposta"}\`
+
+"${nomeBot}"`
+            }, { quoted: msg })
+          }
+
+          const videoRes = await fetch(data.data.url, { signal: AbortSignal.timeout(60000) })
+          const videoBuffer = Buffer.from(await videoRes.arrayBuffer())
+
+          if (videoBuffer.length > 16 * 1024 * 1024) {
+            return sock.sendMessage(jid, {
+              text:
+`❄️ • 𝐒𝐎𝐑𝐀 𝐕𝐈́𝐃𝐄𝐎 •
+
+╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕
+│ Vídeo muito grande (>16MB)
+╰──────────────
+
+📊 𝐓𝐚𝐦𝐚𝐧𝐡𝐨:
+╰➜ ${(videoBuffer.length / 1024 / 1024).toFixed(2)}MB
+
+"${nomeBot}"`
+            }, { quoted: msg })
+          }
+
+          await sock.sendMessage(jid, {
+            video: videoBuffer,
+            mimetype: "video/mp4",
+            fileName: "sora.mp4",
+            caption:
+`❄️ • 𝐒𝐎𝐑𝐀 𝐕𝐈́𝐃𝐄𝐎 •
+
+╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕
+│ Vídeo gerado com sucesso!
+╰──────────────
+
+🎬 𝐏𝐫𝐨𝐦𝐩𝐭:
+╰➜ ${prompt}
+
+"${nomeBot}"`
+          }, { quoted: msg })
+
+        } catch (e) {
+          console.error("Erro sora:", e.message)
+          await sock.sendMessage(jid, {
+            text:
+`❄️ • 𝐒𝐎𝐑𝐀 𝐕𝐈́𝐃𝐄𝐎 •
+
+╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕
+│ Falha ao gerar o vídeo.
+╰──────────────
+
+⚠️ \`${e.message}\`
+
+"${nomeBot}"`
           }, { quoted: msg })
         }
       }
@@ -469,8 +581,8 @@ ${numerosTxt}
 "${nomeBot}"`
           }, { quoted: msg })
 
-          console.log("❄️ ATUALIZAÇÃO concluída. Reiniciando...")
-          setTimeout(() => process.exit(0), 3000)
+          console.log("❄️ ATUALIZAÇÃO concluída. Reiniciando com código 99...")
+          setTimeout(() => process.exit(99), 3000)
 
         } catch (e) {
           console.log("Erro atualizar:", e.message)
@@ -634,9 +746,9 @@ ${numerosTxt}
         try {
           await sock.sendMessage(jid, {
             text:
-`❄️ • 𝐑𝐄𝐈𝐍𝐈𝐂𝐈𝐀𝐍𝐃𝐎 •
+`❄️ • 𝐑𝐄𝐂𝐀𝐑𝐑𝐄𝐆𝐀𝐍𝐃𝐎 •
 
-╭─〔 ♦️ 𝐑𝐄𝐋𝐎𝐀𝐃 〕
+╭─〔 ♻️ 𝐑𝐄𝐋𝐎𝐀𝐃 〕
 │ Recarregando todos os módulos...
 ╰──────────────
 
@@ -650,8 +762,8 @@ ${numerosTxt}
 
           try { if (global.__carregarMenus) global.__carregarMenus() } catch (_) {}
 
-          console.log("❄️ RELOAD solicitado. Reiniciando...")
-          setTimeout(() => process.exit(0), 3000)
+          console.log("♻️ RELOAD solicitado. Saindo com código 99...")
+          setTimeout(() => process.exit(99), 3000)
         } catch (e) {
           await sock.sendMessage(jid, {
             text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"`
@@ -670,7 +782,7 @@ ${numerosTxt}
             text:
 `❄️ • 𝐑𝐄𝐍𝐀𝐒𝐂𝐄𝐍𝐃𝐎 •
 
-╭─〔 ♦️ 𝐑𝐄𝐒𝐓𝐀𝐑𝐓 〕
+╭─〔 ♻️ 𝐑𝐄𝐒𝐓𝐀𝐑𝐓 〕
 │ Reiniciando o bot...
 ╰──────────────
 
@@ -682,8 +794,8 @@ ${numerosTxt}
 "${nomeBot}"`
           }, { quoted: msg })
           try { if (global.__carregarMenus) global.__carregarMenus() } catch (_) {}
-          console.log("❄️ REINICIAR solicitado. Reiniciando...")
-          setTimeout(() => process.exit(0), 3000)
+          console.log("♻️ REINICIAR solicitado. Saindo com código 99...")
+          setTimeout(() => process.exit(99), 3000)
         } catch (e) {
           await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
@@ -710,7 +822,7 @@ ${numerosTxt}
 
 "${nomeBot}"`
         }, { quoted: msg })
-        console.log("🛑 BOTOFF solicitado. Desligando de vez...")
+        console.log("🛑 BOTOFF solicitado. Saindo com código 2 (não reinicia)...")
         setTimeout(() => process.exit(2), 3000)
       }
     },
@@ -1065,7 +1177,7 @@ ${typeof info === "string" ? "🔗 `" + info + "`" : "✅ Entrada realizada"}
         if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: `❄️ • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Status atual.\n╰──────────────\n\n⚙️ 𝐀𝐭𝐢𝐯𝐨:\n╰➜ ${a.ativo ? "ON ✅" : "OFF ❌"}\n\n💡 \`!aluguel on/off\`\n\n"${nomeBot}"` }, { quoted: msg })
         a.ativo = opcao === "on"
         db.salvarAluguel(a)
-        await sock.sendMessage(jid, { text: `❄️ • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ ${opcao === "on" ? "Sistema ativado." : "Sistema desativado."}\n╰──────────────\n\n⚙️ 𝐒𝐭𝐚𝐭𝐮𝐬:\n╰➜ ${opcao.toUpperCase()}\n\n"${nomeBot}"` }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ ${opcao === "on" ? "Sistema ativado." : "Sistema desativado."}\n╰──────────────\n\n⚙️ ${opcao.toUpperCase()}\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
