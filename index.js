@@ -279,19 +279,9 @@ async function processarAutoTtk(sock, msg, remetente, isGrupo) {
 }
 
 // ============================================================
-// 🤖 SISTEMA DE IA (algochat-ai)
+// 🤖 SISTEMA DE IA (POLLINATIONS - Gratuito sem chave)
 // ============================================================
-let algochat = null
-try {
-  algochat = require("algochat-ai")
-  console.log("🤖 Sistema de IA (algochat) carregado!")
-} catch (e) {
-  console.log("⚠️ algochat-ai não instalado. Rode: npm install algochat-ai")
-}
-
 async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
-  if (!algochat) return false
-
   // Verifica se IA está ativa no grupo
   if (isGrupo) {
     const conf = db.grupos()[remetente] || {}
@@ -303,25 +293,34 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
 
   const botNum = soNumero(sock.user?.id)
   const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
+  
+  // Verifica se o bot foi marcado OU se estão respondendo a ele
   const mencionado = (ctx.mentionedJid || []).some(j => soNumero(j) === botNum)
   const respondendoBot = ctx.participant && soNumero(ctx.participant) === botNum
 
   if (!mencionado && !respondendoBot) return false
 
-  // Limpa menções do texto
+  // Limpa as menções do texto
   let pergunta = texto.replace(/@\d+/g, "").trim()
   if (!pergunta) return false
 
   try {
     await sock.sendPresenceUpdate("composing", remetente)
 
-    // Chama a IA sem API Key
-    const resposta = await algochat.chat(pergunta, {
-      system: "Você é o Akaza, um bot de WhatsApp estilo anime/inspirado em Demon Slayer. Responda de forma curta, direta e com personalidade. Use emojis às vezes (❄️⚔️🔥). Não seja muito formal."
+    // Chama a API Pollinations (Gratuita, sem chave)
+    const promptSistema = encodeURIComponent(`Você é o Akaza, um bot de WhatsApp estilo anime/inspirado em Demon Slayer. Responda de forma curta, direta e com personalidade. Use emojis às vezes (❄️⚔️🔥). Não seja muito formal. Pergunta do usuário: ${pergunta}`)
+    
+    const response = await fetch(`https://text.pollinations.ai/${promptSistema}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'text/plain' }
     })
 
+    if (!response.ok) throw new Error("Erro na API da IA")
+
+    const resposta = await response.text()
+
     if (resposta && resposta.trim()) {
-      await sock.sendMessage(remetente, { text: resposta }, { quoted: msg })
+      await sock.sendMessage(remetente, { text: resposta.trim() }, { quoted: msg })
     } else {
       await sock.sendMessage(remetente, { text: "❄️ Não consegui pensar em nada..." }, { quoted: msg })
     }
