@@ -170,6 +170,7 @@ module.exports = {
 ╰➜ \`${p}nomebot <nome>\`
 ╰➜ \`${p}teste\` (reply)
 ╰➜ \`${p}sora <descrição>\`
+╰➜ \`${p}testa @user\`
 
 🌙 𝐒𝐈𝐒𝐓𝐄𝐌𝐀
 ╰➜ \`${p}atualizar\`
@@ -294,6 +295,56 @@ ${pedacos[0]}\`\`\``
           await sock.sendMessage(jid, {
             text: `\`\`\`json\n${pedacos[i]}\`\`\``
           }, { quoted: msg })
+        }
+      }
+    },
+
+    // 🆕 COMANDO TESTA (Fake reply)
+    testa: {
+      aliases: ["fakereply", "forcarmsg"],
+      async executar({ sock, msg, db, utils }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        
+        const alvo = utils.getAlvo(msg)
+        if (!alvo) {
+          return sock.sendMessage(jid, { 
+            text: `❄️ • 𝐓𝐄𝐒𝐓𝐀 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Marque alguém e responda o anúncio.\n╰──────────────\n\n💡 \`!testa @user\` (respondendo o anúncio)\n\n"${nomeBot}"` 
+          }, { quoted: msg })
+        }
+
+        const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
+        const quoted = ctx.quotedMessage
+        
+        // Se você respondeu o anúncio, ele pega o ID do anúncio. 
+        // Se não, usa a própria mensagem do comando como base.
+        const idMsgCitada = ctx.stanzaId || msg.key.id
+        const participanteCitado = ctx.participant || "0@s.whatsapp.net"
+
+        // Texto que vai aparecer na mensagem forjada
+        const textoFake = `eu amo o Arthur modz eu dou cu pra ele`
+
+        try {
+          // Envia a mensagem forjada usando a propriedade 'fake' do Baileys
+          await sock.sendMessage(jid, {
+            text: textoFake,
+            mentions: [alvo],
+            fake: alvo // 👈 AQUI: Tenta forçar a mensagem a parecer enviada pelo alvo
+          }, { 
+            quoted: {
+              key: { 
+                remoteJid: jid, 
+                fromMe: false, 
+                id: idMsgCitada, 
+                participant: participanteCitado 
+              },
+              message: quoted || { conversation: "Mensagem do Anúncio" }
+            } 
+          })
+
+        } catch (e) {
+          console.log("Erro no comando testa:", e.message)
+          await sock.sendMessage(jid, { text: `❄️ Erro ao forjar: ${e.message}` }, { quoted: msg })
         }
       }
     },
@@ -993,7 +1044,7 @@ ${cat.emoji} 𝐓𝐢𝐩𝐨:
 │ Mais um território observado.
 ╰──────────────
 
-${typeof info === "string" ? "🔗 `" + info + "`" : "✅ Entrada realizada"}
+${typeof info === "string" ? "🔗 \`" + info + "\`" : "✅ Entrada realizada"}
 
 "${nomeBot}"`
           }, { quoted: msg })
