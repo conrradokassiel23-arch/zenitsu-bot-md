@@ -279,6 +279,61 @@ async function processarAutoTtk(sock, msg, remetente, isGrupo) {
 }
 
 // ============================================================
+// 🤖 SISTEMA DE IA (algochat-ai)
+// ============================================================
+let algochat = null
+try {
+  algochat = require("algochat-ai")
+  console.log("🤖 Sistema de IA (algochat) carregado!")
+} catch (e) {
+  console.log("⚠️ algochat-ai não instalado. Rode: npm install algochat-ai")
+}
+
+async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
+  if (!algochat) return false
+
+  // Verifica se IA está ativa no grupo
+  if (isGrupo) {
+    const conf = db.grupos()[remetente] || {}
+    if (!conf.iaAtiva) return false
+  }
+
+  const texto = getTexto(msg)
+  if (!texto) return false
+
+  const botNum = soNumero(sock.user?.id)
+  const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
+  const mencionado = (ctx.mentionedJid || []).some(j => soNumero(j) === botNum)
+  const respondendoBot = ctx.participant && soNumero(ctx.participant) === botNum
+
+  if (!mencionado && !respondendoBot) return false
+
+  // Limpa menções do texto
+  let pergunta = texto.replace(/@\d+/g, "").trim()
+  if (!pergunta) return false
+
+  try {
+    await sock.sendPresenceUpdate("composing", remetente)
+
+    // Chama a IA sem API Key
+    const resposta = await algochat.chat(pergunta, {
+      system: "Você é o Akaza, um bot de WhatsApp estilo anime/inspirado em Demon Slayer. Responda de forma curta, direta e com personalidade. Use emojis às vezes (❄️⚔️🔥). Não seja muito formal."
+    })
+
+    if (resposta && resposta.trim()) {
+      await sock.sendMessage(remetente, { text: resposta }, { quoted: msg })
+    } else {
+      await sock.sendMessage(remetente, { text: "❄️ Não consegui pensar em nada..." }, { quoted: msg })
+    }
+    return true
+  } catch (e) {
+    console.log("Erro IA:", e.message)
+    await sock.sendMessage(remetente, { text: `❄️ Erro na IA: ${e.message}` }, { quoted: msg })
+    return true
+  }
+}
+
+// ============================================================
 // 📦 CARREGADOR DE MENUS
 // ============================================================
 const comandos = new Map()
@@ -708,6 +763,12 @@ async function iniciar() {
     // 🎴 Detector de figurinha comando
     if (isGrupo && !msg.key.fromMe) {
       const feito = await processarFigCmd(sock, msg, remetente, sender, isGrupo, isDono, isSubDono)
+      if (feito) return
+    }
+
+    // 🤖 NOVO: Processar IA (se marcado ou respondido)
+    if (!msg.key.fromMe) {
+      const feito = await processarIA(sock, msg, remetente, sender, isGrupo, db)
       if (feito) return
     }
 
