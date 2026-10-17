@@ -292,23 +292,40 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
   if (!texto) return false
 
   const botNum = soNumero(sock.user?.id)
-  const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
+  const botNome = (db.config().nomeBot || "Akaza").toLowerCase()
   
-  // Verifica se o bot foi marcado OU se estão respondendo a ele
-  const mencionado = (ctx.mentionedJid || []).some(j => soNumero(j) === botNum)
+  const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
+  const mentionedJid = ctx.mentionedJid || []
+  
+  // 1. Verifica se o bot foi marcado (pelo ID)
+  const mencionadoPorId = mentionedJid.some(j => soNumero(j) === botNum)
+  
+  // 2. Verifica se a mensagem tem o nome do bot escrito ou menção de texto (ex: "@Bot")
+  const mencionadoPorTexto = texto.toLowerCase().includes("@" + botNome) || texto.toLowerCase().includes("@" + botNome.replace(/\s+/g, ""))
+
+  // 3. Verifica se estão respondendo a mensagem do bot
   const respondendoBot = ctx.participant && soNumero(ctx.participant) === botNum
 
-  if (!mencionado && !respondendoBot) return false
+  // Se não foi marcado de nenhuma forma e não é resposta, ignora
+  if (!mencionadoPorId && !respondendoBot && !mencionadoPorTexto) return false
 
-  // Limpa as menções do texto
-  let pergunta = texto.replace(/@\d+/g, "").trim()
-  if (!pergunta) return false
+  // Limpa as menções do texto e o nome do bot para a IA não ficar confusa
+  let pergunta = texto
+    .replace(/@\d+/g, "") // Remove @5511...
+    .replace(new RegExp("@" + botNome, "gi"), "") // Remove @Akaza
+    .replace(new RegExp(botNome, "gi"), "") // Remove Akaza escrito no texto
+    .trim()
+
+  if (!pergunta) {
+    pergunta = "Oi" // Se a pessoa só marcou e não escreveu nada
+  }
+
+  console.log(`🤖 IA sendo chamada por ${sender}. Pergunta: "${pergunta}"`)
 
   try {
     await sock.sendPresenceUpdate("composing", remetente)
 
-    // Chama a API Pollinations (Gratuita, sem chave)
-    const promptSistema = encodeURIComponent(`Você é o Akaza, um bot de WhatsApp estilo anime/inspirado em Demon Slayer. Responda de forma curta, direta e com personalidade. Use emojis às vezes (❄️⚔️🔥). Não seja muito formal. Pergunta do usuário: ${pergunta}`)
+    const promptSistema = encodeURIComponent(`Você é o Akaza, um bot de WhatsApp estilo anime/inspirado em Demon Slayer. Responda de forma curta, direta e com personalidade. Use emojis às vezes (❄️⚔️🔥). Não seja muito formal. O usuário disse: ${pergunta}`)
     
     const response = await fetch(`https://text.pollinations.ai/${promptSistema}`, {
       method: 'GET',
@@ -326,7 +343,7 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
     }
     return true
   } catch (e) {
-    console.log("Erro IA:", e.message)
+    console.log("❌ Erro IA:", e.message)
     await sock.sendMessage(remetente, { text: `❄️ Erro na IA: ${e.message}` }, { quoted: msg })
     return true
   }
