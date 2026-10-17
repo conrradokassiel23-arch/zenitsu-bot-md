@@ -282,7 +282,6 @@ async function processarAutoTtk(sock, msg, remetente, isGrupo) {
 // 🤖 SISTEMA DE IA (POLLINATIONS - Gratuito sem chave)
 // ============================================================
 async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
-  // Verifica se IA está ativa no grupo
   if (isGrupo) {
     const conf = db.grupos()[remetente] || {}
     if (!conf.iaAtiva) return false
@@ -297,28 +296,19 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
   const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
   const mentionedJid = ctx.mentionedJid || []
   
-  // 1. Verifica se o bot foi marcado (pelo ID)
   const mencionadoPorId = mentionedJid.some(j => soNumero(j) === botNum)
-  
-  // 2. Verifica se a mensagem tem o nome do bot escrito ou menção de texto (ex: "@Bot")
   const mencionadoPorTexto = texto.toLowerCase().includes("@" + botNome) || texto.toLowerCase().includes("@" + botNome.replace(/\s+/g, ""))
-
-  // 3. Verifica se estão respondendo a mensagem do bot
   const respondendoBot = ctx.participant && soNumero(ctx.participant) === botNum
 
-  // Se não foi marcado de nenhuma forma e não é resposta, ignora
   if (!mencionadoPorId && !respondendoBot && !mencionadoPorTexto) return false
 
-  // Limpa as menções do texto e o nome do bot para a IA não ficar confusa
   let pergunta = texto
-    .replace(/@\d+/g, "") // Remove @5511...
-    .replace(new RegExp("@" + botNome, "gi"), "") // Remove @Akaza
-    .replace(new RegExp(botNome, "gi"), "") // Remove Akaza escrito no texto
+    .replace(/@\d+/g, "")
+    .replace(new RegExp("@" + botNome, "gi"), "")
+    .replace(new RegExp(botNome, "gi"), "")
     .trim()
 
-  if (!pergunta) {
-    pergunta = "Oi" // Se a pessoa só marcou e não escreveu nada
-  }
+  if (!pergunta) pergunta = "Oi"
 
   console.log(`🤖 IA sendo chamada por ${sender}. Pergunta: "${pergunta}"`)
 
@@ -1050,92 +1040,61 @@ async function iniciar() {
 
     const cmd = getComando(cmdName.toLowerCase())
     if (!cmd) {
-      // 🔥 COMANDO NÃO ENCONTRADO
+      // 🔥 COMANDO NÃO ENCONTRADO OU SÓ "PREFIXO"
       const p = (isGrupo && confGrupo.multiprefixo && confGrupo.prefixo) ? confGrupo.prefixo : prefixoGlobal
       const cmdLimpo = (cmdName || "").trim().toLowerCase()
-      const soPrefixo = !cmdLimpo || cmdLimpo.length === 0
-
-      let comandoCerto = p + "menu"
-      if (!soPrefixo) {
-        const parecidos = comandosParecidos(cmdLimpo, 3)
-        comandoCerto = parecidos.length ? p + parecidos[0].comando : "inexistente"
-      }
-
-      const VARIACOES_SO_PREFIXO = [
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •", aviso: "O comando informado não foi reconhecido.", frase: "💡 Digite um comando após o prefixo!" },
-        { topo: "🔥 • 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 𝐒𝐎𝐙𝐈𝐍𝐇𝐎 •", aviso: "Só o prefixo não faz nada.", frase: "💡 Complete com um comando!" },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐕𝐀𝐙𝐈𝐎 •", aviso: "Isso não é um comando.", frase: "💡 Digite algo após o prefixo." },
-        { topo: "🔥 • 𝐎 𝐐𝐔𝐄 𝐕𝐎𝐂𝐄̂ 𝐐𝐔𝐄𝐑? •", aviso: "O prefixo sozinho não diz nada.", frase: "💡 Seja mais específico." },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐂𝐎𝐌𝐏𝐋𝐄𝐓𝐎 •", aviso: "Você esqueceu do resto.", frase: "💡 Digite o comando inteiro." }
-      ]
-
-      const VARIACOES_CMD_ERRADO = [
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •", aviso: "O comando informado não foi reconhecido.", frase: "💡 Verifique a escrita e tente novamente!" },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐕𝐀́𝐋𝐈𝐃𝐎 •", aviso: "Isso não existe no meu repertório.", frase: "💡 Confira antes de tentar novamente." },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐃𝐄𝐒𝐂𝐎𝐍𝐇𝐄𝐂𝐈𝐃𝐎 •", aviso: "Nem meus olhos encontraram isso.", frase: "💡 Talvez esteja em outro mundo." },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐄𝐑𝐑𝐀𝐃𝐎 •", aviso: "Tenta de novo, mortal.", frase: "💡 A pressa cega os fracos." },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐗𝐈𝐒𝐓𝐄 •", aviso: "Isso não tá na minha lista.", frase: "💡 Aprenda antes de usar." },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐄𝐗𝐈𝐒𝐓𝐄𝐍𝐓𝐄 •", aviso: "Meus olhos não acham esse comando.", frase: "💡 Procure outro caminho." },
-        { topo: "🔥 • 𝐄𝐑𝐑𝐎 𝐃𝐄 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 •", aviso: "Esse não é o caminho, guerreiro.", frase: "💡 Retorne e estude as técnicas." },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐌𝐈𝐒𝐓𝐄𝐑𝐈𝐎𝐒𝐎 •", aviso: "Isso não existe nesse mundo.", frase: "💡 Nem nos meus sonhos." },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐏𝐄𝐑𝐃𝐈𝐃𝐎 •", aviso: "Se perdeu no caminho?", frase: "💡 Ou tá testando minha paciência?" },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐄𝐒𝐂𝐎𝐍𝐃𝐈𝐃𝐎 •", aviso: "Sumiu no meio da noite.", frase: "💡 Ou nunca existiu." }
-      ]
-
-      const lista = soPrefixo ? VARIACOES_SO_PREFIXO : VARIACOES_CMD_ERRADO
-      const v = lista[Math.floor(Math.random() * lista.length)]
-
+      
+      // Verifica se a pessoa mandou APENAS a palavra "prefixo"
+      const isSoPrefixo = cmdLimpo === "prefixo"
+      
       const numUser = soNumero(sender)
-      const agora = new Date()
-      const hora = agora.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })
-      const data = agora.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
       const nomeBot = db.config().nomeBot || "Akaza Bot"
-      const cmdExibido = cmdLimpo ? (p + cmdLimpo) : p
+      const cfgCmd = db.config()
+      const mencoes = sender ? [sender] : []
 
-      let textoBase
-      if (soPrefixo) {
-        textoBase =
-`${v.topo}
+      let textoBase = ""
+      let temBotao = false
 
-╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕
-│ ${v.aviso}
+      if (isSoPrefixo) {
+        // ✨ VISUAL NOVO DO COMANDO "PREFIXO"
+        textoBase = 
+`❄️ • 𝐂𝐎𝐍𝐅𝐈𝐆𝐔𝐑𝐀𝐂̧𝐀̃𝐎 •
+
+╭─〔 ⚔️ 𝐒𝐈𝐒𝐓𝐄𝐌𝐀 〕
+│ Olá @${numUser}, este é o meu prefixo.
 ╰──────────────
 
-『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
+🔥 𝐏𝐫𝐞𝐟𝐢𝐱𝐨 𝐀𝐭𝐮𝐚𝐥:
+╰➜ 『 ${p} 』
 
-👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:
-╰➜ @${numUser}
-
-🔥 𝐏𝐫𝐞𝐟𝐢𝐱𝐨:
-╰➜ ${p}
-
-❔ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐮𝐬𝐚𝐝𝐨:
-╰➜ ${cmdExibido}
-
-♦️ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐜𝐨𝐫𝐫𝐞𝐭𝐨:
+💡 Para usar meus comandos, digite:
 ╰➜ ${p}menu
 
-🕐 𝐇𝐨𝐫𝐚́𝐫𝐢𝐨:
-╰➜ ${hora} — ${data}
-
-${v.frase}
+❄️ _"Use com sabedoria."_
 
 "${nomeBot}"`
+        temBotao = true
       } else {
-        textoBase =
+        // Visual padrão de erro
+        const VARIACOES_CMD_ERRADO = [
+          { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •", aviso: "O comando informado não foi reconhecido.", frase: "💡 Verifique a escrita e tente novamente!" },
+          { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐕𝐀́𝐋𝐈𝐃𝐎 •", aviso: "Isso não existe no meu repertório.", frase: "💡 Confira antes de tentar novamente." },
+          { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐃𝐄𝐒𝐂𝐎𝐍𝐇𝐄𝐂𝐈𝐃𝐎 •", aviso: "Nem meus olhos encontraram isso.", frase: "💡 Talvez esteja em outro mundo." }
+        ]
+        const v = VARIACOES_CMD_ERRADO[Math.floor(Math.random() * VARIACOES_CMD_ERRADO.length)]
+        const cmdExibido = cmdLimpo ? (p + cmdLimpo) : p
+        const parecidos = comandosParecidos(cmdLimpo, 3)
+        const comandoCerto = parecidos.length ? p + parecidos[0].comando : "inexistente"
+
+        textoBase = 
 `${v.topo}
 
 ╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕
 │ ${v.aviso}
 ╰──────────────
 
-『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
-
 👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:
 ╰➜ @${numUser}
-
-🔥 𝐏𝐫𝐞𝐟𝐢𝐱𝐨:
-╰➜ ${p}
 
 ❔ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐮𝐬𝐚𝐝𝐨:
 ╰➜ ${cmdExibido}
@@ -1143,29 +1102,42 @@ ${v.frase}
 ♦️ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐜𝐨𝐫𝐫𝐞𝐭𝐨:
 ╰➜ ${comandoCerto}
 
-🕐 𝐇𝐨𝐫𝐚́𝐫𝐢𝐨:
-╰➜ ${hora} — ${data}
-
 ${v.frase}
 
 "${nomeBot}"`
       }
 
-      const cfgCmd = db.config()
-      const mencoes = sender ? [sender] : []
-
+      // 🚀 ENVIO DA MENSAGEM (FOTO + BOTÃO)
       try {
+        const opcoesEnvio = { 
+          caption: textoBase, 
+          mentions: mencoes,
+          footer: "⚔️ " + nomeBot,
+          // Adiciona o botão se for o comando "prefixo"
+          ...(temBotao ? {
+            buttons: [
+              { buttonId: p + "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }
+            ],
+            headerType: 1 
+          } : {})
+        }
+
         if (cfgCmd.fotoCmd) {
           const buf = Buffer.from(cfgCmd.fotoCmd, "base64")
           if (cfgCmd.tipoFotoCmd === "video") {
-            await sock.sendMessage(remetente, { video: buf, mimetype: "video/mp4", fileName: "akaza.mp4", gifPlayback: true, caption: textoBase, mentions: mencoes }, { quoted: msg })
+            // Envia vídeo com botão
+            await sock.sendMessage(remetente, { video: buf, mimetype: "video/mp4", fileName: "akaza.mp4", gifPlayback: true, ...opcoesEnvio }, { quoted: msg })
           } else {
-            await sock.sendMessage(remetente, { image: buf, caption: textoBase, mentions: mencoes }, { quoted: msg })
+            // Envia imagem com botão
+            await sock.sendMessage(remetente, { image: buf, ...opcoesEnvio }, { quoted: msg })
           }
         } else {
-          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes }, { quoted: msg })
+          // Se não tiver foto, envia só texto com botão
+          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, ...(temBotao ? { buttons: [{ buttonId: p + "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }] } : {}) }, { quoted: msg })
         }
       } catch (e) {
+        // Fallback se o WhatsApp recusar o botão
+        console.log("Erro ao enviar botão:", e.message)
         await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes }, { quoted: msg })
       }
       return
