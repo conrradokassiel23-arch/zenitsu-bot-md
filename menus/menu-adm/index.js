@@ -418,6 +418,10 @@ ${listaCat || "╰➜ _nenhuma_"}
 ╰➜ \`${p}legendafechar <texto>\`
 ╰➜ \`${p}limparfotos\`
 
+🤖 𝐈𝐍𝐓𝐄𝐋𝐈𝐆𝐄̂𝐍𝐂𝐈𝐀
+╰➜ \`${p}iaon\`
+╰➜ \`${p}iaoff\`
+
 🎁 𝐒𝐎𝐑𝐓𝐄𝐈𝐎
 ╰➜ \`${p}sorteio <prêmio> <tempo>\`
 
@@ -1155,10 +1159,6 @@ ${listaCat || "╰➜ _nenhuma_"}
       }
     },
 
-    // ============================================================
-    // 🆕 NOVOS COMANDOS DE LEGENDA (separados)
-    // ============================================================
-
     legendaabrir: {
       aliases: ["setlegendaabrir", "legendabrir", "legendaabrirgp"],
       adminOnly: true, grupoOnly: true,
@@ -1225,7 +1225,33 @@ ${listaCat || "╰➜ _nenhuma_"}
     },
 
     // ============================================================
-    // FIM DOS NOVOS COMANDOS
+    // 🤖 INTELIGÊNCIA ARTIFICIAL
+    // ============================================================
+
+    iaon: {
+      aliases: ["ativaria", "ligaria"],
+      adminOnly: true, grupoOnly: true,
+      async executar({ sock, msg, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const g = db.grupos(); g[jid] = g[jid] || {}
+        g[jid].iaAtiva = true; db.salvarGrupos(g)
+        await sock.sendMessage(jid, { text: `❄️ • 𝐈𝐀 𝐀𝐓𝐈𝐕𝐀𝐃𝐀 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Agora eu respondo quando me marcarem.\n╰──────────────\n\n💡 Marque o bot ou responda uma msg dele.\n\n"${nomeBot}"` }, { quoted: msg })
+      }
+    },
+
+    iaoff: {
+      aliases: ["desligaria", "desativaria"],
+      adminOnly: true, grupoOnly: true,
+      async executar({ sock, msg, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const g = db.grupos(); g[jid] = g[jid] || {}
+        g[jid].iaAtiva = false; db.salvarGrupos(g)
+        await sock.sendMessage(jid, { text: `❄️ • 𝐈𝐀 𝐃𝐄𝐒𝐀𝐓𝐈𝐕𝐀𝐃𝐀 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Não respondo mais automaticamente.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+      }
+    },
+
     // ============================================================
 
     sorteio: {
@@ -1324,6 +1350,10 @@ ${listaCat || "╰➜ _nenhuma_"}
         await sock.sendMessage(jid, { text: txt, mentions: mentions }, { quoted: msg })
       }
     },
+
+    // ============================================================
+    // 🎴 FIGURINHAS COMANDO
+    // ============================================================
 
     rgfig: {
       aliases: ["registrarfig", "addfigcmd", "savefig"],
