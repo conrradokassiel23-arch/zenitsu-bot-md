@@ -529,7 +529,7 @@ async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo,
       await sock.sendMessage(remetente, {
         text: "🔥⚔️ *SEM PERMISSÃO*\n\n" +
           "> 👁️ _\"Meus olhos veem que você não é admin.\"_\n" +
-          "> _\"Não posso obedecer.\"_"
+          "> _\"Não posso obedecer.\"_\n\n> ⚔️ _\"Respeite a hierarquia.\"_"
       }, { quoted: msg })
       return true
     }
@@ -1020,7 +1020,21 @@ async function iniciar() {
     if (btnId) {
       const prefixos = ["!", "/", ".", "-", "#", ","]
       const temPrefixo = prefixos.some(p => btnId.startsWith(p))
-      texto = temPrefixo ? btnId : (prefixoGlobal || "!") + btnId
+      
+      // Correção do ++menu:
+      let textoLimpo = btnId;
+      if (temPrefixo) {
+        textoLimpo = btnId;
+      } else {
+        textoLimpo = (prefixoGlobal || "!") + btnId;
+      }
+      
+      // Se o botão veio com o prefixo duplicado, a gente limpa
+      if (textoLimpo.startsWith(prefixoGlobal + prefixoGlobal)) {
+        textoLimpo = textoLimpo.replace(prefixoGlobal + prefixoGlobal, prefixoGlobal);
+      }
+      
+      texto = textoLimpo;
     }
 
     let prefixoUsado = prefixosAtivos.find(p => texto.startsWith(p))
@@ -1070,10 +1084,12 @@ async function iniciar() {
         caption: textoBase, 
         mentions: mencoes,
         footer: "⚔️ " + nomeBot,
-        buttons: [
-          { buttonId: p + "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }
+        interactiveButtons: [
+          { 
+            name: "quick_reply", 
+            buttonParamsJson: JSON.stringify({ display_text: "❄️ Menu-principal", id: p + "menu" }) 
+          }
         ],
-        headerType: 1,
         ignorarCanal: true 
       }
 
@@ -1086,7 +1102,7 @@ async function iniciar() {
             await sock.sendMessage(remetente, { image: buf, ...opcoesEnvio }, { quoted: msg })
           }
         } else {
-          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, buttons: opcoesEnvio.buttons, ignorarCanal: true }, { quoted: msg })
+          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, interactiveButtons: opcoesEnvio.interactiveButtons, ignorarCanal: true }, { quoted: msg })
         }
       } catch (e) {
         console.log("Erro ao enviar prefixo com botão:", e.message)
@@ -1108,30 +1124,14 @@ async function iniciar() {
         comandoCerto = parecidos.length ? p + parecidos[0].comando : "inexistente"
       }
 
-      const VARIACOES_SO_PREFIXO = [
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •", aviso: "O comando informado não foi reconhecido.", frase: "💡 Digite um comando após o prefixo!" },
-        { topo: "🔥 • 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 𝐒𝐎𝐙𝐈𝐍𝐇𝐎 •", aviso: "Só o prefixo não faz nada.", frase: "💡 Complete com um comando!" },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐕𝐀𝐙𝐈𝐎 •", aviso: "Isso não é um comando.", frase: "💡 Digite algo após o prefixo." },
-        { topo: "🔥 • 𝐎 𝐐𝐔𝐄 𝐕𝐎𝐂𝐄̂ 𝐐𝐔𝐄𝐑? •", aviso: "O prefixo sozinho não diz nada.", frase: "💡 Seja mais específico." },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐂𝐎𝐌𝐏𝐋𝐄𝐓𝐎 •", aviso: "Você esqueceu do resto.", frase: "💡 Digite o comando inteiro." }
-      ]
-
       const VARIACOES_CMD_ERRADO = [
         { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •", aviso: "O comando informado não foi reconhecido.", frase: "💡 Verifique a escrita e tente novamente!" },
         { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐕𝐀́𝐋𝐈𝐃𝐎 •", aviso: "Isso não existe no meu repertório.", frase: "💡 Confira antes de tentar novamente." },
         { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐃𝐄𝐒𝐂𝐎𝐍𝐇𝐄𝐂𝐈𝐃𝐎 •", aviso: "Nem meus olhos encontraram isso.", frase: "💡 Talvez esteja em outro mundo." },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐄𝐑𝐑𝐀𝐃𝐎 •", aviso: "Tenta de novo, mortal.", frase: "💡 A pressa cega os fracos." },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐗𝐈𝐒𝐓𝐄 •", aviso: "Isso não tá na minha lista.", frase: "💡 Aprenda antes de usar." },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐄𝐗𝐈𝐒𝐓𝐄𝐍𝐓𝐄 •", aviso: "Meus olhos não acham esse comando.", frase: "💡 Procure outro caminho." },
-        { topo: "🔥 • 𝐄𝐑𝐑𝐎 𝐃𝐄 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 •", aviso: "Esse não é o caminho, guerreiro.", frase: "💡 Retorne e estude as técnicas." },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐌𝐈𝐒𝐓𝐄𝐑𝐈𝐎𝐒𝐎 •", aviso: "Isso não existe nesse mundo.", frase: "💡 Nem nos meus sonhos." },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐏𝐄𝐑𝐃𝐈𝐃𝐎 •", aviso: "Se perdeu no caminho?", frase: "💡 Ou tá testando minha paciência?" },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐄𝐒𝐂𝐎𝐍𝐃𝐈𝐃𝐎 •", aviso: "Sumiu no meio da noite.", frase: "💡 Ou nunca existiu." }
+        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐄𝐑𝐑𝐀𝐃𝐎 •", aviso: "Tenta de novo, mortal.", frase: "💡 A pressa cega os fracos." }
       ]
 
-      const lista = soPrefixo ? VARIACOES_SO_PREFIXO : VARIACOES_CMD_ERRADO
-      const v = lista[Math.floor(Math.random() * lista.length)]
-
+      const v = VARIACOES_CMD_ERRADO[Math.floor(Math.random() * VARIACOES_CMD_ERRADO.length)]
       const numUser = soNumero(sender)
       const agora = new Date()
       const hora = agora.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })
@@ -1139,37 +1139,7 @@ async function iniciar() {
       const nomeBot = db.config().nomeBot || "Akaza Bot"
       const cmdExibido = cmdLimpo ? (p + cmdLimpo) : p
 
-      let textoBase
-      if (soPrefixo) {
-        textoBase =
-`${v.topo}
-
-╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕
-│ ${v.aviso}
-╰──────────────
-
-『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
-
-👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:
-╰➜ @${numUser}
-
-🔥 𝐏𝐫𝐞𝐟𝐢𝐱𝐨:
-╰➜ ${p}
-
-❔ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐮𝐬𝐚𝐝𝐨:
-╰➜ ${cmdExibido}
-
-♦️ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐜𝐨𝐫𝐫𝐞𝐭𝐨:
-╰➜ ${p}menu
-
-🕐 𝐇𝐨𝐫𝐚́𝐫𝐢𝐨:
-╰➜ ${hora} — ${data}
-
-${v.frase}
-
-"${nomeBot}"`
-      } else {
-        textoBase =
+      const textoBase =
 `${v.topo}
 
 ╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕
@@ -1196,21 +1166,33 @@ ${v.frase}
 ${v.frase}
 
 "${nomeBot}"`
-      }
 
       const cfgCmd = db.config()
       const mencoes = sender ? [sender] : []
+
+      const opcoesErro = { 
+        caption: textoBase, 
+        mentions: mencoes,
+        footer: "⚔️ " + nomeBot,
+        interactiveButtons: [
+          { 
+            name: "quick_reply", 
+            buttonParamsJson: JSON.stringify({ display_text: "❄️ Menu-principal", id: p + "menu" }) 
+          }
+        ],
+        ignorarCanal: true
+      }
 
       try {
         if (cfgCmd.fotoCmd) {
           const buf = Buffer.from(cfgCmd.fotoCmd, "base64")
           if (cfgCmd.tipoFotoCmd === "video") {
-            await sock.sendMessage(remetente, { video: buf, mimetype: "video/mp4", fileName: "akaza.mp4", gifPlayback: true, caption: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
+            await sock.sendMessage(remetente, { video: buf, mimetype: "video/mp4", fileName: "akaza.mp4", gifPlayback: true, ...opcoesErro }, { quoted: msg })
           } else {
-            await sock.sendMessage(remetente, { image: buf, caption: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
+            await sock.sendMessage(remetente, { image: buf, ...opcoesErro }, { quoted: msg })
           }
         } else {
-          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
+          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, interactiveButtons: opcoesErro.interactiveButtons, ignorarCanal: true }, { quoted: msg })
         }
       } catch (e) {
         await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
