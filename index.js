@@ -147,10 +147,12 @@ function getTextoBotao(msg) {
     if (msg.message && msg.message.templateButtonReplyMessage) return msg.message.templateButtonReplyMessage.selectedId || ""
     if (msg.message && msg.message.listResponseMessage) return msg.message.listResponseMessage.singleSelectReply && msg.message.listResponseMessage.singleSelectReply.selectedRowId || ""
     
-    // 🔥 CORREÇÃO AQUI: Lê o ID do botão direto do JSON bruto (Bypass no erro do Baileys)
+    // 🔥 LEITURA PROFUNDA: Pega o clique do botão pelo JSON cru
     const msgStr = JSON.stringify(msg.message)
-    if (msgStr.includes('"selectedId":"menu"') || msgStr.includes('"id":"menu"')) {
-      return "menu"
+    if (msgStr.includes('"selectedId":"menu"') || msgStr.includes('"id":"menu"') || msgStr.includes('menu')) {
+      if (msg.message.interactiveResponseMessage || msg.message.buttonsResponseMessage || msgStr.includes("nativeFlowResponse")) {
+        return "menu"
+      }
     }
   } catch (_) {}
   return ""
