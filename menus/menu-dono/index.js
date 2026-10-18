@@ -351,13 +351,13 @@ ${pedacos[0]}\`\`\``
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         
-        const nomeComando = args[0] ? args[0].toLowerCase().replace(/[^a-z0-9]/g, "") : ""
+        let nomeComando = args[0] ? args[0].toLowerCase().replace(/[^a-z0-9]/g, "") : ""
         const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
         const quoted = ctx.quotedMessage
         
         if (!quoted) {
           return sock.sendMessage(jid, { 
-            text: `❄️ • 𝐆𝐄𝐓 𝐂𝐀𝐒𝐄 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Responda a mensagem do outro bot.\n╰──────────────\n\n💡 Use:\n╰➜ \`!get <nome_do_comando>\`\n\n📌 Exemplo:\n╰➜ Responda o menu do outro bot com \`!get menu\`\n\n"${nomeBot}"` 
+            text: `❄️ • 𝐆𝐄𝐓 𝐂𝐀𝐒𝐄 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Responda a mensagem do outro bot.\n╰──────────────\n\n💡 Use:\n╰➜ \`!get <nome_do_comando>\`\n\n"${nomeBot}"` 
           }, { quoted: msg })
         }
 
@@ -369,15 +369,19 @@ ${pedacos[0]}\`\`\``
 
         if (!textoResposta) {
           return sock.sendMessage(jid, { 
-            text: `❄️ • 𝐆𝐄𝐓 𝐂𝐀𝐒𝐄 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ A mensagem respondida não tem texto.\n╰──────────────\n\n💡 Responda o texto do outro bot.\n\n"${nomeBot}"` 
+            text: `❄️ • 𝐆𝐄𝐓 𝐂𝐀𝐒𝐄 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ A mensagem respondida não tem texto.\n╰──────────────\n\n"${nomeBot}"` 
           }, { quoted: msg })
         }
 
-        const cmdFinal = nomeComando || "comando_novo"
+        if (!nomeComando) {
+          const primeiraPalavra = textoResposta.trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, "")
+          nomeComando = primeiraPalavra || "comando_novo"
+        }
+
         const textoEscapado = textoResposta.replace(/`/g, "\\`").replace(/\$/g, "\\$")
 
         const blocoCase = 
-`case '${cmdFinal}': {
+`case '${nomeComando}': {
     if (!q) return reply('❄️ Cadê o texto?');
     
     await reply(\`${textoEscapado}\`);
@@ -386,7 +390,7 @@ ${pedacos[0]}\`\`\``
 }`
 
         await sock.sendMessage(jid, {
-          text: `❄️ • 𝐂𝐀𝐒𝐄 𝐂𝐎𝐏𝐈𝐀𝐃𝐎 •\n\nAqui está o código do comando \`${cmdFinal}\`:\n\n\`\`\`javascript\n${blocoCase}\n\`\`\``
+          text: `❄️ • 𝐂𝐀𝐒𝐄 𝐂𝐎𝐏𝐈𝐀𝐃𝐎 •\n\nAqui está o código do comando \`${nomeComando}\`:\n\n\`\`\`javascript\n${blocoCase}\n\`\`\``
         }, { quoted: msg })
       }
     },
