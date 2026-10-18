@@ -46,6 +46,21 @@ function bootstrap() {
   if (!fs.existsSync(arquivoCidadeJson)) {
     try { fs.writeFileSync(arquivoCidadeJson, JSON.stringify({ usuarios: {}, casas: {}, predios: {} }, null, 2)) } catch (e) {}
   }
+
+  // 🛠️ CORREÇÃO DA VERSÃO: Força a versão para 3 sem apagar os dados
+  const commitPath = path.join(DATA_DIR, "ultimo_commit.json")
+  let commitData = { versao: 3 }
+  if (fs.existsSync(commitPath)) {
+    try {
+      commitData = JSON.parse(fs.readFileSync(commitPath, "utf8"))
+      commitData.versao = 3 // Define V3
+      fs.writeFileSync(commitPath, JSON.stringify(commitData, null, 2))
+    } catch (e) {
+      fs.writeFileSync(commitPath, JSON.stringify({ versao: 3, hash: "reset" }, null, 2))
+    }
+  } else {
+    try { fs.writeFileSync(commitPath, JSON.stringify({ versao: 3, hash: "reset" }, null, 2)) } catch (e) {}
+  }
 }
 bootstrap()
 
@@ -458,7 +473,6 @@ function envolverSendMessage(sock) {
       if (temBotoes) return original(jid, content, options)
       if (options.edit) return original(jid, content, options)
       
-      // 👇 ISSO AQUI BLOQUEIA O VER CANAL NAS MENSAGENS DE PREFIXO E ERRO
       if (options.ignorarCanal) return original(jid, content, options)
 
       if (!canalCache) recarregarCanal()
@@ -1018,7 +1032,6 @@ async function iniciar() {
 
     const btnId = getTextoBotao(msg)
     if (btnId) {
-      // Correção do ++menu: Limpa qualquer duplicação de prefixo
       texto = btnId.replace(new RegExp("^\\" + prefixoGlobal + "+"), prefixoGlobal)
     }
 
@@ -1069,13 +1082,11 @@ async function iniciar() {
         caption: textoBase, 
         mentions: mencoes,
         footer: "⚔️ " + nomeBot,
-        interactiveButtons: [
-          { 
-            name: "quick_reply", 
-            buttonParamsJson: JSON.stringify({ display_text: "❄️ Menu-principal", id: "menu" }) // ID puro para não bugar
-          }
+        buttons: [
+          { buttonId: "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }
         ],
-        ignorarCanal: true // Remove o "Ver canal"
+        headerType: 1,
+        ignorarCanal: true
       }
 
       try {
@@ -1087,7 +1098,7 @@ async function iniciar() {
             await sock.sendMessage(remetente, { image: buf, ...opcoesEnvio }, { quoted: msg })
           }
         } else {
-          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, interactiveButtons: opcoesEnvio.interactiveButtons, ignorarCanal: true }, { quoted: msg })
+          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, buttons: opcoesEnvio.buttons, ignorarCanal: true }, { quoted: msg })
         }
       } catch (e) {
         console.log("Erro ao enviar prefixo com botão:", e.message)
@@ -1146,13 +1157,11 @@ ${v.frase}
         caption: textoBase, 
         mentions: mencoes,
         footer: "⚔️ " + nomeBot,
-        interactiveButtons: [
-          { 
-            name: "quick_reply", 
-            buttonParamsJson: JSON.stringify({ display_text: "❄️ Menu-principal", id: "menu" }) 
-          }
+        buttons: [
+          { buttonId: "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }
         ],
-        ignorarCanal: true 
+        headerType: 1,
+        ignorarCanal: true
       }
 
       try {
@@ -1164,7 +1173,7 @@ ${v.frase}
             await sock.sendMessage(remetente, { image: buf, ...opcoesErro }, { quoted: msg })
           }
         } else {
-          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, interactiveButtons: opcoesErro.interactiveButtons, ignorarCanal: true }, { quoted: msg })
+          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, buttons: opcoesErro.buttons, ignorarCanal: true }, { quoted: msg })
         }
       } catch (e) {
         await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
