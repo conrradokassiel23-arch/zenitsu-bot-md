@@ -1,5 +1,5 @@
 /* ============================================================
-   ❄️ MENU FAZENDA - AKAZA BOT MD
+   🟣 MENU FAZENDA - RIMURU BOT MD
    ============================================================ */
 
 const fs = require("fs")
@@ -25,7 +25,7 @@ function normalizar(s) {
 }
 
 function nomeBotDb(db) {
-  try { return db.config().nomeBot || "Akaza Bot" } catch { return "Akaza Bot" }
+  try { return db.config().nomeBot || "Rimuru Bot" } catch { return "Rimuru Bot" }
 }
 
 function lineEmoji(emoji, label, valor) {
@@ -33,9 +33,9 @@ function lineEmoji(emoji, label, valor) {
 }
 
 function msgSucesso(titulo, aviso, detalhes, rodape, nomeBot) {
-  return `❄️ • ${titulo} •
+  return `🟣 • ${titulo} •
 
-╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕
+╭─〔 💜 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕
 │ ${aviso}
 ╰──────────────
 
@@ -47,9 +47,9 @@ ${rodape ? rodape + "\n\n" : ""}"${nomeBot}"`
 }
 
 function msgAviso(titulo, aviso, detalhes, rodape, nomeBot) {
-  return `❄️ • ${titulo} •
+  return `🟣 • ${titulo} •
 
-╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕
+╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕
 │ ${aviso}
 ╰──────────────
 
@@ -61,9 +61,9 @@ ${rodape ? rodape + "\n\n" : ""}"${nomeBot}"`
 }
 
 function msgErro(titulo, aviso, detalhes, rodape, nomeBot) {
-  return `❄️ • ${titulo} •
+  return `🟣 • ${titulo} •
 
-╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕
+╭─〔 🚫 𝐄𝐑𝐑𝐎 〕
 │ ${aviso}
 ╰──────────────
 
@@ -97,52 +97,13 @@ const ANIMAIS = [
   { id: "pavao", nome: "Pavão", emoji: "🦚", preco: 500, producao: 60 },
   { id: "cisne", nome: "Cisne", emoji: "🦢", preco: 450, producao: 55 },
   { id: "avestruz", nome: "Avestruz", emoji: "🦤", preco: 800, producao: 100 },
-  { id: "ema", nome: "Ema", emoji: "🦤", preco: 700, producao: 90 },
-  { id: "coelho", nome: "Coelho", emoji: "🐰", preco: 120, producao: 18 },
-  { id: "coelha", nome: "Coelha", emoji: "🐇", preco: 130, producao: 20 },
-  { id: "hamster", nome: "Hamster", emoji: "🐹", preco: 80, producao: 10 },
-  { id: "porquinhodaIndia", nome: "Porquinho da Índia", emoji: "🐹", preco: 90, producao: 12 },
-  { id: "chinchila", nome: "Chinchila", emoji: "🐭", preco: 200, producao: 25 },
-  { id: "furao", nome: "Furão", emoji: "🦡", preco: 250, producao: 30 },
-  { id: "ratoBranco", nome: "Rato Branco", emoji: "🐭", preco: 60, producao: 8 },
-  { id: "minhoca", nome: "Minhoca", emoji: "🪱", preco: 50, producao: 8 },
   { id: "vaca", nome: "Vaca", emoji: "🐮", preco: 500, producao: 65 },
   { id: "boi", nome: "Boi", emoji: "🐂", preco: 700, producao: 85 },
-  { id: "vacaLeiteira", nome: "Vaca Leiteira", emoji: "🐄", preco: 800, producao: 100 },
-  { id: "touro", nome: "Touro", emoji: "🐂", preco: 900, producao: 110 },
-  { id: "bufalo", nome: "Búfalo", emoji: "🐃", preco: 1000, producao: 120 },
-  { id: "bufala", nome: "Búfala", emoji: "🐃", preco: 950, producao: 115 },
   { id: "porco", nome: "Porco", emoji: "🐷", preco: 400, producao: 50 },
-  { id: "javali", nome: "Javali", emoji: "🐗", preco: 600, producao: 75 },
   { id: "cabra", nome: "Cabra", emoji: "🐐", preco: 350, producao: 45 },
-  { id: "bode", nome: "Bode", emoji: "🐐", preco: 380, producao: 48 },
   { id: "ovelha", nome: "Ovelha", emoji: "🐑", preco: 400, producao: 52 },
-  { id: "carneiro", nome: "Carneiro", emoji: "🐏", preco: 450, producao: 58 },
-  { id: "ovelhaNegra", nome: "Ovelha Negra", emoji: "🐑", preco: 500, producao: 62 },
-  { id: "cordeiro", nome: "Cordeiro", emoji: "🐑", preco: 300, producao: 40 },
   { id: "cavalo", nome: "Cavalo", emoji: "🐴", preco: 900, producao: 100 },
-  { id: "egua", nome: "Égua", emoji: "🐴", preco: 850, producao: 95 },
-  { id: "potro", nome: "Potro", emoji: "🐎", preco: 600, producao: 70 },
-  { id: "ponei", nome: "Pônei", emoji: "🐴", preco: 400, producao: 50 },
-  { id: "burro", nome: "Burro", emoji: "🫏", preco: 350, producao: 45 },
-  { id: "mula", nome: "Mula", emoji: "🫏", preco: 380, producao: 48 },
-  { id: "jumento", nome: "Jumento", emoji: "🫏", preco: 320, producao: 42 },
-  { id: "lhama", nome: "Lhama", emoji: "🦙", preco: 700, producao: 85 },
-  { id: "alpaca", nome: "Alpaca", emoji: "🦙", preco: 750, producao: 90 },
-  { id: "cachorroPastor", nome: "Cachorro Pastor", emoji: "🐕", preco: 400, producao: 50 },
-  { id: "cachorroFila", nome: "Cachorro Fila", emoji: "🐕‍🦺", preco: 500, producao: 60 },
-  { id: "gato", nome: "Gato", emoji: "🐱", preco: 300, producao: 40 },
-  { id: "gata", nome: "Gata", emoji: "🐈", preco: 320, producao: 42 },
-  { id: "tartaruga", nome: "Tartaruga", emoji: "🐢", preco: 250, producao: 30 },
-  { id: "cagado", nome: "Cágado", emoji: "🐢", preco: 220, producao: 28 },
-  { id: "ra", nome: "Rã", emoji: "🐸", preco: 100, producao: 15 },
-  { id: "sapo", nome: "Sapo", emoji: "🐸", preco: 120, producao: 18 },
-  { id: "abelha", nome: "Abelha (Colmeia)", emoji: "🐝", preco: 300, producao: 60 },
-  { id: "tilapia", nome: "Tilápia", emoji: "🐟", preco: 150, producao: 25 },
-  { id: "carpa", nome: "Carpa", emoji: "🐠", preco: 200, producao: 30 },
-  { id: "truta", nome: "Truta", emoji: "🐟", preco: 250, producao: 35 },
-  { id: "bagre", nome: "Bagre", emoji: "🐟", preco: 180, producao: 28 },
-  { id: "pintado", nome: "Pintado", emoji: "🐟", preco: 300, producao: 45 }
+  { id: "coelho", nome: "Coelho", emoji: "🐰", preco: 120, producao: 18 }
 ]
 
 const SEMENTES = [
@@ -151,51 +112,13 @@ const SEMENTES = [
   { id: "arroz", nome: "Arroz", emoji: "🍚", preco: 35, vendaBase: 100, tempo: 22 },
   { id: "feijao", nome: "Feijão", emoji: "🫘", preco: 28, vendaBase: 85, tempo: 20 },
   { id: "soja", nome: "Soja", emoji: "🫘", preco: 40, vendaBase: 120, tempo: 25 },
-  { id: "cevada", nome: "Cevada", emoji: "🌾", preco: 27, vendaBase: 80, tempo: 18 },
-  { id: "centeio", nome: "Centeio", emoji: "🌾", preco: 26, vendaBase: 78, tempo: 19 },
-  { id: "aveia", nome: "Aveia", emoji: "🌾", preco: 24, vendaBase: 72, tempo: 17 },
-  { id: "sorgo", nome: "Sorgo", emoji: "🌾", preco: 30, vendaBase: 88, tempo: 21 },
-  { id: "girassol", nome: "Girassol", emoji: "🌻", preco: 45, vendaBase: 130, tempo: 28 },
-  { id: "canola", nome: "Canola", emoji: "🌼", preco: 42, vendaBase: 125, tempo: 26 },
-  { id: "algodao", nome: "Algodão", emoji: "🌸", preco: 55, vendaBase: 160, tempo: 35 },
-  { id: "cana", nome: "Cana-de-açúcar", emoji: "🎋", preco: 60, vendaBase: 180, tempo: 40 },
-  { id: "beterraba", nome: "Beterraba", emoji: "🍠", preco: 32, vendaBase: 95, tempo: 22 },
   { id: "batata", nome: "Batata", emoji: "🥔", preco: 30, vendaBase: 90, tempo: 20 },
-  { id: "batataDoce", nome: "Batata-doce", emoji: "🍠", preco: 34, vendaBase: 100, tempo: 22 },
-  { id: "mandioca", nome: "Mandioca", emoji: "🥔", preco: 36, vendaBase: 105, tempo: 24 },
   { id: "cenoura", nome: "Cenoura", emoji: "🥕", preco: 28, vendaBase: 82, tempo: 19 },
-  { id: "rabanete", nome: "Rabanete", emoji: "🥬", preco: 22, vendaBase: 65, tempo: 15 },
-  { id: "nabo", nome: "Nabo", emoji: "🥬", preco: 24, vendaBase: 70, tempo: 16 },
-  { id: "cebola", nome: "Cebola", emoji: "🧅", preco: 30, vendaBase: 88, tempo: 21 },
-  { id: "alho", nome: "Alho", emoji: "🧄", preco: 35, vendaBase: 102, tempo: 23 },
   { id: "tomate", nome: "Tomate", emoji: "🍅", preco: 40, vendaBase: 118, tempo: 25 },
-  { id: "pimentao", nome: "Pimentão", emoji: "🫑", preco: 38, vendaBase: 112, tempo: 24 },
-  { id: "pepino", nome: "Pepino", emoji: "🥒", preco: 32, vendaBase: 95, tempo: 20 },
-  { id: "abobrinha", nome: "Abobrinha", emoji: "🥒", preco: 34, vendaBase: 100, tempo: 22 },
-  { id: "abobora", nome: "Abóbora", emoji: "🎃", preco: 50, vendaBase: 150, tempo: 30 },
   { id: "melancia", nome: "Melancia", emoji: "🍉", preco: 65, vendaBase: 195, tempo: 40 },
-  { id: "melao", nome: "Melão", emoji: "🍈", preco: 60, vendaBase: 180, tempo: 38 },
   { id: "morango", nome: "Morango", emoji: "🍓", preco: 70, vendaBase: 210, tempo: 32 },
   { id: "uva", nome: "Uva", emoji: "🍇", preco: 80, vendaBase: 240, tempo: 45 },
-  { id: "maca", nome: "Maçã", emoji: "🍎", preco: 75, vendaBase: 225, tempo: 42 },
-  { id: "laranja", nome: "Laranja", emoji: "🍊", preco: 70, vendaBase: 210, tempo: 40 },
-  { id: "limao", nome: "Limão", emoji: "🍋", preco: 55, vendaBase: 165, tempo: 32 },
-  { id: "banana", nome: "Banana", emoji: "🍌", preco: 60, vendaBase: 180, tempo: 35 },
-  { id: "abacaxi", nome: "Abacaxi", emoji: "🍍", preco: 85, vendaBase: 255, tempo: 45 },
-  { id: "manga", nome: "Manga", emoji: "🥭", preco: 80, vendaBase: 240, tempo: 42 },
-  { id: "coco", nome: "Coco", emoji: "🥥", preco: 90, vendaBase: 270, tempo: 48 },
-  { id: "amendoim", nome: "Amendoim", emoji: "🥜", preco: 45, vendaBase: 135, tempo: 28 },
-  { id: "cafe", nome: "Café", emoji: "☕", preco: 100, vendaBase: 300, tempo: 50 },
-  { id: "cacau", nome: "Cacau", emoji: "🍫", preco: 110, vendaBase: 330, tempo: 52 },
-  { id: "cha", nome: "Chá", emoji: "🍵", preco: 50, vendaBase: 150, tempo: 30 },
-  { id: "ervaMate", nome: "Erva-mate", emoji: "🍃", preco: 55, vendaBase: 165, tempo: 32 },
-  { id: "alfafa", nome: "Alfafa", emoji: "🌿", preco: 30, vendaBase: 90, tempo: 20 },
-  { id: "cogumelo", nome: "Cogumelo", emoji: "🍄", preco: 65, vendaBase: 195, tempo: 35 },
-  { id: "alface", nome: "Alface", emoji: "🥬", preco: 20, vendaBase: 60, tempo: 14 },
-  { id: "couve", nome: "Couve", emoji: "🥬", preco: 22, vendaBase: 65, tempo: 15 },
-  { id: "brocolis", nome: "Brócolis", emoji: "🥦", preco: 28, vendaBase: 85, tempo: 20 },
-  { id: "repolho", nome: "Repolho", emoji: "🥬", preco: 26, vendaBase: 80, tempo: 18 },
-  { id: "espinafre", nome: "Espinafre", emoji: "🥬", preco: 24, vendaBase: 72, tempo: 16 }
+  { id: "cafe", nome: "Café", emoji: "☕", preco: 100, vendaBase: 300, tempo: 50 }
 ]
 
 function acharAnimal(nome) {
@@ -309,7 +232,7 @@ module.exports = {
         if (grupo) {
           await sock.sendMessage(grupo, {
             text:
-`❄️ • 𝐑𝐄𝐍𝐃𝐀 𝐀𝐂𝐔𝐌𝐔𝐋𝐀𝐃𝐀 •
+`🟣 • 𝐑𝐄𝐍𝐃𝐀 𝐀𝐂𝐔𝐌𝐔𝐋𝐀𝐃𝐀 •
 
 ╭─〔 🌾 𝐅𝐀𝐙𝐄𝐍𝐃𝐀 〕
 │ Sua renda foi gerada.
@@ -317,7 +240,7 @@ module.exports = {
 
 『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
 
-👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:
+👤 𝐒𝐥𝐢𝐦𝐞:
 ╰➜ ${num}
 
 💰 𝐀𝐜𝐮𝐦𝐮𝐥𝐚𝐝𝐨:
@@ -344,10 +267,10 @@ module.exports = {
         const nomeBot = nomeBotDb(db)
         const cfg = db.config()
         const texto =
-`❄️ • 𝐌𝐄𝐍𝐔 𝐅𝐀𝐙𝐄𝐍𝐃𝐀 •
+`🟣 • 𝐌𝐄𝐍𝐔 𝐅𝐀𝐙𝐄𝐍𝐃𝐀 •
 
 ╭─〔 🌾 𝐌𝐔𝐍𝐃𝐎 𝐑𝐔𝐑𝐀𝐋 〕
-│ O celeiro do império.
+│ O celeiro do Reino de Tempest.
 ╰──────────────
 
 『 𝐂𝐚𝐭𝐞𝐠𝐨𝐫𝐢𝐚𝐬 』 ↴
@@ -383,13 +306,13 @@ module.exports = {
 ╰➜ \`${p}statusfazenda\`
 ╰➜ \`${p}statusplanta\`
 
-❄️ _\"A renda acumula de 3h em 3h!\"_
+🟣 _"A renda acumula de 3h em 3h!"_
 
 "${nomeBot}"`
 
         if (cfg.fotoMenu) {
           const buf = Buffer.from(cfg.fotoMenu, "base64")
-          if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "akaza.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
+          if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "rimuru.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
           return sock.sendMessage(jid, { image: buf, caption: texto }, { quoted: msg })
         }
         await sock.sendMessage(jid, { text: texto }, { quoted: msg })
@@ -406,7 +329,7 @@ module.exports = {
         const pendente = u.rendaPendente || 0
 
         if (pendente <= 0) {
-          return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐒𝐆𝐀𝐓𝐀𝐑 𝐅𝐀𝐙𝐄𝐍𝐃𝐀", "Você não tem nada pra resgatar.", "🦅 A renda acumula a cada *3h*\n╰➜ Cuide dos bichinhos!", null, nomeBot) }, { quoted: msg })
+          return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐒𝐆𝐀𝐓𝐀𝐑 𝐅𝐀𝐙𝐄𝐍𝐃𝐀", "Você não tem nada pra resgatar.", "🦠 A renda acumula a cada *3h*\n╰➜ Cuide dos bichinhos!", null, nomeBot) }, { quoted: msg })
         }
 
         const rpg = db.rpg()
@@ -419,15 +342,15 @@ module.exports = {
 
         await sock.sendMessage(jid, {
           text:
-`❄️ • 𝐑𝐄𝐒𝐆𝐀𝐓𝐄 𝐅𝐄𝐈𝐓𝐎 •
+`🟣 • 𝐑𝐄𝐒𝐆𝐀𝐓𝐄 𝐅𝐄𝐈𝐓𝐎 •
 
-╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕
+╭─〔 💜 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕
 │ Renda coletada com sucesso.
 ╰──────────────
 
 『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
 
-👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:
+👤 𝐒𝐥𝐢𝐦𝐞:
 ╰➜ @${num}
 
 💰 𝐑𝐞𝐬𝐠𝐚𝐭𝐚𝐝𝐨:
@@ -436,7 +359,7 @@ module.exports = {
 💼 𝐒𝐚𝐥𝐝𝐨 𝐭𝐨𝐭𝐚𝐥:
 ╰➜ ${rpg.usuarios[num].moedas}
 
-❄️ _\"Cuide bem da fazenda!\"_
+🟣 _"Cuide bem da fazenda!"_
 
 "${nomeBot}"`,
           mentions: [`${num}@s.whatsapp.net`]
@@ -449,7 +372,7 @@ module.exports = {
       async executar({ sock, msg, prefixoAtivo, db }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
-        let txt = `❄️ • 𝐀𝐍𝐈𝐌𝐀𝐈𝐒 𝐃𝐈𝐒𝐏𝐎𝐍𝐈́𝐕𝐄𝐈𝐒 •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
+        let txt = `🟣 • 𝐀𝐍𝐈𝐌𝐀𝐈𝐒 𝐃𝐈𝐒𝐏𝐎𝐍𝐈́𝐕𝐄𝐈𝐒 •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
         ANIMAIS.forEach((a, i) => {
           txt += `${i + 1}. ${a.emoji} ${a.nome}\n╰➜ 💰 ${a.preco} | 📈 ${a.producao}/3h\n\n`
         })
@@ -588,12 +511,12 @@ module.exports = {
         const m = Math.floor((restante % 3600000) / 60000)
         const tempo = h > 0 ? `${h}h ${m}min` : `${m}min`
         const cheio = Math.min(10, Math.floor(u.animais.length / Math.max(1, u.limiteAnimais) * 10))
-        const barra = "🟦".repeat(cheio) + "⬜".repeat(10 - cheio)
+        const barra = "🟪".repeat(cheio) + "⬜".repeat(10 - cheio)
         const statusSujeira = u.sujeira > 70 ? "🔴" : u.sujeira > 40 ? "🟡" : "🟢"
         const prontas = (u.plantacoes || []).filter(p => p.pronta).length
         await sock.sendMessage(jid, {
           text:
-`❄️ • 𝐒𝐓𝐀𝐓𝐔𝐒 𝐅𝐀𝐙𝐄𝐍𝐃𝐀 •
+`🟣 • 𝐒𝐓𝐀𝐓𝐔𝐒 𝐅𝐀𝐙𝐄𝐍𝐃𝐀 •
 
 ╭─〔 🌾 𝐅𝐀𝐙𝐄𝐍𝐃𝐀 〕
 │ Visão geral do seu terreno.
@@ -601,7 +524,7 @@ module.exports = {
 
 『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
 
-👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:
+👤 𝐒𝐥𝐢𝐦𝐞:
 ╰➜ @${num}
 
 📊 𝐍𝐢́𝐯𝐞𝐥:
@@ -648,7 +571,7 @@ ${barra} ${u.animais.length}/${u.limiteAnimais}
         const num = utils.soNumero(sender)
         const { u } = getFazenda(num)
         if (!u.animais.length) return sock.sendMessage(jid, { text: msgAviso("𝐒𝐓𝐀𝐓𝐔𝐒 𝐀𝐍𝐈𝐌𝐀𝐈𝐒", "Você não tem animais.", "💡 Use `!compraranimal`", null, nomeBot) }, { quoted: msg })
-        let txt = `❄️ • 𝐀𝐍𝐈𝐌𝐀𝐈𝐒 (${u.animais.length}/${u.limiteAnimais}) •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
+        let txt = `🟣 • 𝐀𝐍𝐈𝐌𝐀𝐈𝐒 (${u.animais.length}/${u.limiteAnimais}) •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
         for (const a of u.animais) {
           const fomeIco = a.fome > 70 ? "🔴" : a.fome > 40 ? "🟡" : "🟢"
           const sujoIco = a.sujo > 70 ? "🔴" : a.sujo > 40 ? "🟡" : "🟢"
@@ -664,7 +587,7 @@ ${barra} ${u.animais.length}/${u.limiteAnimais}
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
-        let txt = `❄️ • 𝐋𝐎𝐉𝐀 𝐃𝐄 𝐒𝐄𝐌𝐄𝐍𝐓𝐄𝐒 •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
+        let txt = `🟣 • 𝐋𝐎𝐉𝐀 𝐃𝐄 𝐒𝐄𝐌𝐄𝐍𝐓𝐄𝐒 •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
         SEMENTES.forEach((s, i) => {
           txt += `${i + 1}. ${s.emoji} ${s.nome}\n╰➜ 💰 ${s.preco} | ⏰ ${s.tempo}min | 💵 ~${s.vendaBase}\n\n`
         })
@@ -820,7 +743,7 @@ ${barra} ${u.animais.length}/${u.limiteAnimais}
         rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
         rpg.usuarios[num].moedas = (rpg.usuarios[num].moedas || 0) + valor
         db.salvarRpg(rpg); dbSalvar("fazenda.json", f)
-        const estrelas = qualidade >= 90 ? "❄️❄️" : qualidade >= 70 ? "❄️" : ""
+        const estrelas = qualidade >= 90 ? "🟣🟣" : qualidade >= 70 ? "🟣" : ""
         await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐋𝐀𝐍𝐓𝐀 𝐕𝐄𝐍𝐃𝐈𝐃𝐀", "Colheita vendida.", lineEmoji(p.emoji, "𝐏𝐥𝐚𝐧𝐭𝐚", p.nome) + "\n" + lineEmoji("📊", "𝐐𝐮𝐚𝐥𝐢𝐝𝐚𝐝𝐞", qualidade + "% " + estrelas) + "\n" + lineEmoji("💵", "𝐕𝐚𝐥𝐨𝐫", "+" + valor + " gold") + "\n" + lineEmoji("💼", "𝐓𝐨𝐭𝐚𝐥", rpg.usuarios[num].moedas), null, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
@@ -833,10 +756,10 @@ ${barra} ${u.animais.length}/${u.limiteAnimais}
         const num = utils.soNumero(sender)
         const { u } = getFazenda(num)
         if (!u.plantacoes.length) return sock.sendMessage(jid, { text: msgAviso("𝐒𝐓𝐀𝐓𝐔𝐒 𝐏𝐋𝐀𝐍𝐓𝐀", "Você não tem plantações.", "💡 Use `!plantarsemente`", null, nomeBot) }, { quoted: msg })
-        let txt = `❄️ • 𝐏𝐋𝐀𝐍𝐓𝐀𝐂̧𝐎̃𝐄𝐒 (${u.plantacoes.length}/${u.terras}) •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
+        let txt = `🟣 • 𝐏𝐋𝐀𝐍𝐓𝐀𝐂̧𝐎̃𝐄𝐒 (${u.plantacoes.length}/${u.terras}) •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
         for (const p of u.plantacoes) {
           const q = qualidadePlanta(p)
-          const estrelas = q >= 90 ? "❄️❄️" : q >= 70 ? "❄️" : ""
+          const estrelas = q >= 90 ? "🟣🟣" : q >= 70 ? "🟣" : ""
           const status = p.pronta ? "✅ Pronta!" : `⏰ Crescendo...`
           txt += `${p.emoji} ${p.nome}\n╰➜ ${status}\n╰➜ 📊 ${q}% ${estrelas}\n╰➜ 💧 Regas: ${p.regas || 0}\n\n`
         }
