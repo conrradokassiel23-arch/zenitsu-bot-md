@@ -347,6 +347,9 @@ ${listaCat || "╰➜ _nenhuma_"}
 
 『 𝐂𝐚𝐭𝐞𝐠𝐨𝐫𝐢𝐚𝐬 』 ↴
 
+🤝 𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀
+╰➜ \`${p}parceria\` (pedir parceria)
+
 ⚙️ 𝐏𝐑𝐄𝐅𝐈𝐗𝐎
 ╰➜ \`${p}multiprefixo on/off\`
 ╰➜ \`${p}setprefixo <novo>\`
@@ -1298,21 +1301,80 @@ ${listaCat || "╰➜ _nenhuma_"}
       }
     },
 
+    parceria: {
+      aliases: ["pedirparceria", "quero parceria"],
+      adminOnly: false, grupoOnly: true, // Qualquer membro pode usar
+      async executar({ sock, msg, db, groupMetadata, utils }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const numUser = utils.soNumero(msg.key.participant || msg.key.remoteJid)
+        
+        if (!groupMetadata) return
+
+        // Pega todos os admins do grupo
+        const admins = groupMetadata.participants.filter(p => p.admin === "admin" || p.admin === "superadmin").map(p => p.id)
+        
+        if (admins.length === 0) {
+          return sock.sendMessage(jid, { 
+            text: msgAviso("𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀", "Não encontrei nenhum admin no grupo.", "⚠️ Avise o dono do grupo.", null, nomeBot) 
+          }, { quoted: msg })
+        }
+
+        // Monta a mensagem marcando todos os admins
+        let txt = `❄️ • 𝐏𝐄𝐃𝐈𝐃𝐎 𝐃𝐄 𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 •\n\n`
+        txt += `╭─〔 🤝 𝐒𝐎𝐋𝐈𝐂𝐈𝐓𝐀𝐂̧𝐀̃𝐎 〕\n`
+        txt += `│ @${numUser} está pedindo parceria.\n`
+        txt += `╰──────────────\n\n`
+        txt += `『 𝐀𝐃𝐌𝐈𝐍𝐒 𝐌𝐀𝐑𝐂𝐀𝐃𝐎𝐒 』 ↴\n\n`
+        
+        admins.forEach((a, i) => {
+          txt += `╰➜ ${i + 1}. @${utils.soNumero(a)}\n`
+        })
+
+        txt += `\n💡 *Administradores*, para liberar, usem:\n`
+        txt += `╰➜ \`!addparceria @${numUser} <qtd>\`\n\n`
+        txt += `"${nomeBot}"`
+
+        // Envia a mensagem com as menções
+        await sock.sendMessage(jid, { 
+          text: txt, 
+          mentions: [msg.key.participant || msg.key.remoteJid, ...admins] 
+        }, { quoted: msg })
+      }
+    },
+
     addparceria: {
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db, utils }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: msgAviso("𝐀𝐃𝐃𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀", "Marque um usuário.", "💡 `!addparceria @user <qtd>`", null, nomeBot) }, { quoted: msg })
+        
+        if (!alvo) {
+          return sock.sendMessage(jid, { 
+            text: msgAviso("𝐀𝐃𝐃𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀", "Marque um usuário.", "💡 `!addparceria @user <qtd>`", null, nomeBot) 
+          }, { quoted: msg })
+        }
+
         const qtd = parseInt(args.find(a => /^\d+$/.test(a)) || "0", 10)
-        if (!qtd) return sock.sendMessage(jid, { text: msgAviso("𝐐𝐔𝐀𝐍𝐓𝐈𝐃𝐀𝐃𝐄", "Informe a quantidade.", "💡 `!addparceria @user <qtd>`", null, nomeBot) }, { quoted: msg })
+        if (!qtd || qtd <= 0) {
+          return sock.sendMessage(jid, { 
+            text: msgAviso("𝐐𝐔𝐀𝐍𝐓𝐈𝐃𝐀𝐃𝐄", "Informe a quantidade de links por dia.", "💡 `!addparceria @user <qtd>`\n📌 Exemplo: `!addparceria @user 2`", null, nomeBot) 
+          }, { quoted: msg })
+        }
+
         const parcerias = db.parcerias()
         parcerias[jid] = parcerias[jid] || { ativo: false, parceiros: {} }
         parcerias[jid].parceiros = parcerias[jid].parceiros || {}
+        
+        // Salva a parceria com o limite diário
         parcerias[jid].parceiros[alvo] = { total: qtd, usados: 0, desde: Date.now() }
         db.salvarParcerias(parcerias)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 𝐀𝐃𝐈𝐂𝐈𝐎𝐍𝐀𝐃𝐀", "Parceria registrada.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + utils.soNumero(alvo)) + "\n" + lineEmoji("📊", "𝐔𝐬𝐨𝐬", "0/" + qtd), null, nomeBot), mentions: [alvo] }, { quoted: msg })
+
+        await sock.sendMessage(jid, { 
+          text: msgSucesso("𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 𝐀𝐃𝐈𝐂𝐈𝐎𝐍𝐀𝐃𝐀", "O usuário agora pode enviar links diários.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + utils.soNumero(alvo)) + "\n" + lineEmoji("📊", "𝐋𝐢𝐦𝐢𝐭𝐞", qtd + " link(s) por dia") + "\n" + lineEmoji("⏰", "𝐑𝐞𝐬𝐞𝐭", "Todos os dias às 00:00"), null, nomeBot), 
+          mentions: [alvo] 
+        }, { quoted: msg })
       }
     },
 
