@@ -181,16 +181,18 @@ function formatarTempo(ms) {
 function adicionarAviso(grupoJid, userJid, tipo) {
   const avisos = db.avisos()
   avisos[grupoJid] = avisos[grupoJid] || {}
-  avisos[grupoJid][userJid] = avisos[grupoJid][userJid] || {}
-  avisos[grupoJid][userJid][tipo] = (avisos[grupoJid][userJid][tipo] || 0) + 1
+  const num = soNumero(userJid)
+  avisos[grupoJid][num] = avisos[grupoJid][num] || {}
+  avisos[grupoJid][num][tipo] = (avisos[grupoJid][num][tipo] || 0) + 1
   db.salvarAvisos(avisos)
-  return avisos[grupoJid][userJid][tipo]
+  return avisos[grupoJid][num][tipo]
 }
 
 function limparAvisos(grupoJid, userJid, tipo) {
   const avisos = db.avisos()
-  if (avisos[grupoJid] && avisos[grupoJid][userJid] && avisos[grupoJid][userJid][tipo]) {
-    avisos[grupoJid][userJid][tipo] = 0
+  const num = soNumero(userJid)
+  if (avisos[grupoJid] && avisos[grupoJid][num] && avisos[grupoJid][num][tipo]) {
+    avisos[grupoJid][num][tipo] = 0
     db.salvarAvisos(avisos)
   }
 }
@@ -300,7 +302,7 @@ async function processarAutoTtk(sock, msg, remetente, isGrupo) {
 }
 
 // ============================================================
-// 🤖 SISTEMA DE IA (POLLINATIONS - Gratuito sem chave)
+// 🤖 SISTEMA DE IA
 // ============================================================
 async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
   if (isGrupo) {
@@ -330,8 +332,6 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
     .trim()
 
   if (!pergunta) pergunta = "Oi"
-
-  console.log(`🤖 IA sendo chamada por ${sender}. Pergunta: "${pergunta}"`)
 
   try {
     await sock.sendPresenceUpdate("composing", remetente)
@@ -440,35 +440,6 @@ function getComando(n) {
   return null
 }
 
-function similaridade(a, b) {
-  a = String(a).toLowerCase(); b = String(b).toLowerCase()
-  const m = a.length, n = b.length
-  if (m === 0 || n === 0) return 0
-  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0))
-  for (let i = 0; i <= m; i++) dp[i][0] = i
-  for (let j = 0; j <= n; j++) dp[0][j] = j
-  for (let i = 1; i <= m; i++)
-    for (let j = 1; j <= n; j++) {
-      const c = a[i - 1] === b[j - 1] ? 0 : 1
-      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + c)
-    }
-  return Math.round((1 - dp[m][n] / Math.max(m, n)) * 100)
-}
-
-function comandosParecidos(d, limite = 3) {
-  const r = []
-  for (const [nome, cmd] of comandos.entries()) {
-    let melhor = { comando: nome, porcentagem: similaridade(d, nome) }
-    for (const a of cmd.aliases) {
-      const p = similaridade(d, a)
-      if (p > melhor.porcentagem) melhor = { comando: nome, porcentagem: p }
-    }
-    if (melhor.porcentagem > 0) r.push(melhor)
-  }
-  r.sort((a, b) => b.porcentagem - a.porcentagem)
-  return r.slice(0, limite).filter(x => x.porcentagem >= 40)
-}
-
 let canalCache = null
 function recarregarCanal() { canalCache = db.canal() }
 
@@ -500,7 +471,7 @@ function envolverSendMessage(sock) {
 }
 
 // ============================================================
-// 🔥 COMANDOS SEM PREFIXO (nome do bot)
+// 🔥 COMANDOS SEM PREFIXO
 // ============================================================
 async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo, isDono, isSubDono) {
   if (!isGrupo) return false
@@ -784,19 +755,16 @@ async function iniciar() {
       if (b.grupos && b.grupos[remetente]) return
     }
 
-    // 🔥 Comando sem prefixo (nome fecha/abre)
     if (isGrupo && !msg.key.fromMe) {
       const feito = await processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo, isDono, isSubDono)
       if (feito) return
     }
 
-    // 🎴 Detector de figurinha comando
     if (isGrupo && !msg.key.fromMe) {
       const feito = await processarFigCmd(sock, msg, remetente, sender, isGrupo, isDono, isSubDono)
       if (feito) return
     }
 
-    // 🤖 NOVO: Processar IA (se marcado ou respondido)
     if (!msg.key.fromMe) {
       const feito = await processarIA(sock, msg, remetente, sender, isGrupo, db)
       if (feito) return
@@ -947,79 +915,46 @@ async function iniciar() {
           const modoParceria = p.ativo === true
           const senderNum = soNumero(sender)
 
-          // 🔍 DEBUG
-          console.log("=== 🔍 DEBUG ANTILINK / PARCERIA ===")
-          console.log("Grupo:", remetente)
-          console.log("Sender:", senderNum)
-          console.log("ehAdmin:", ehAdmin)
-          console.log("ehSub:", ehSub)
-          console.log("isDono:", isDono)
-          console.log("modoParceria ativo:", modoParceria)
-          console.log("Parceiros cadastrados:", Object.keys(parceiros).map(soNumero))
-          console.log("Mensagem:", textoMsg.slice(0, 100))
-          console.log("===================================")
-
           let encontrado = null
-          let jidParceiro = null
-
           for (const [jidP, info] of Object.entries(parceiros)) {
-            if (soNumero(jidP) === senderNum) { encontrado = info; jidParceiro = jidP; break }
+            if (soNumero(jidP) === senderNum) { encontrado = info; break }
           }
 
-          // 🔍 DEBUG
-          console.log("Parceria encontrada:", encontrado ? JSON.stringify(encontrado) : "NENHUMA")
-
-          // Se o cara tem parceria E modo parceria tá ON
           if (modoParceria && encontrado) {
             if (encontrado.usados < encontrado.total) {
               encontrado.usados++
               db.salvarParcerias(parcerias)
-
               const restantes = encontrado.total - encontrado.usados
-              let extra = ""
-              if (restantes === 0) extra = "⚠️ *Esse foi o seu último link de hoje!* Volta amanhã às 00:00."
-              else extra = `✨ Você ainda tem *${restantes}* link(s) restante(s) hoje.`
+              const extra = restantes === 0 
+                ? "⚠️ *Esse foi o seu último link de hoje!* Volta amanhã." 
+                : `✨ Ainda tem *${restantes}* link(s) restante(s) hoje.`
 
-              await sock.sendMessage(remetente, {
-                text: `✅ *PARCERIA LIBERADA*\n\n👤 @${senderNum} link autorizado.\n\n📊 *Status:* ${encontrado.usados}/${encontrado.total}\n\n${extra}`,
-                mentions: [sender]
-              })
+              try {
+                await sock.sendMessage(remetente, {
+                  text: `✅ *PARCERIA LIBERADA*\n\n👤 @${senderNum} link autorizado.\n📊 *Status:* ${encontrado.usados}/${encontrado.total}\n\n${extra}`,
+                  mentions: [sender]
+                })
+              } catch (e) { console.log("Erro msg parceria:", e.message) }
               return
             } else {
               try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
-              await sock.sendMessage(remetente, {
-                text: `❌ *PARCERIA ESGOTADA*\n\n@${senderNum}, você já usou todos os seus links hoje (${encontrado.total}/${encontrado.total}).\n\n⏰ Aguarde o reset à meia-noite.`,
-                mentions: [sender]
-              })
+              try {
+                await sock.sendMessage(remetente, {
+                  text: `❌ *PARCERIA ESGOTADA*\n\n@${senderNum}, você já usou todos os seus links hoje (${encontrado.total}/${encontrado.total}).\n\n⏰ Aguarde o reset à meia-noite.`,
+                  mentions: [sender]
+                })
+              } catch (e) { console.log("Erro msg esgotada:", e.message) }
               return
             }
           }
 
-          // ============================================================
-          // 🚨 NÃO TEM PARCERIA → DELETA + AVISA O GRUPO SEMPRE
-          // ============================================================
           try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
-
-          const n = adicionarAviso(remetente, sender, "link")
-
-          console.log("Avisos após adicionar:", n)
-
-          if (n >= 3) {
-            limparAvisos(remetente, sender, "link")
+          try {
             await sock.sendMessage(remetente, {
-              text: `🚫 *LIMITE ATINGIDO*\n\n@${senderNum} chegou a 3/3 avisos por divulgação.\n\n👢 Removendo do grupo...`,
+              text: `🚫 *LINK DE GRUPO BLOQUEADO*\n\n👤 @${senderNum}, você não tem parceria configurada neste grupo.\n\n💡 Para enviar links, peça para um admin usar:\n╰➜ \`!parceria\``,
               mentions: [sender]
             })
-            try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (e) {
-              console.log("Erro ao remover:", e.message)
-            }
-          } else {
-            // 🔥 AQUI É O AVISO QUE VOCÊ QUER — SEMPRE QUE MANDAR LINK
-            await sock.sendMessage(remetente, {
-              text: `🚫 *LINK DE GRUPO BLOQUEADO*\n\n👤 @${senderNum}\n⚠️ *Avisos:* ${n}/3\n\n💡 Peça parceria com um admin usando:\n╰➜ \`!parceria\``,
-              mentions: [sender]
-            })
-          }
+          } catch (e) { console.log("Erro msg bloqueio:", e.message) }
           return
         }
 
@@ -1106,7 +1041,6 @@ async function iniciar() {
       } else return
     }
 
-    // 🔥 INTERCEPTA O COMANDO "PREFIXO" SEM PREFIXO (Visual Novo)
     if (cmdName.toLowerCase() === "prefixo") {
       const p = prefixoGlobal
       const numUser = soNumero(sender)
@@ -1162,7 +1096,6 @@ async function iniciar() {
 
     const cmd = getComando(cmdName.toLowerCase())
     if (!cmd) {
-      // 🔥 COMANDO NÃO ENCONTRADO
       const p = (isGrupo && confGrupo.multiprefixo && confGrupo.prefixo) ? confGrupo.prefixo : prefixoGlobal
       const cmdLimpo = (cmdName || "").trim().toLowerCase()
       
