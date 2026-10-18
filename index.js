@@ -47,13 +47,13 @@ function bootstrap() {
     try { fs.writeFileSync(arquivoCidadeJson, JSON.stringify({ usuarios: {}, casas: {}, predios: {} }, null, 2)) } catch (e) {}
   }
 
-  // 🛠️ CORREÇÃO DA VERSÃO: Força a versão para 3 sem apagar os dados
+  // Força a versão para 3
   const commitPath = path.join(DATA_DIR, "ultimo_commit.json")
   let commitData = { versao: 3 }
   if (fs.existsSync(commitPath)) {
     try {
       commitData = JSON.parse(fs.readFileSync(commitPath, "utf8"))
-      commitData.versao = 3 // Define V3
+      commitData.versao = 3
       fs.writeFileSync(commitPath, JSON.stringify(commitData, null, 2))
     } catch (e) {
       fs.writeFileSync(commitPath, JSON.stringify({ versao: 3, hash: "reset" }, null, 2))
@@ -146,7 +146,6 @@ function getTextoBotao(msg) {
     if (msg.message && msg.message.buttonsResponseMessage) return msg.message.buttonsResponseMessage.selectedButtonId || ""
     if (msg.message && msg.message.templateButtonReplyMessage) return msg.message.templateButtonReplyMessage.selectedId || ""
     if (msg.message && msg.message.listResponseMessage) return msg.message.listResponseMessage.singleSelectReply && msg.message.listResponseMessage.singleSelectReply.selectedRowId || ""
-    // NOVO: Formato novo de botão do WhatsApp (Native Flow)
     if (msg.message && msg.message.interactiveResponseMessage) {
       const params = msg.message.interactiveResponseMessage.nativeFlowResponseMessage?.paramsJson
       if (params) {
@@ -1090,13 +1089,11 @@ async function iniciar() {
         caption: textoBase, 
         mentions: mencoes,
         footer: "⚔️ " + nomeBot,
-        interactiveButtons: [
-          { 
-            name: "quick_reply", 
-            buttonParamsJson: JSON.stringify({ display_text: "❄️ Menu-principal", id: "menu" }) 
-          }
+        buttons: [
+          { buttonId: "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }
         ],
-        ignorarCanal: true 
+        headerType: 1,
+        ignorarCanal: true
       }
 
       try {
@@ -1108,7 +1105,7 @@ async function iniciar() {
             await sock.sendMessage(remetente, { image: buf, ...opcoesEnvio }, { quoted: msg })
           }
         } else {
-          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, interactiveButtons: opcoesEnvio.interactiveButtons, ignorarCanal: true }, { quoted: msg })
+          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, buttons: opcoesEnvio.buttons, ignorarCanal: true }, { quoted: msg })
         }
       } catch (e) {
         console.log("Erro ao enviar prefixo com botão:", e.message)
@@ -1167,13 +1164,11 @@ ${v.frase}
         caption: textoBase, 
         mentions: mencoes,
         footer: "⚔️ " + nomeBot,
-        interactiveButtons: [
-          { 
-            name: "quick_reply", 
-            buttonParamsJson: JSON.stringify({ display_text: "❄️ Menu-principal", id: "menu" }) 
-          }
+        buttons: [
+          { buttonId: "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }
         ],
-        ignorarCanal: true 
+        headerType: 1,
+        ignorarCanal: true
       }
 
       try {
@@ -1185,7 +1180,7 @@ ${v.frase}
             await sock.sendMessage(remetente, { image: buf, ...opcoesErro }, { quoted: msg })
           }
         } else {
-          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, interactiveButtons: opcoesErro.interactiveButtons, ignorarCanal: true }, { quoted: msg })
+          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, buttons: opcoesErro.buttons, ignorarCanal: true }, { quoted: msg })
         }
       } catch (e) {
         await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
