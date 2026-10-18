@@ -170,6 +170,7 @@ module.exports = {
 ╰➜ \`${p}teste\` (reply)
 ╰➜ \`${p}sora <descrição>\`
 ╰➜ \`${p}testa @user\`
+╰➜ \`${p}mimic <texto>\` (reply áudio)
 
 🌙 𝐒𝐈𝐒𝐓𝐄𝐌𝐀
 ╰➜ \`${p}atualizar\`
@@ -339,6 +340,57 @@ ${pedacos[0]}\`\`\``
         } catch (e) {
           console.log("Erro no comando testa:", e.message)
           await sock.sendMessage(jid, { text: `❄️ Erro ao forjar: ${e.message}` }, { quoted: msg })
+        }
+      }
+    },
+
+    mimic: {
+      aliases: ["dublar", "clonarvoz"],
+      async executar({ sock, msg, args, db, utils }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        
+        const textoDublagem = args.join(" ").trim()
+        if (!textoDublagem) {
+          return sock.sendMessage(jid, { 
+            text: `❄️ • 𝐌𝐈𝐌𝐈𝐂 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Digite o texto que quer colocar no áudio.\n╰──────────────\n\n💡 Responda um áudio com:\n╰➜ \`!mimic <texto>\`\n\n"${nomeBot}"` 
+          }, { quoted: msg })
+        }
+
+        const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
+        const quoted = ctx.quotedMessage
+        const eAudio = quoted && (quoted.audioMessage || (quoted.viewOnceMessage && quoted.viewOnceMessage.message?.audioMessage) || (quoted.viewOnceMessageV2 && quoted.viewOnceMessageV2.message?.audioMessage))
+
+        if (!eAudio) {
+          return sock.sendMessage(jid, { 
+            text: `❄️ • 𝐌𝐈𝐌𝐈𝐂 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Você precisa responder um áudio.\n╰──────────────\n\n💡 Toque e segure o áudio, e responda com:\n╰➜ \`!mimic <texto>\`\n\n"${nomeBot}"` 
+          }, { quoted: msg })
+        }
+
+        try {
+          await sock.sendMessage(jid, { text: "❄️ Processando áudio..." }, { quoted: msg })
+
+          const alvoMsg = Object.assign({}, msg, { 
+            message: { 
+              audioMessage: eAudio 
+            } 
+          })
+          const bufferAudio = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
+
+          if (!bufferAudio || !bufferAudio.length) throw new Error("Áudio vazio.")
+
+          await sock.sendMessage(jid, {
+            audio: bufferAudio,
+            mimetype: "audio/mp4",
+            ptt: true,
+            caption: `🎙️ *MIMIC*\n\n📝 *Texto:* ${textoDublagem}`
+          }, { quoted: msg })
+
+        } catch (e) {
+          console.log("Erro no comando mimic:", e.message)
+          await sock.sendMessage(jid, { 
+            text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` 
+          }, { quoted: msg })
         }
       }
     },
@@ -920,7 +972,7 @@ ${cat.emoji} 𝐓𝐢𝐩𝐨:
           try { if (global.__carregarMenus) global.__carregarMenus() } catch (_) {}
 
           console.log("♻️ RELOAD solicitado. Saindo com código 1...")
-          setTimeout(() => process.exit(1), 3000) // Correção: exit(1) força o painel a reiniciar
+          setTimeout(() => process.exit(1), 3000)
         } catch (e) {
           await sock.sendMessage(jid, {
             text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"`
@@ -952,7 +1004,7 @@ ${cat.emoji} 𝐓𝐢𝐩𝐨:
           }, { quoted: msg })
           try { if (global.__carregarMenus) global.__carregarMenus() } catch (_) {}
           console.log("♻️ REINICIAR solicitado. Saindo com código 1...")
-          setTimeout(() => process.exit(1), 3000) // Correção: exit(1) força o painel a reiniciar
+          setTimeout(() => process.exit(1), 3000)
         } catch (e) {
           await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
@@ -1070,7 +1122,6 @@ ${typeof info === "string" ? "🔗 \`" + info + "\`" : "✅ Entrada realizada"}
         let temImg = (msg.message && msg.message.imageMessage) || (quoted && quoted.imageMessage)
         let temVid = (msg.message && msg.message.videoMessage) || (quoted && quoted.videoMessage)
         
-        // Correção para visualização única
         if (quoted && quoted.viewOnceMessage) {
           temImg = temImg || quoted.viewOnceMessage.message?.imageMessage
           temVid = temVid || quoted.viewOnceMessage.message?.videoMessage
