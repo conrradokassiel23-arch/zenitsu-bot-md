@@ -1091,7 +1091,7 @@ async function iniciar() {
         mentions: mencoes,
         footer: "⚔️ " + nomeBot,
         buttons: [
-          { buttonId: "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }
+          { buttonId: prefixoGlobal + "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }
         ],
         headerType: 1,
         ignorarCanal: true
@@ -1166,7 +1166,7 @@ ${v.frase}
         mentions: mencoes,
         footer: "⚔️ " + nomeBot,
         buttons: [
-          { buttonId: "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }
+          { buttonId: prefixoGlobal + "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }
         ],
         headerType: 1,
         ignorarCanal: true
