@@ -458,8 +458,8 @@ function envolverSendMessage(sock) {
       if (temBotoes) return original(jid, content, options)
       if (options.edit) return original(jid, content, options)
       
-      // Ignora o "Ver Canal" se for a mensagem de prefixo
-      if (options.prefixoMsg) return original(jid, content, options)
+      // Ignora o "Ver Canal" se for a mensagem de prefixo ou mensagens de erro
+      if (options.ignorarCanal) return original(jid, content, options)
 
       if (!canalCache) recarregarCanal()
       const c = canalCache
@@ -1074,7 +1074,7 @@ async function iniciar() {
           { buttonId: p + "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }
         ],
         headerType: 1,
-        prefixoMsg: true // Ignora o "Ver Canal"
+        ignorarCanal: true 
       }
 
       try {
@@ -1086,11 +1086,11 @@ async function iniciar() {
             await sock.sendMessage(remetente, { image: buf, ...opcoesEnvio }, { quoted: msg })
           }
         } else {
-          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, buttons: opcoesEnvio.buttons, prefixoMsg: true }, { quoted: msg })
+          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, buttons: opcoesEnvio.buttons, ignorarCanal: true }, { quoted: msg })
         }
       } catch (e) {
         console.log("Erro ao enviar prefixo com botão:", e.message)
-        await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, prefixoMsg: true }, { quoted: msg })
+        await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
       }
       return
     }
@@ -1205,15 +1205,15 @@ ${v.frase}
         if (cfgCmd.fotoCmd) {
           const buf = Buffer.from(cfgCmd.fotoCmd, "base64")
           if (cfgCmd.tipoFotoCmd === "video") {
-            await sock.sendMessage(remetente, { video: buf, mimetype: "video/mp4", fileName: "akaza.mp4", gifPlayback: true, caption: textoBase, mentions: mencoes }, { quoted: msg })
+            await sock.sendMessage(remetente, { video: buf, mimetype: "video/mp4", fileName: "akaza.mp4", gifPlayback: true, caption: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
           } else {
-            await sock.sendMessage(remetente, { image: buf, caption: textoBase, mentions: mencoes }, { quoted: msg })
+            await sock.sendMessage(remetente, { image: buf, caption: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
           }
         } else {
-          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes }, { quoted: msg })
+          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
         }
       } catch (e) {
-        await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes }, { quoted: msg })
+        await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
       }
       return
     }
