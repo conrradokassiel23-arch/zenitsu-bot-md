@@ -458,7 +458,7 @@ function envolverSendMessage(sock) {
       if (temBotoes) return original(jid, content, options)
       if (options.edit) return original(jid, content, options)
       
-      // Ignora o "Ver Canal" se for a mensagem de prefixo ou mensagens de erro
+      // 👇 ISSO AQUI BLOQUEIA O VER CANAL NAS MENSAGENS DE PREFIXO E ERRO
       if (options.ignorarCanal) return original(jid, content, options)
 
       if (!canalCache) recarregarCanal()
@@ -1018,23 +1018,8 @@ async function iniciar() {
 
     const btnId = getTextoBotao(msg)
     if (btnId) {
-      const prefixos = ["!", "/", ".", "-", "#", ","]
-      const temPrefixo = prefixos.some(p => btnId.startsWith(p))
-      
-      // Correção do ++menu:
-      let textoLimpo = btnId;
-      if (temPrefixo) {
-        textoLimpo = btnId;
-      } else {
-        textoLimpo = (prefixoGlobal || "!") + btnId;
-      }
-      
-      // Se o botão veio com o prefixo duplicado, a gente limpa
-      if (textoLimpo.startsWith(prefixoGlobal + prefixoGlobal)) {
-        textoLimpo = textoLimpo.replace(prefixoGlobal + prefixoGlobal, prefixoGlobal);
-      }
-      
-      texto = textoLimpo;
+      // Correção do ++menu: Limpa qualquer duplicação de prefixo
+      texto = btnId.replace(new RegExp("^\\" + prefixoGlobal + "+"), prefixoGlobal)
     }
 
     let prefixoUsado = prefixosAtivos.find(p => texto.startsWith(p))
@@ -1087,10 +1072,10 @@ async function iniciar() {
         interactiveButtons: [
           { 
             name: "quick_reply", 
-            buttonParamsJson: JSON.stringify({ display_text: "❄️ Menu-principal", id: p + "menu" }) 
+            buttonParamsJson: JSON.stringify({ display_text: "❄️ Menu-principal", id: "menu" }) // ID puro para não bugar
           }
         ],
-        ignorarCanal: true 
+        ignorarCanal: true // Remove o "Ver canal"
       }
 
       try {
@@ -1116,26 +1101,16 @@ async function iniciar() {
       // 🔥 COMANDO NÃO ENCONTRADO
       const p = (isGrupo && confGrupo.multiprefixo && confGrupo.prefixo) ? confGrupo.prefixo : prefixoGlobal
       const cmdLimpo = (cmdName || "").trim().toLowerCase()
-      const soPrefixo = !cmdLimpo || cmdLimpo.length === 0
-
-      let comandoCerto = p + "menu"
-      if (!soPrefixo) {
-        const parecidos = comandosParecidos(cmdLimpo, 3)
-        comandoCerto = parecidos.length ? p + parecidos[0].comando : "inexistente"
-      }
-
+      
       const VARIACOES_CMD_ERRADO = [
         { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •", aviso: "O comando informado não foi reconhecido.", frase: "💡 Verifique a escrita e tente novamente!" },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐕𝐀́𝐋𝐈𝐃𝐎 •", aviso: "Isso não existe no meu repertório.", frase: "💡 Confira antes de tentar novamente." },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐃𝐄𝐒𝐂𝐎𝐍𝐇𝐄𝐂𝐈𝐃𝐎 •", aviso: "Nem meus olhos encontraram isso.", frase: "💡 Talvez esteja em outro mundo." },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐄𝐑𝐑𝐀𝐃𝐎 •", aviso: "Tenta de novo, mortal.", frase: "💡 A pressa cega os fracos." }
+        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐕𝐀́𝐋𝐈𝐃𝐎 •", aviso: "Isso não existe no meu repertório.", frase: "💡 Confira antes de tentar novamente." }
       ]
 
       const v = VARIACOES_CMD_ERRADO[Math.floor(Math.random() * VARIACOES_CMD_ERRADO.length)]
       const numUser = soNumero(sender)
-      const agora = new Date()
-      const hora = agora.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })
-      const data = agora.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
+      const hora = new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })
+      const data = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
       const nomeBot = db.config().nomeBot || "Akaza Bot"
       const cmdExibido = cmdLimpo ? (p + cmdLimpo) : p
 
@@ -1157,9 +1132,6 @@ async function iniciar() {
 ❔ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐮𝐬𝐚𝐝𝐨:
 ╰➜ ${cmdExibido}
 
-♦️ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐜𝐨𝐫𝐫𝐞𝐭𝐨:
-╰➜ ${comandoCerto}
-
 🕐 𝐇𝐨𝐫𝐚́𝐫𝐢𝐨:
 ╰➜ ${hora} — ${data}
 
@@ -1177,10 +1149,10 @@ ${v.frase}
         interactiveButtons: [
           { 
             name: "quick_reply", 
-            buttonParamsJson: JSON.stringify({ display_text: "❄️ Menu-principal", id: p + "menu" }) 
+            buttonParamsJson: JSON.stringify({ display_text: "❄️ Menu-principal", id: "menu" }) 
           }
         ],
-        ignorarCanal: true
+        ignorarCanal: true 
       }
 
       try {
