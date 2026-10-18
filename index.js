@@ -147,7 +147,6 @@ function getTextoBotao(msg) {
     if (msg.message && msg.message.templateButtonReplyMessage) return msg.message.templateButtonReplyMessage.selectedId || ""
     if (msg.message && msg.message.listResponseMessage) return msg.message.listResponseMessage.singleSelectReply && msg.message.listResponseMessage.singleSelectReply.selectedRowId || ""
     
-    // 🔥 LEITURA PROFUNDA: Pega o clique do botão pelo JSON cru
     const msgStr = JSON.stringify(msg.message)
     if (msgStr.includes('"selectedId":"menu"') || msgStr.includes('"id":"menu"') || msgStr.includes('menu')) {
       if (msg.message.interactiveResponseMessage || msg.message.buttonsResponseMessage || msgStr.includes("nativeFlowResponse")) {
@@ -949,19 +948,46 @@ async function iniciar() {
           const senderNum = soNumero(sender)
 
           let encontrado = null
+          let jidParceiro = null
+
           for (const [jidP, info] of Object.entries(parceiros)) {
-            if (soNumero(jidP) === senderNum) { encontrado = { jid: jidP, info }; break }
+            if (soNumero(jidP) === senderNum) { encontrado = info; jidParceiro = jidP; break }
+          }
+
+          // Se for admin e não tiver parceria configurada, cria uma "parceria" invisível de 3 links
+          if (!encontrado && ehAdmin) {
+            encontrado = { total: 3, usados: 0, desde: Date.now() }
+            jidParceiro = sender
+            if (!parcerias[remetente]) parcerias[remetente] = { ativo: true, parceiros: {} }
+            parcerias[remetente].parceiros[jidParceiro] = encontrado
+            db.salvarParcerias(parcerias)
           }
 
           if (modoParceria && encontrado) {
-            if (encontrado.info.usados < encontrado.info.total) {
-              encontrado.info.usados++
+            if (encontrado.usados < encontrado.total) {
+              encontrado.usados++
               db.salvarParcerias(parcerias)
-              await sock.sendMessage(remetente, { text: "Parceria liberada para @" + senderNum + "\nUsos: " + encontrado.info.usados + "/" + encontrado.info.total, mentions: [sender] })
+              
+              const restantes = encontrado.total - encontrado.usados;
+              let mensagemExtra = "";
+              
+              if (restantes === 0) {
+                mensagemExtra = "⚠️ *Atenção:* Esse foi o seu último link de hoje! O limite será resetado amanhã às 00:00.";
+              } else {
+                mensagemExtra = `✨ Você ainda tem *${restantes}* link(s) sobrando(s) para enviar hoje.`;
+              }
+
+              await sock.sendMessage(remetente, { 
+                text: `✅ *Parceria Liberada*\n\n👤 @${senderNum} você enviou um link permitido.\n\n📊 *Status:* ${encontrado.usados}/${encontrado.total}\n\n${mensagemExtra}`, 
+                mentions: [sender] 
+              })
               return
             } else {
               try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
-              await sock.sendMessage(remetente, { text: "Parceria esgotada para @" + senderNum, mentions: [sender] })
+              await sock.sendMessage(remetente, { 
+                text: `❌ *Parceria Esgotada*\n\n@${senderNum}, você já atingiu o limite diário de links. Aguarde o reset às 00:00 para enviar novamente.`, 
+                mentions: [sender] 
+              })
               return
             }
           }
