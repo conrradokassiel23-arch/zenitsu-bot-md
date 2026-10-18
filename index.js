@@ -47,7 +47,6 @@ function bootstrap() {
     try { fs.writeFileSync(arquivoCidadeJson, JSON.stringify({ usuarios: {}, casas: {}, predios: {} }, null, 2)) } catch (e) {}
   }
 
-  // Força a versão para 3
   const commitPath = path.join(DATA_DIR, "ultimo_commit.json")
   let commitData = { versao: 3 }
   if (fs.existsSync(commitPath)) {
@@ -341,7 +340,8 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
     
     const response = await fetch(`https://text.pollinations.ai/${promptSistema}`, {
       method: 'GET',
-      headers: { 'Content-Type': 'text/plain' }
+      headers: { 'Content-Type': 'text/plain' },
+      signal: AbortSignal.timeout(30000)
     })
 
     if (!response.ok) throw new Error("Erro na API da IA")
@@ -947,6 +947,18 @@ async function iniciar() {
           const modoParceria = p.ativo === true
           const senderNum = soNumero(sender)
 
+          // 🔍 DEBUG
+          console.log("=== 🔍 DEBUG ANTILINK / PARCERIA ===")
+          console.log("Grupo:", remetente)
+          console.log("Sender:", senderNum)
+          console.log("ehAdmin:", ehAdmin)
+          console.log("ehSub:", ehSub)
+          console.log("isDono:", isDono)
+          console.log("modoParceria ativo:", modoParceria)
+          console.log("Parceiros cadastrados:", Object.keys(parceiros).map(soNumero))
+          console.log("Mensagem:", textoMsg.slice(0, 100))
+          console.log("===================================")
+
           let encontrado = null
           let jidParceiro = null
 
@@ -954,52 +966,59 @@ async function iniciar() {
             if (soNumero(jidP) === senderNum) { encontrado = info; jidParceiro = jidP; break }
           }
 
-          // Se for admin e não tiver parceria configurada, cria uma "parceria" invisível de 3 links
-          if (!encontrado && ehAdmin) {
-            encontrado = { total: 3, usados: 0, desde: Date.now() }
-            jidParceiro = sender
-            if (!parcerias[remetente]) parcerias[remetente] = { ativo: true, parceiros: {} }
-            parcerias[remetente].parceiros[jidParceiro] = encontrado
-            db.salvarParcerias(parcerias)
-          }
+          // 🔍 DEBUG
+          console.log("Parceria encontrada:", encontrado ? JSON.stringify(encontrado) : "NENHUMA")
 
+          // Se o cara tem parceria E modo parceria tá ON
           if (modoParceria && encontrado) {
             if (encontrado.usados < encontrado.total) {
               encontrado.usados++
               db.salvarParcerias(parcerias)
-              
-              const restantes = encontrado.total - encontrado.usados;
-              let mensagemExtra = "";
-              
-              if (restantes === 0) {
-                mensagemExtra = "⚠️ *Atenção:* Esse foi o seu último link de hoje! O limite será resetado amanhã às 00:00.";
-              } else {
-                mensagemExtra = `✨ Você ainda tem *${restantes}* link(s) sobrando(s) para enviar hoje.`;
-              }
 
-              await sock.sendMessage(remetente, { 
-                text: `✅ *Parceria Liberada*\n\n👤 @${senderNum} você enviou um link permitido.\n\n📊 *Status:* ${encontrado.usados}/${encontrado.total}\n\n${mensagemExtra}`, 
-                mentions: [sender] 
+              const restantes = encontrado.total - encontrado.usados
+              let extra = ""
+              if (restantes === 0) extra = "⚠️ *Esse foi o seu último link de hoje!* Volta amanhã às 00:00."
+              else extra = `✨ Você ainda tem *${restantes}* link(s) restante(s) hoje.`
+
+              await sock.sendMessage(remetente, {
+                text: `✅ *PARCERIA LIBERADA*\n\n👤 @${senderNum} link autorizado.\n\n📊 *Status:* ${encontrado.usados}/${encontrado.total}\n\n${extra}`,
+                mentions: [sender]
               })
               return
             } else {
               try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
-              await sock.sendMessage(remetente, { 
-                text: `❌ *Parceria Esgotada*\n\n@${senderNum}, você já atingiu o limite diário de links. Aguarde o reset às 00:00 para enviar novamente.`, 
-                mentions: [sender] 
+              await sock.sendMessage(remetente, {
+                text: `❌ *PARCERIA ESGOTADA*\n\n@${senderNum}, você já usou todos os seus links hoje (${encontrado.total}/${encontrado.total}).\n\n⏰ Aguarde o reset à meia-noite.`,
+                mentions: [sender]
               })
               return
             }
           }
 
+          // ============================================================
+          // 🚨 NÃO TEM PARCERIA → DELETA + AVISA O GRUPO SEMPRE
+          // ============================================================
           try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+
           const n = adicionarAviso(remetente, sender, "link")
+
+          console.log("Avisos após adicionar:", n)
+
           if (n >= 3) {
             limparAvisos(remetente, sender, "link")
-            await sock.sendMessage(remetente, { text: "@" + senderNum + " 3/3 divulgacoes!", mentions: [sender] })
-            try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
+            await sock.sendMessage(remetente, {
+              text: `🚫 *LIMITE ATINGIDO*\n\n@${senderNum} chegou a 3/3 avisos por divulgação.\n\n👢 Removendo do grupo...`,
+              mentions: [sender]
+            })
+            try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (e) {
+              console.log("Erro ao remover:", e.message)
+            }
           } else {
-            await sock.sendMessage(remetente, { text: "Divulgacao bloqueada! Avisos: " + n + "/3", mentions: [sender] })
+            // 🔥 AQUI É O AVISO QUE VOCÊ QUER — SEMPRE QUE MANDAR LINK
+            await sock.sendMessage(remetente, {
+              text: `🚫 *LINK DE GRUPO BLOQUEADO*\n\n👤 @${senderNum}\n⚠️ *Avisos:* ${n}/3\n\n💡 Peça parceria com um admin usando:\n╰➜ \`!parceria\``,
+              mentions: [sender]
+            })
           }
           return
         }
@@ -1364,13 +1383,15 @@ function checarAgendamentos() {
   setInterval(async () => {
     if (!sockGlobal) return
 
-    const v = db.vips()
-    let vipAlterou = false
-    const agoraMs = Date.now()
-    for (const [jidVip, info] of Object.entries(v.vips || {})) {
-      if (info.expira !== "inf" && info.expira <= agoraMs) { delete v.vips[jidVip]; vipAlterou = true }
-    }
-    if (vipAlterou) db.salvarVips(v)
+    try {
+      const v = db.vips()
+      let vipAlterou = false
+      const agoraMs = Date.now()
+      for (const [jidVip, info] of Object.entries(v.vips || {})) {
+        if (info.expira !== "inf" && info.expira <= agoraMs) { delete v.vips[jidVip]; vipAlterou = true }
+      }
+      if (vipAlterou) db.salvarVips(v)
+    } catch (e) { console.log("Erro VIP cleanup:", e.message) }
 
     if (global.rendasAutomaticas && global.rendasAutomaticas.length) {
       for (const fn of global.rendasAutomaticas) {
@@ -1418,33 +1439,35 @@ function checarAgendamentos() {
       }
     } catch (e) { console.log("Erro renda cidade:", e.message) }
 
-    const agora = new Date()
-    const horaAtual = String(agora.getHours()).padStart(2, "0") + ":" + String(agora.getMinutes()).padStart(2, "0")
-    const dataHoje = agora.toISOString().slice(0, 10)
-    const grupos = db.grupos()
-    let alterou = false
-    for (const [jid, conf] of Object.entries(grupos)) {
-      if (!jid.endsWith("@g.us")) continue
-      if (conf.abrirHora === horaAtual && conf.ultimoAbrir !== dataHoje) {
-        try {
-          await sockGlobal.groupSettingUpdate(jid, "not_announcement")
-          const legenda = (conf.legendaAbrir && conf.legendaAbrir.trim()) || "Territorio aberto!"
-          if (conf.fotoAbrir) await sockGlobal.sendMessage(jid, { image: Buffer.from(conf.fotoAbrir, "base64"), caption: legenda })
-          else await sockGlobal.sendMessage(jid, { text: legenda })
-          conf.ultimoAbrir = dataHoje; alterou = true
-        } catch (e) {}
+    try {
+      const agora = new Date()
+      const horaAtual = String(agora.getHours()).padStart(2, "0") + ":" + String(agora.getMinutes()).padStart(2, "0")
+      const dataHoje = agora.toISOString().slice(0, 10)
+      const grupos = db.grupos()
+      let alterou = false
+      for (const [jid, conf] of Object.entries(grupos)) {
+        if (!jid.endsWith("@g.us")) continue
+        if (conf.abrirHora === horaAtual && conf.ultimoAbrir !== dataHoje) {
+          try {
+            await sockGlobal.groupSettingUpdate(jid, "not_announcement")
+            const legenda = (conf.legendaAbrir && conf.legendaAbrir.trim()) || "Territorio aberto!"
+            if (conf.fotoAbrir) await sockGlobal.sendMessage(jid, { image: Buffer.from(conf.fotoAbrir, "base64"), caption: legenda })
+            else await sockGlobal.sendMessage(jid, { text: legenda })
+            conf.ultimoAbrir = dataHoje; alterou = true
+          } catch (e) {}
+        }
+        if (conf.fecharHora === horaAtual && conf.ultimoFechar !== dataHoje) {
+          try {
+            await sockGlobal.groupSettingUpdate(jid, "announcement")
+            const legenda = (conf.legendaFechar && conf.legendaFechar.trim()) || "Territorio fechado!"
+            if (conf.fotoFechar) await sockGlobal.sendMessage(jid, { image: Buffer.from(conf.fotoFechar, "base64"), caption: legenda })
+            else await sockGlobal.sendMessage(jid, { text: legenda })
+            conf.ultimoFechar = dataHoje; alterou = true
+          } catch (e) {}
+        }
       }
-      if (conf.fecharHora === horaAtual && conf.ultimoFechar !== dataHoje) {
-        try {
-          await sockGlobal.groupSettingUpdate(jid, "announcement")
-          const legenda = (conf.legendaFechar && conf.legendaFechar.trim()) || "Territorio fechado!"
-          if (conf.fotoFechar) await sockGlobal.sendMessage(jid, { image: Buffer.from(conf.fotoFechar, "base64"), caption: legenda })
-          else await sockGlobal.sendMessage(jid, { text: legenda })
-          conf.ultimoFechar = dataHoje; alterou = true
-        } catch (e) {}
-      }
-    }
-    if (alterou) db.salvarGrupos(grupos)
+      if (alterou) db.salvarGrupos(grupos)
+    } catch (e) { console.log("Erro agendamento:", e.message) }
   }, 30000)
 }
 
