@@ -36,10 +36,6 @@ function nomeBotDb(db) {
   try { return db.config().nomeBot || "Rimuru Bot" } catch { return "Rimuru Bot" }
 }
 
-function lineEmoji(emoji, label, valor) {
-  return `${emoji} ${label}:\n╰➜ ${valor}`
-}
-
 async function baixarMusica(busca, qualidade = 64) {
   try {
     const apiRes = await fetch(`https://obanai-apis.eu.cc/api/dl/play?q=${encodeURIComponent(busca)}&apitoken=rj8SpI`)
@@ -72,7 +68,7 @@ async function baixarMusica(busca, qualidade = 64) {
       if (buffer.length < 16 * 1024 * 1024) return { ok: true, buffer, titulo: busca }
       return { ok: false, erro: "Música muito grande (limite 16MB)" }
     }
-  } catch (e) { console.log("🎵 youtube-dl-exec falhou:", e.message) }
+  } catch (e) {}
   return { ok: false, erro: "Todas as tentativas falharam. Tente outra música." }
 }
 
@@ -151,6 +147,7 @@ module.exports = {
   donoOnly: false,
 
   commands: {
+
     menuvip: {
       aliases: ["vipmenu", "menuv"],
       async executar({ sock, msg, prefixoAtivo, db, isDono, isSubDono }) {
@@ -382,6 +379,99 @@ module.exports = {
       }
     },
 
+    uol: {
+      aliases: ["noticiauol"],
+      async executar({ sock, msg, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        try {
+          const r = await fetch(`https://obanai-apis.eu.cc/api/noticias/uol?apitoken=rj8SpI`)
+          const data = await r.json()
+          if (!data?.status || !data.data?.resultado?.length) return sock.sendMessage(jid, { text: `🟣 • 𝐔𝐎𝐋 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Erro.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          const n = data.data.resultado[Math.floor(Math.random() * data.data.resultado.length)]
+          await sock.sendMessage(jid, { text: `🟣 • 𝐔𝐎𝐋 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀𝐒 •\n\n╭─〔 📰 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀 〕\n│ Aleatória\n╰──────────────\n\n📌 ${n.noticia}\n\n📁 ${n.secao}\n\n📝 ${n.desc}\n\n🔗 ${n.link}\n\n"${nomeBot}"` }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+      }
+    },
+
+    jovempan: {
+      aliases: ["jp", "noticiajp"],
+      async executar({ sock, msg, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        try {
+          const r = await fetch(`https://obanai-apis.eu.cc/api/noticias/jovempan?apitoken=rj8SpI`)
+          const data = await r.json()
+          if (!data?.status || !data.data?.resultado?.length) return sock.sendMessage(jid, { text: `🟣 • 𝐉𝐎𝐕𝐄𝐌 𝐏𝐀𝐍 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Erro.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          const n = data.data.resultado[Math.floor(Math.random() * data.data.resultado.length)]
+          await sock.sendMessage(jid, { text: `🟣 • 𝐉𝐎𝐕𝐄𝐌 𝐏𝐀𝐍 •\n\n╭─〔 📰 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀 〕\n│ Aleatória\n╰──────────────\n\n📌 ${n.noticia}\n\n📁 ${n.secao}\n🕒 ${n.data}\n\n📝 ${n.desc}\n\n🔗 ${n.link}\n\n"${nomeBot}"` }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+      }
+    },
+
+    vasco: {
+      aliases: ["noticiavasco", "vascao"],
+      async executar({ sock, msg, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        try {
+          const r = await fetch(`https://obanai-apis.eu.cc/api/noticias/vasco?apitoken=rj8SpI`)
+          const data = await r.json()
+          if (!data?.status || !data.data?.resultado?.length) return sock.sendMessage(jid, { text: `⚓ • 𝐕𝐀𝐒𝐂𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Erro.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          const n = data.data.resultado[Math.floor(Math.random() * data.data.resultado.length)]
+          await sock.sendMessage(jid, { text: `⚓ • 𝐕𝐀𝐒𝐂𝐎 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀𝐒 •\n\n╭─〔 📰 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀 〕\n│ Aleatória\n╰──────────────\n\n📌 ${n.noticia}\n\n📝 ${n.desc}\n\n🔗 ${n.link}\n\n"${nomeBot}"` }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: `⚓ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+      }
+    },
+
+    gerarnick: {
+      aliases: ["nick", "nickname"],
+      async executar({ sock, msg, args, db, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        const texto = args.join(" ").trim()
+        if (!texto) return sock.sendMessage(jid, { text: `🟣 • 𝐆𝐄𝐑𝐀𝐑𝐍𝐈𝐂𝐊 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe o texto.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        try {
+          const textoLimpo = texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          const r = await fetch(`https://obanai-apis.eu.cc/api/tools/gerarnick?texto=${encodeURIComponent(textoLimpo)}&apitoken=rj8SpI`)
+          const data = await r.json()
+          if (!data?.success || !data.data?.length) return sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Não consegui gerar.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          let txt = `🟣 • 𝐄𝐒𝐓𝐈𝐋𝐎𝐒 𝐏𝐀𝐑𝐀 "${textoLimpo}" •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
+          data.data.forEach((n, i) => { txt += `${i + 1}. \`${n.nome}\`\n\n` })
+          txt += `💡 Toque e segure pra copiar.\n\n"${nomeBot}"`
+          await sock.sendMessage(jid, { text: txt }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+      }
+    },
+
+    feriados: {
+      aliases: ["feriado", "calendario"],
+      async executar({ sock, msg, args, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const ano = (args[0] && /^\d{4}$/.test(args[0].trim())) ? args[0].trim() : new Date().getFullYear()
+        try {
+          const r = await fetch(`https://obanai-apis.eu.cc/api/outros/feriados?ano=${ano}&apitoken=rj8SpI`)
+          const data = await r.json()
+          if (!data?.success || !data.data?.total) return sock.sendMessage(jid, { text: `🟣 • 𝐅𝐄𝐑𝐈𝐀𝐃𝐎𝐒 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Nenhum feriado.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          const lista = data.data.feriados.map(f => `📌 *${f.date}* — ${f.name} _(${f.weekday})_`).join("\n")
+          await sock.sendMessage(jid, { text: `🟣 • 𝐅𝐄𝐑𝐈𝐀𝐃𝐎𝐒 ${data.data.ano} •\n\n${lista}\n\n"${nomeBot}"` }, { quoted: msg })
+        } catch (e) {
+          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+      }
+    },
+
     unliai: {
       aliases: ["ia", "unli", "chatia"],
       async executar({ sock, msg, args, db }) {
@@ -439,6 +529,50 @@ module.exports = {
         } catch (e) {
           await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
+      }
+    },
+
+    autofig: {
+      aliases: ["autosticker", "autofigu"],
+      async executar({ sock, msg, args, db, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: `🟣 • 𝐀𝐔𝐓𝐎𝐅𝐈𝐆 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só em grupos.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        const op = (args[0] || "").toLowerCase()
+        const ac = dbLer("autocfg.json", { grupos: {} })
+        ac.grupos = ac.grupos || {}
+        ac.grupos[jid] = ac.grupos[jid] || {}
+        if (!["on", "off"].includes(op)) {
+          const s = ac.grupos[jid].autofig ? "ON ✅" : "OFF ❌"
+          return sock.sendMessage(jid, { text: `🟣 • 𝐀𝐔𝐓𝐎𝐅𝐈𝐆 •\n\n╭─〔 💜 𝐒𝐓𝐀𝐓𝐔𝐒 〕\n│ ${s}\n╰──────────────\n\n💡 \`!autofig on/off\`\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+        ac.grupos[jid].autofig = op === "on"
+        dbSalvar("autocfg.json", ac)
+        await sock.sendMessage(jid, { text: `🟣 • 𝐀𝐔𝐓𝐎𝐅𝐈𝐆 •\n\n╭─〔 💜 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ ${op.toUpperCase()}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+      }
+    },
+
+    autottk: {
+      aliases: ["autotiktok", "autott"],
+      async executar({ sock, msg, args, db, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: `🟣 • 𝐀𝐔𝐓𝐎𝐓𝐓𝐊 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só em grupos.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        const op = (args[0] || "").toLowerCase()
+        const ac = dbLer("autocfg.json", { grupos: {} })
+        ac.grupos = ac.grupos || {}
+        ac.grupos[jid] = ac.grupos[jid] || {}
+        if (!["on", "off"].includes(op)) {
+          const s = ac.grupos[jid].autottk ? "ON ✅" : "OFF ❌"
+          return sock.sendMessage(jid, { text: `🟣 • 𝐀𝐔𝐓𝐎𝐓𝐓𝐊 •\n\n╭─〔 💜 𝐒𝐓𝐀𝐓𝐔𝐒 〕\n│ ${s}\n╰──────────────\n\n💡 \`!autottk on/off\`\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+        ac.grupos[jid].autottk = op === "on"
+        dbSalvar("autocfg.json", ac)
+        await sock.sendMessage(jid, { text: `🟣 • 𝐀𝐔𝐓𝐎𝐓𝐓𝐊 •\n\n╭─〔 💜 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ ${op.toUpperCase()}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -726,5 +860,6 @@ module.exports = {
         await sock.sendMessage(jid, { text: `🟣 • 𝐌𝐄𝐔 𝐕𝐈𝐏 •\n\n╭─〔 🔮 𝐒𝐓𝐀𝐓𝐔𝐒 〕\n│ 💠 ${info.expira === "inf" ? "INFINITO ♾️" : "Expira em " + new Date(info.expira).toLocaleString("pt-BR")}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       }
     }
+
   }
 }
