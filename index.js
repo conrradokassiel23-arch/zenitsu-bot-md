@@ -1066,19 +1066,19 @@ async function iniciar() {
       const mencoes = sender ? [sender] : []
 
       const textoBase = 
-`❄️ • 𝐂𝐎𝐍𝐅𝐈𝐆𝐔𝐑𝐀𝐂̧𝐀̃𝐎 •
+`💜 • 𝐂𝐎𝐍𝐅𝐈𝐆𝐔𝐑𝐀𝐂̧𝐀̃𝐎 •
 
-╭─〔 ⚔️ 𝐒𝐈𝐒𝐓𝐄𝐌𝐀 〕
+╭─〔 🦄 𝐒𝐈𝐒𝐓𝐄𝐌𝐀 〕
 │ Olá @${numUser}, este é o meu prefixo.
 ╰──────────────
 
-🔥 𝐏𝐫𝐞𝐟𝐢𝐱𝐨 𝐀𝐭𝐮𝐚𝐥:
+🫟 𝐏𝐫𝐞𝐟𝐢𝐱𝐨 𝐀𝐭𝐮𝐚𝐥:
 ╰➜ 『 ${p} 』
 
 💡 Para usar meus comandos, digite:
 ╰➜ ${p}menu
 
-❄️ _"Use com sabedoria."_
+💜 _"Use com sabedoria."_
 
 "${nomeBot}"`
 
@@ -1131,7 +1131,7 @@ async function iniciar() {
       const textoBase =
 `${v.topo}
 
-╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕
+╭─〔 🦄 𝐀𝐕𝐈𝐒𝐎 〕
 │ ${v.aviso}
 ╰──────────────
 
@@ -1140,7 +1140,7 @@ async function iniciar() {
 👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:
 ╰➜ @${numUser}
 
-🔥 𝐏𝐫𝐞𝐟𝐢𝐱𝐨:
+🫟 𝐏𝐫𝐞𝐟𝐢𝐱𝐨:
 ╰➜ ${p}
 
 ❔ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐮𝐬𝐚𝐝𝐨:
