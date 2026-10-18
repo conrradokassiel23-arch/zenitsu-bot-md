@@ -170,7 +170,7 @@ module.exports = {
 ╰➜ \`${p}teste\` (reply)
 ╰➜ \`${p}sora <descrição>\`
 ╰➜ \`${p}testa @user\`
-╰➜ \`${p}mimic <efeito> | <texto>\` (reply áudio)
+╰➜ \`${p}googlevoz <texto>\`
 
 🌙 𝐒𝐈𝐒𝐓𝐄𝐌𝐀
 ╰➜ \`${p}atualizar\`
@@ -344,77 +344,36 @@ ${pedacos[0]}\`\`\``
       }
     },
 
-    mimic: {
-      aliases: ["dublar", "mudarvoz"],
+    googlevoz: {
+      aliases: ["tts", "falar", "googlevoice"],
       async executar({ sock, msg, args, db, utils }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         
-        const textoDigitado = args.join(" ").trim()
-        if (!textoDigitado || !textoDigitado.includes("|")) {
+        const textoFinal = args.join(" ").trim()
+        if (!textoFinal) {
           return sock.sendMessage(jid, { 
-            text: `❄️ • 𝐌𝐈𝐌𝐈𝐂 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Use o formato correto com o pipe ( | ).\n╰──────────────\n\n💡 Responda um áudio com:\n╰➜ \`!mimic <efeito> | <texto>\`\n\n🎙️ 𝐄𝐟𝐞𝐢𝐭𝐨𝐬: grave, agudo, eco, robo\n\n📌 Exemplo:\n╰➜ \`!mimic grave | Eu sou o Akaza\`\n\n"${nomeBot}"` 
-          }, { quoted: msg })
-        }
-
-        const [efeitoRaw, ...textoPartes] = textoDigitado.split("|")
-        const efeito = efeitoRaw.trim().toLowerCase()
-        const textoFinal = textoPartes.join("|").trim()
-
-        if (!["grave", "agudo", "eco", "robo"].includes(efeito)) {
-          return sock.sendMessage(jid, { 
-            text: `❄️ • 𝐌𝐈𝐌𝐈𝐂 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Efeito inválido: \`${efeito}\`\n╰──────────────\n\n🎙️ Escolha: grave, agudo, eco, robo\n\n"${nomeBot}"` 
-          }, { quoted: msg })
-        }
-
-        const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
-        const quoted = ctx.quotedMessage
-        const eAudio = quoted && (quoted.audioMessage || (quoted.viewOnceMessage && quoted.viewOnceMessage.message?.audioMessage) || (quoted.viewOnceMessageV2 && quoted.viewOnceMessageV2.message?.audioMessage))
-
-        if (!eAudio) {
-          return sock.sendMessage(jid, { 
-            text: `❄️ • 𝐌𝐈𝐌𝐈𝐂 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Você precisa responder um áudio.\n╰──────────────\n\n💡 Responda o áudio com:\n╰➜ \`!mimic ${efeito} | ${textoFinal}\`\n\n"${nomeBot}"` 
+            text: `❄️ • 𝐆𝐎𝐎𝐆𝐋𝐄 𝐕𝐎𝐙 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Digite o texto que a IA deve falar.\n╰──────────────\n\n💡 Use:\n╰➜ \`!googlevoz <texto>\`\n\n📌 Exemplo:\n╰➜ \`!googlevoz Bom dia, guerreiros\`\n\n"${nomeBot}"` 
           }, { quoted: msg })
         }
 
         try {
-          await sock.sendMessage(jid, { text: `❄️ Aplicando efeito \`${efeito}\` no áudio...` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ Gerando voz de IA para: "${textoFinal}"...` }, { quoted: msg })
 
-          // Baixa o áudio original
-          const alvoMsg = Object.assign({}, msg, { message: { audioMessage: eAudio } })
-          const bufferAudio = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
-          if (!bufferAudio || !bufferAudio.length) throw new Error("Áudio vazio.")
-
-          // Configura o FFmpeg para aplicar o efeito
-          const ff = require("@ffmpeg-installer/ffmpeg").path
-          const tmp = os.tmpdir()
-          const tIn = path.join(tmp, "mimic_in_" + Date.now() + ".ogg")
-          const tOut = path.join(tmp, "mimic_out_" + Date.now() + ".ogg")
-          fs.writeFileSync(tIn, bufferAudio)
-
-          let filter = ""
-          if (efeito === "grave") filter = "-af asetrate=44100*0.8,aresample=44100,atempo=1.25"
-          else if (efeito === "agudo") filter = "-af asetrate=44100*1.3,aresample=44100,atempo=0.8"
-          else if (efeito === "eco") filter = "-af aecho=0.8:0.9:1000:0.3"
-          else if (efeito === "robo") filter = "-af afftfilt=real='hypot(re,im)*sin(0)':imag='hypot(re,im)*cos(0)'"
-
-          execSync(`"${ff}" -y -i "${tIn}" ${filter} -c:a libopus "${tOut}"`, { stdio: "ignore", timeout: 60000 })
+          const urlTTS = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(textoFinal)}&tl=pt&client=tw-ob`
+          const resTTS = await fetch(urlTTS)
+          if (!resTTS.ok) throw new Error("Falha ao gerar áudio da IA.")
           
-          const outBuffer = fs.readFileSync(tOut)
-          try { fs.unlinkSync(tIn) } catch (_) {}
-          try { fs.unlinkSync(tOut) } catch (_) {}
+          const bufferAudio = Buffer.from(await resTTS.arrayBuffer())
 
-          // Envia o áudio com o texto formatado
           await sock.sendMessage(jid, {
-            audio: outBuffer,
-            mimetype: "audio/ogg; codecs=opus",
-            ptt: true,
-            caption: `🐺 *SILVER WOLF*\n\n⚡ *OPERAÇÃO:* PIXEL GHOST\n🟢 *STATUS:* MISSÃO CONCLUÍDA\n\n👤 *Operador:* @${utils.soNumero(msg.key.participant || msg.key.remoteJid)}\n🎙️ *Modificação:* ${textoFinal}\n\n_"Áudio alterado com efeito ${efeito}"_`,
-            mentions: [msg.key.participant || msg.key.remoteJid]
+            audio: bufferAudio,
+            mimetype: "audio/mp4",
+            ptt: true
           }, { quoted: msg })
 
         } catch (e) {
-          console.log("Erro no comando mimic:", e.message)
+          console.log("Erro no comando googlevoz:", e.message)
           await sock.sendMessage(jid, { 
             text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` 
           }, { quoted: msg })
