@@ -738,7 +738,7 @@ ${cat.emoji} 𝐓𝐢𝐩𝐨:
           })
 
           console.log(`❄️ ATUALIZAÇÃO V${versaoNova} concluída. Reiniciando...`)
-          setTimeout(() => process.exit(1), 3000) // Correção: exit(1) força o painel a reiniciar
+          setTimeout(() => process.exit(1), 3000)
 
         } catch (e) {
           console.log("Erro atualizar:", e.message)
@@ -1066,8 +1066,20 @@ ${typeof info === "string" ? "🔗 \`" + info + "\`" : "✅ Entrada realizada"}
         const nomeBot = nomeBotDb(db)
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         const quoted = ctx.quotedMessage
-        const temImg = (msg.message && msg.message.imageMessage) || (quoted && quoted.imageMessage)
-        const temVid = (msg.message && msg.message.videoMessage) || (quoted && quoted.videoMessage)
+        
+        let temImg = (msg.message && msg.message.imageMessage) || (quoted && quoted.imageMessage)
+        let temVid = (msg.message && msg.message.videoMessage) || (quoted && quoted.videoMessage)
+        
+        // Correção para visualização única
+        if (quoted && quoted.viewOnceMessage) {
+          temImg = temImg || quoted.viewOnceMessage.message?.imageMessage
+          temVid = temVid || quoted.viewOnceMessage.message?.videoMessage
+        }
+        if (quoted && quoted.viewOnceMessageV2) {
+          temImg = temImg || quoted.viewOnceMessageV2.message?.imageMessage
+          temVid = temVid || quoted.viewOnceMessageV2.message?.videoMessage
+        }
+
         if (!temImg && !temVid) {
           return sock.sendMessage(jid, {
             text:
@@ -1086,14 +1098,14 @@ ${typeof info === "string" ? "🔗 \`" + info + "\`" : "✅ Entrada realizada"}
         try {
           const cfg = db.config()
           if (temImg) {
-            const alvoMsg = (msg.message && msg.message.imageMessage) ? msg : Object.assign({}, msg, { message: { imageMessage: quoted.imageMessage } })
+            const alvoMsg = (msg.message && msg.message.imageMessage) ? msg : Object.assign({}, msg, { message: { imageMessage: quoted.imageMessage || quoted.viewOnceMessage?.message?.imageMessage || quoted.viewOnceMessageV2?.message?.imageMessage } })
             const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
             cfg.fotoMenu = buffer.toString("base64")
             cfg.tipoMenu = "foto"
             db.salvarConfig(cfg)
             return sock.sendMessage(jid, { image: buffer, caption: `❄️ • 𝐄𝐒𝐓𝐀𝐍𝐃𝐀𝐑𝐓𝐄 𝐒𝐀𝐋𝐕𝐎 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Foto do menu salva.\n╰──────────────\n\n🖼️ _Aplicada ao menu._\n\n"${nomeBot}"` }, { quoted: msg })
           }
-          const vidMsg = (msg.message && msg.message.videoMessage) ? msg : Object.assign({}, msg, { message: { videoMessage: quoted.videoMessage } })
+          const vidMsg = (msg.message && msg.message.videoMessage) ? msg : Object.assign({}, msg, { message: { videoMessage: quoted.videoMessage || quoted.viewOnceMessage?.message?.videoMessage || quoted.viewOnceMessageV2?.message?.videoMessage } })
           const vidBuffer = await utils.downloadMediaMessage(vidMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
           const ff = require("@ffmpeg-installer/ffmpeg").path
           const tmp = os.tmpdir()
@@ -1127,8 +1139,19 @@ ${typeof info === "string" ? "🔗 \`" + info + "\`" : "✅ Entrada realizada"}
         const nomeBot = nomeBotDb(db)
         const ctx = (msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo) || {}
         const quoted = ctx.quotedMessage
-        const temImg = (msg.message && msg.message.imageMessage) || (quoted && quoted.imageMessage)
-        const temVid = (msg.message && msg.message.videoMessage) || (quoted && quoted.videoMessage)
+        
+        let temImg = (msg.message && msg.message.imageMessage) || (quoted && quoted.imageMessage)
+        let temVid = (msg.message && msg.message.videoMessage) || (quoted && quoted.videoMessage)
+        
+        if (quoted && quoted.viewOnceMessage) {
+          temImg = temImg || quoted.viewOnceMessage.message?.imageMessage
+          temVid = temVid || quoted.viewOnceMessage.message?.videoMessage
+        }
+        if (quoted && quoted.viewOnceMessageV2) {
+          temImg = temImg || quoted.viewOnceMessageV2.message?.imageMessage
+          temVid = temVid || quoted.viewOnceMessageV2.message?.videoMessage
+        }
+
         if (!temImg && !temVid) {
           return sock.sendMessage(jid, {
             text:
@@ -1147,14 +1170,14 @@ ${typeof info === "string" ? "🔗 \`" + info + "\`" : "✅ Entrada realizada"}
         try {
           const cfg = db.config()
           if (temImg) {
-            const alvoMsg = (msg.message && msg.message.imageMessage) ? msg : Object.assign({}, msg, { message: { imageMessage: quoted.imageMessage } })
+            const alvoMsg = (msg.message && msg.message.imageMessage) ? msg : Object.assign({}, msg, { message: { imageMessage: quoted.imageMessage || quoted.viewOnceMessage?.message?.imageMessage || quoted.viewOnceMessageV2?.message?.imageMessage } })
             const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
             cfg.fotoCmd = buffer.toString("base64")
             cfg.tipoFotoCmd = "foto"
             db.salvarConfig(cfg)
             return sock.sendMessage(jid, { image: buffer, caption: `❄️ • 𝐅𝐎𝐓𝐎 𝐂𝐌𝐃 𝐒𝐀𝐋𝐕𝐀 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Vai aparecer no 'comando não encontrado'.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           }
-          const vidMsg = (msg.message && msg.message.videoMessage) ? msg : Object.assign({}, msg, { message: { videoMessage: quoted.videoMessage } })
+          const vidMsg = (msg.message && msg.message.videoMessage) ? msg : Object.assign({}, msg, { message: { videoMessage: quoted.videoMessage || quoted.viewOnceMessage?.message?.videoMessage || quoted.viewOnceMessageV2?.message?.videoMessage } })
           const vidBuffer = await utils.downloadMediaMessage(vidMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
           const ff = require("@ffmpeg-installer/ffmpeg").path
           const tmp = os.tmpdir()
