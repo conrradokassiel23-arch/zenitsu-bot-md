@@ -1493,4 +1493,4 @@ async function salvarCanalPeloLink(link) {
 carregarMenus()
 iniciar()
 iniciarConsole()
-checarAgendamentos(
+checarAgendamentos()
