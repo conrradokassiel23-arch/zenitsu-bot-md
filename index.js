@@ -146,6 +146,14 @@ function getTextoBotao(msg) {
     if (msg.message && msg.message.buttonsResponseMessage) return msg.message.buttonsResponseMessage.selectedButtonId || ""
     if (msg.message && msg.message.templateButtonReplyMessage) return msg.message.templateButtonReplyMessage.selectedId || ""
     if (msg.message && msg.message.listResponseMessage) return msg.message.listResponseMessage.singleSelectReply && msg.message.listResponseMessage.singleSelectReply.selectedRowId || ""
+    // NOVO: Formato novo de botão do WhatsApp (Native Flow)
+    if (msg.message && msg.message.interactiveResponseMessage) {
+      const params = msg.message.interactiveResponseMessage.nativeFlowResponseMessage?.paramsJson
+      if (params) {
+        const parsed = JSON.parse(params)
+        return parsed.id || ""
+      }
+    }
   } catch (_) {}
   return ""
 }
@@ -1082,11 +1090,13 @@ async function iniciar() {
         caption: textoBase, 
         mentions: mencoes,
         footer: "⚔️ " + nomeBot,
-        buttons: [
-          { buttonId: "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }
+        interactiveButtons: [
+          { 
+            name: "quick_reply", 
+            buttonParamsJson: JSON.stringify({ display_text: "❄️ Menu-principal", id: "menu" }) 
+          }
         ],
-        headerType: 1,
-        ignorarCanal: true
+        ignorarCanal: true 
       }
 
       try {
@@ -1098,7 +1108,7 @@ async function iniciar() {
             await sock.sendMessage(remetente, { image: buf, ...opcoesEnvio }, { quoted: msg })
           }
         } else {
-          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, buttons: opcoesEnvio.buttons, ignorarCanal: true }, { quoted: msg })
+          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, interactiveButtons: opcoesEnvio.interactiveButtons, ignorarCanal: true }, { quoted: msg })
         }
       } catch (e) {
         console.log("Erro ao enviar prefixo com botão:", e.message)
@@ -1157,11 +1167,13 @@ ${v.frase}
         caption: textoBase, 
         mentions: mencoes,
         footer: "⚔️ " + nomeBot,
-        buttons: [
-          { buttonId: "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }
+        interactiveButtons: [
+          { 
+            name: "quick_reply", 
+            buttonParamsJson: JSON.stringify({ display_text: "❄️ Menu-principal", id: "menu" }) 
+          }
         ],
-        headerType: 1,
-        ignorarCanal: true
+        ignorarCanal: true 
       }
 
       try {
@@ -1173,7 +1185,7 @@ ${v.frase}
             await sock.sendMessage(remetente, { image: buf, ...opcoesErro }, { quoted: msg })
           }
         } else {
-          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, buttons: opcoesErro.buttons, ignorarCanal: true }, { quoted: msg })
+          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, interactiveButtons: opcoesErro.interactiveButtons, ignorarCanal: true }, { quoted: msg })
         }
       } catch (e) {
         await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
