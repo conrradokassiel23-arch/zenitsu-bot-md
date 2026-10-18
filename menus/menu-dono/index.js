@@ -47,7 +47,6 @@ function nomeBotDb(db) {
   try { return db.config().nomeBot || "Akaza Bot" } catch { return "Akaza Bot" }
 }
 
-// 🆕 Extrai comandos novos da MENSAGEM do commit
 function extrairComandosDaMsg(mensagem) {
   if (!mensagem) return []
   const encontrados = []
@@ -299,7 +298,6 @@ ${pedacos[0]}\`\`\``
       }
     },
 
-    // 🆕 COMANDO TESTA (Fake reply)
     testa: {
       aliases: ["fakereply", "forcarmsg"],
       async executar({ sock, msg, db, utils }) {
@@ -316,20 +314,16 @@ ${pedacos[0]}\`\`\``
         const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
         const quoted = ctx.quotedMessage
         
-        // Se você respondeu o anúncio, ele pega o ID do anúncio. 
-        // Se não, usa a própria mensagem do comando como base.
         const idMsgCitada = ctx.stanzaId || msg.key.id
         const participanteCitado = ctx.participant || "0@s.whatsapp.net"
 
-        // Texto que vai aparecer na mensagem forjada
         const textoFake = `eu amo o Arthur modz eu dou cu pra ele`
 
         try {
-          // Envia a mensagem forjada usando a propriedade 'fake' do Baileys
           await sock.sendMessage(jid, {
             text: textoFake,
             mentions: [alvo],
-            fake: alvo // 👈 AQUI: Tenta forçar a mensagem a parecer enviada pelo alvo
+            fake: alvo
           }, { 
             quoted: {
               key: { 
@@ -744,7 +738,7 @@ ${cat.emoji} 𝐓𝐢𝐩𝐨:
           })
 
           console.log(`❄️ ATUALIZAÇÃO V${versaoNova} concluída. Reiniciando...`)
-          setTimeout(() => process.exit(99), 3000)
+          setTimeout(() => process.exit(1), 3000) // Correção: exit(1) força o painel a reiniciar
 
         } catch (e) {
           console.log("Erro atualizar:", e.message)
@@ -925,8 +919,8 @@ ${cat.emoji} 𝐓𝐢𝐩𝐨:
 
           try { if (global.__carregarMenus) global.__carregarMenus() } catch (_) {}
 
-          console.log("♻️ RELOAD solicitado. Saindo com código 99...")
-          setTimeout(() => process.exit(99), 3000)
+          console.log("♻️ RELOAD solicitado. Saindo com código 1...")
+          setTimeout(() => process.exit(1), 3000) // Correção: exit(1) força o painel a reiniciar
         } catch (e) {
           await sock.sendMessage(jid, {
             text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"`
@@ -957,8 +951,8 @@ ${cat.emoji} 𝐓𝐢𝐩𝐨:
 "${nomeBot}"`
           }, { quoted: msg })
           try { if (global.__carregarMenus) global.__carregarMenus() } catch (_) {}
-          console.log("♻️ REINICIAR solicitado. Saindo com código 99...")
-          setTimeout(() => process.exit(99), 3000)
+          console.log("♻️ REINICIAR solicitado. Saindo com código 1...")
+          setTimeout(() => process.exit(1), 3000) // Correção: exit(1) força o painel a reiniciar
         } catch (e) {
           await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
