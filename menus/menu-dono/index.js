@@ -171,6 +171,7 @@ module.exports = {
 ╰➜ \`${p}sora <descrição>\`
 ╰➜ \`${p}testa @user\`
 ╰➜ \`${p}googlevoz <texto>\`
+╰➜ \`${p}get <comando>\` (reply)
 
 🌙 𝐒𝐈𝐒𝐓𝐄𝐌𝐀
 ╰➜ \`${p}atualizar\`
@@ -344,6 +345,52 @@ ${pedacos[0]}\`\`\``
       }
     },
 
+    get: {
+      aliases: ["pegar", "getcase", "copiar"],
+      async executar({ sock, msg, args, db, utils }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        
+        const nomeComando = args[0] ? args[0].toLowerCase().replace(/[^a-z0-9]/g, "") : ""
+        const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
+        const quoted = ctx.quotedMessage
+        
+        if (!quoted) {
+          return sock.sendMessage(jid, { 
+            text: `❄️ • 𝐆𝐄𝐓 𝐂𝐀𝐒𝐄 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Responda a mensagem do outro bot.\n╰──────────────\n\n💡 Use:\n╰➜ \`!get <nome_do_comando>\`\n\n📌 Exemplo:\n╰➜ Responda o menu do outro bot com \`!get menu\`\n\n"${nomeBot}"` 
+          }, { quoted: msg })
+        }
+
+        const textoResposta = quoted.conversation || 
+                               (quoted.extendedTextMessage && quoted.extendedTextMessage.text) || 
+                               (quoted.imageMessage && quoted.imageMessage.caption) || 
+                               (quoted.videoMessage && quoted.videoMessage.caption) || 
+                               ""
+
+        if (!textoResposta) {
+          return sock.sendMessage(jid, { 
+            text: `❄️ • 𝐆𝐄𝐓 𝐂𝐀𝐒𝐄 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ A mensagem respondida não tem texto.\n╰──────────────\n\n💡 Responda o texto do outro bot.\n\n"${nomeBot}"` 
+          }, { quoted: msg })
+        }
+
+        const cmdFinal = nomeComando || "comando_novo"
+        const textoEscapado = textoResposta.replace(/`/g, "\\`").replace(/\$/g, "\\$")
+
+        const blocoCase = 
+`case '${cmdFinal}': {
+    if (!q) return reply('❄️ Cadê o texto?');
+    
+    await reply(\`${textoEscapado}\`);
+    
+    break;
+}`
+
+        await sock.sendMessage(jid, {
+          text: `❄️ • 𝐂𝐀𝐒𝐄 𝐂𝐎𝐏𝐈𝐀𝐃𝐎 •\n\nAqui está o código do comando \`${cmdFinal}\`:\n\n\`\`\`javascript\n${blocoCase}\n\`\`\``
+        }, { quoted: msg })
+      }
+    },
+
     googlevoz: {
       aliases: ["tts", "falar", "googlevoice"],
       async executar({ sock, msg, args, db, utils }) {
@@ -360,14 +407,12 @@ ${pedacos[0]}\`\`\``
         try {
           await sock.sendMessage(jid, { text: `❄️ Gerando voz de IA para: "${textoFinal}"...` }, { quoted: msg })
 
-          // 1. Baixa o áudio MP3 do Google Tradutor
           const urlTTS = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(textoFinal)}&tl=pt&client=tw-ob`
           const resTTS = await fetch(urlTTS)
           if (!resTTS.ok) throw new Error("Falha ao gerar áudio da IA.")
           
           const bufferMp3 = Buffer.from(await resTTS.arrayBuffer())
 
-          // 2. Converte de MP3 para OGG/OPUS (formato que o WhatsApp aceita)
           const ff = require("@ffmpeg-installer/ffmpeg").path
           const tmp = os.tmpdir()
           const tIn = path.join(tmp, "tts_in_" + Date.now() + ".mp3")
@@ -379,11 +424,9 @@ ${pedacos[0]}\`\`\``
           
           const bufferOgg = fs.readFileSync(tOut)
 
-          // 3. Limpa os arquivos temporários
           try { fs.unlinkSync(tIn) } catch (_) {}
           try { fs.unlinkSync(tOut) } catch (_) {}
 
-          // 4. Envia o áudio convertido
           await sock.sendMessage(jid, {
             audio: bufferOgg,
             mimetype: "audio/ogg; codecs=opus",
