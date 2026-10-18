@@ -360,15 +360,33 @@ ${pedacos[0]}\`\`\``
         try {
           await sock.sendMessage(jid, { text: `❄️ Gerando voz de IA para: "${textoFinal}"...` }, { quoted: msg })
 
+          // 1. Baixa o áudio MP3 do Google Tradutor
           const urlTTS = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(textoFinal)}&tl=pt&client=tw-ob`
           const resTTS = await fetch(urlTTS)
           if (!resTTS.ok) throw new Error("Falha ao gerar áudio da IA.")
           
-          const bufferAudio = Buffer.from(await resTTS.arrayBuffer())
+          const bufferMp3 = Buffer.from(await resTTS.arrayBuffer())
 
+          // 2. Converte de MP3 para OGG/OPUS (formato que o WhatsApp aceita)
+          const ff = require("@ffmpeg-installer/ffmpeg").path
+          const tmp = os.tmpdir()
+          const tIn = path.join(tmp, "tts_in_" + Date.now() + ".mp3")
+          const tOut = path.join(tmp, "tts_out_" + Date.now() + ".ogg")
+          
+          fs.writeFileSync(tIn, bufferMp3)
+
+          execSync(`"${ff}" -i "${tIn}" -c:a libopus -b:a 64k -ar 48000 -ac 1 -application voip -avoid_negative_ts make_zero "${tOut}"`, { stdio: "ignore", timeout: 60000 })
+          
+          const bufferOgg = fs.readFileSync(tOut)
+
+          // 3. Limpa os arquivos temporários
+          try { fs.unlinkSync(tIn) } catch (_) {}
+          try { fs.unlinkSync(tOut) } catch (_) {}
+
+          // 4. Envia o áudio convertido
           await sock.sendMessage(jid, {
-            audio: bufferAudio,
-            mimetype: "audio/mp4",
+            audio: bufferOgg,
+            mimetype: "audio/ogg; codecs=opus",
             ptt: true
           }, { quoted: msg })
 
