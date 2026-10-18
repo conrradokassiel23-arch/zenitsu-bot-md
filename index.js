@@ -823,16 +823,24 @@ async function iniciar() {
       const conf = grupos[remetente] || {}
       const meta = await sock.groupMetadata(remetente).catch(() => null)
 
-      const isAdm = meta && meta.participants.find(p => p.id === sender || soNumero(p.id) === soNumero(sender) || soNumero(p.lid) === soNumero(sender))
+      const senderCands = [
+        sender, senderRaw,
+        msg.key && msg.key.participant, msg.key && msg.key.participantPn,
+        msg.key && msg.key.participantLid, msg.key && msg.key.remoteJid
+      ].filter(Boolean).map(soNumero)
+
+      const isAdm = meta && meta.participants.find(p => {
+        const pIds = [p.id, p.lid, p.phoneNumber].filter(Boolean).map(soNumero)
+        return senderCands.some(cand => pIds.includes(cand))
+      })
       const ehAdmin = isAdm && (isAdm.admin === "admin" || isAdm.admin === "superadmin")
       const ehSub = ehSubAdmin(remetente, sender)
       const podeBurlar = ehAdmin || isDono || isSubDono || ehSub
 
       const mutados = db.mutados()
       const mutadosG = mutados[remetente] || {}
-      const candsM = [sender, msg.key && msg.key.participantPn, msg.key && msg.key.participantLid].filter(Boolean)
       let jidMutado = null
-      for (const c of candsM) {
+      for (const c of senderCands) {
         for (const j of Object.keys(mutadosG)) {
           if (soNumero(j) === soNumero(c) && mutadosG[j] > Date.now()) { jidMutado = j; break }
         }
@@ -868,15 +876,13 @@ async function iniciar() {
 
       const afks = db.afk()
       const afkGrupo = afks[remetente] || {}
-      const candsAutor = [sender, msg.key && msg.key.participantPn, msg.key && msg.key.participantLid].filter(Boolean)
       let jidAfk = null
-      for (const c of candsAutor) {
+      for (const c of senderCands) {
         for (const j of Object.keys(afkGrupo)) {
           if (soNumero(j) === soNumero(c)) { jidAfk = j; break }
         }
         if (jidAfk) break
       }
-
       if (jidAfk && afkGrupo[jidAfk]) {
         const info = afkGrupo[jidAfk]
         const tempo = formatarTempo(Date.now() - info.desde)
@@ -913,11 +919,16 @@ async function iniciar() {
           const p = parcerias[remetente] || {}
           const parceiros = p.parceiros || {}
           const modoParceria = p.ativo === true
-          const senderNum = soNumero(sender)
 
           let encontrado = null
+          let jidParceiro = null
           for (const [jidP, info] of Object.entries(parceiros)) {
-            if (soNumero(jidP) === senderNum) { encontrado = info; break }
+            const jidPNum = soNumero(jidP)
+            if (senderCands.some(cand => cand === jidPNum)) {
+              encontrado = info
+              jidParceiro = jidP
+              break
+            }
           }
 
           if (modoParceria && encontrado) {
@@ -931,7 +942,7 @@ async function iniciar() {
 
               try {
                 await sock.sendMessage(remetente, {
-                  text: `✅ *PARCERIA LIBERADA*\n\n👤 @${senderNum} link autorizado.\n📊 *Status:* ${encontrado.usados}/${encontrado.total}\n\n${extra}`,
+                  text: `✅ *PARCERIA LIBERADA*\n\n👤 @${soNumero(sender)} link autorizado.\n📊 *Status:* ${encontrado.usados}/${encontrado.total}\n\n${extra}`,
                   mentions: [sender]
                 })
               } catch (e) { console.log("Erro msg parceria:", e.message) }
@@ -940,7 +951,7 @@ async function iniciar() {
               try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
               try {
                 await sock.sendMessage(remetente, {
-                  text: `❌ *PARCERIA ESGOTADA*\n\n@${senderNum}, você já usou todos os seus links hoje (${encontrado.total}/${encontrado.total}).\n\n⏰ Aguarde o reset à meia-noite.`,
+                  text: `❌ *PARCERIA ESGOTADA*\n\n@${soNumero(sender)}, você já usou todos os seus links hoje (${encontrado.total}/${encontrado.total}).\n\n⏰ Aguarde o reset à meia-noite.`,
                   mentions: [sender]
                 })
               } catch (e) { console.log("Erro msg esgotada:", e.message) }
@@ -951,7 +962,7 @@ async function iniciar() {
           try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
           try {
             await sock.sendMessage(remetente, {
-              text: `🚫 *LINK DE GRUPO BLOQUEADO*\n\n👤 @${senderNum}, você não tem parceria configurada neste grupo.\n\n💡 Para enviar links, peça para um admin usar:\n╰➜ \`!parceria\``,
+              text: `🚫 *LINK DE GRUPO BLOQUEADO*\n\n👤 @${soNumero(sender)}, você não tem parceria configurada neste grupo.\n\n💡 Para enviar links, peça para um admin usar:\n╰➜ \`!parceria\``,
               mentions: [sender]
             })
           } catch (e) { console.log("Erro msg bloqueio:", e.message) }
