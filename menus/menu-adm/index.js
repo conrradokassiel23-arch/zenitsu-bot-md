@@ -78,13 +78,13 @@ module.exports = {
           await sock.sendMessage(jid, {
             text: "🟣 *Escolha uma categoria de Tempest:*", footer: "🌌 " + nomeBot, title: "🟣 MENUS DO REINO", buttonText: "🦠 ABRIR MENUS",
             sections: [
-              { title: "⚔️ ADMINISTRAÇÃO", rows: [{ title: "⚙️ Menu Admin", rowId: p + "menuadmin", description: "Banir, mutar, proteções..." }, { title: "👁️ Menu Dono", rowId: p + "menudono", description: "Comandos do Grande Sábio" }] },
-              { title: "💜 ÁREA NOBRE", rows: [{ title: "🟣 Menu VIP", rowId: p + "menuvip", description: "Figurinhas, logos, autofig" }] },
-              { title: "🎮 JOGOS E DIVERSÃO", rows: [{ title: "🦠 Menu RPG", rowId: p + "menurpg", description: "Economia, pets, cassino" }, { title: "🌾 Menu Fazenda", rowId: p + "menufazenda", description: "Animais, plantações" }, { title: "🐻 Menu FNAF", rowId: p + "menufnaf", description: "Five Nights at Freddy's" }, { title: "🏙️ Menu Cidade", rowId: p + "menucidade", description: "Casas, banco, crimes" }] }
+              { title: "🧊 ADMINISTRAÇÃO", rows: [{ title: "💧 Menu Admin", rowId: p + "menuadmin", description: "Banir, mutar, proteções..." }, { title: "💙 Menu Dono", rowId: p + "menudono", description: "Comandos do Grande Sábio" }] },
+              { title: "💙 ÁREA NOBRE", rows: [{ title: "💧 Menu VIP", rowId: p + "menuvip", description: "Figurinhas, logos, autofig" }] },
+              { title: "🧊 JOGOS E DIVERSÃO", rows: [{ title: "💧 Menu RPG", rowId: p + "menurpg", description: "Economia, pets, cassino" }, { title: "💧 Menu Fazenda", rowId: p + "menufazenda", description: "Animais, plantações" }, { title: "❄️ Menu FNAF", rowId: p + "menufnaf", description: "Five Nights at Freddy's" }, { title: "🧊 Menu Cidade", rowId: p + "menucidade", description: "Casas, banco, crimes" }] }
             ]
           })
         } catch (e) {
-          await sock.sendMessage(jid, { text: "🟣 *MENUS DISPONÍVEIS:*\n\n⚙️ ▸ " + p + "menuadmin\n👁️ ▸ " + p + "menudono\n💜 ▸ " + p + "menuvip\n🦠 ▸ " + p + "menurpg\n🌾 ▸ " + p + "menufazenda\n🐻 ▸ " + p + "menufnaf\n🏙️ ▸ " + p + "menucidade" }, { quoted: msg })
+          await sock.sendMessage(jid, { text: "🧊 *MENUS DISPONÍVEIS:*\n\n💧 ▸ " + p + "menuadmin\n👁️ ▸ " + p + "menudono\n💙 ▸ " + p + "menuvip\n💧 ▸ " + p + "menurpg\n🧊 ▸ " + p + "menufazenda\n💧 ▸ " + p + "menufnaf\n💧 ▸ " + p + "menucidade" }, { quoted: msg })
         }
       }
     },
