@@ -1,5 +1,5 @@
 /* ============================================================
-   🔥 RIMURU BOT MD - INDEX COMPLETO E FINAL
+   🔥 RIMURU BOT MD - INDEX COMPLETO E BLINDADO
    ============================================================ */
 
 const {
@@ -455,6 +455,9 @@ async function iniciar() {
     const msg = messages[0]
     if (!msg.message) return
 
+    // ✅ LOG PARA VER SE A MENSAGEM CHEGA
+    console.log("📩 Mensagem recebida de:", msg.key.remoteJid, "| Texto:", getTexto(msg).trim())
+
     const remetente = msg.key.remoteJid
     const isGrupo = remetente.endsWith("@g.us")
 
@@ -545,168 +548,172 @@ async function iniciar() {
     }
 
     if (isGrupo && !msg.key.fromMe) {
-      const grupos = db.grupos()
-      const conf = grupos[remetente] || {}
-      const meta = await sock.groupMetadata(remetente).catch(() => null)
+      try {
+        const grupos = db.grupos()
+        const conf = grupos[remetente] || {}
+        const meta = await sock.groupMetadata(remetente).catch(() => null)
 
-      const senderCands = [sender, senderRaw, msg.key && msg.key.participant, msg.key && msg.key.participantPn, msg.key && msg.key.participantLid, msg.key && msg.key.remoteJid].filter(Boolean).map(soNumero)
-      const isAdm = meta && meta.participants.find(p => {
-        const pIds = [p.id, p.lid, p.phoneNumber].filter(Boolean).map(soNumero)
-        return senderCands.some(cand => pIds.includes(cand))
-      })
-      const ehAdmin = isAdm && (isAdm.admin === "admin" || isAdm.admin === "superadmin")
-      const ehSub = ehSubAdmin(remetente, sender)
-      const podeBurlar = ehAdmin || isDono || isSubDono || ehSub
-
-      const mutados = db.mutados()
-      const mutadosG = mutados[remetente] || {}
-      let jidMutado = null
-      for (const c of senderCands) {
-        for (const j of Object.keys(mutadosG)) { if (soNumero(j) === soNumero(c) && mutadosG[j] > Date.now()) { jidMutado = j; break } }
-        if (jidMutado) break
-      }
-      if (jidMutado && !podeBurlar) { try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {} return }
-
-      if (conf.palavrao && !podeBurlar) {
-        const lista = db.palavroes()[remetente] || []
-        const normalizar = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim()
-        const textoNorm = normalizar(getTexto(msg))
-        const temPalavrao = lista.some(p => {
-          const pl = normalizar(p)
-          if (!pl) return false
-          return new RegExp("\\b" + pl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(textoNorm)
+        const senderCands = [sender, senderRaw, msg.key && msg.key.participant, msg.key && msg.key.participantPn, msg.key && msg.key.participantLid, msg.key && msg.key.remoteJid].filter(Boolean).map(soNumero)
+        const isAdm = meta && meta.participants.find(p => {
+          const pIds = [p.id, p.lid, p.phoneNumber].filter(Boolean).map(soNumero)
+          return senderCands.some(cand => pIds.includes(cand))
         })
-        if (lista.length && textoNorm && temPalavrao) {
-          try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
-          const n = adicionarAviso(remetente, sender, "palavrao")
-          if (n >= 3) {
-            limparAvisos(remetente, sender, "palavrao")
-            await sock.sendMessage(remetente, { text: "@" + soNumero(sender) + " 3/3 palavras proibidas!", mentions: [sender] })
-            try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
-          } else {
-            await sock.sendMessage(remetente, { text: "@" + soNumero(sender) + " palavra proibida - " + n + "/3", mentions: [sender] })
-          }
-          return
+        const ehAdmin = isAdm && (isAdm.admin === "admin" || isAdm.admin === "superadmin")
+        const ehSub = ehSubAdmin(remetente, sender)
+        const podeBurlar = ehAdmin || isDono || isSubDono || ehSub
+
+        const mutados = db.mutados()
+        const mutadosG = mutados[remetente] || {}
+        let jidMutado = null
+        for (const c of senderCands) {
+          for (const j of Object.keys(mutadosG)) { if (soNumero(j) === soNumero(c) && mutadosG[j] > Date.now()) { jidMutado = j; break } }
+          if (jidMutado) break
         }
-      }
+        if (jidMutado && !podeBurlar) { try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {} return }
 
-      const afks = db.afk()
-      const afkGrupo = afks[remetente] || {}
-      let jidAfk = null
-      for (const c of senderCands) { for (const j of Object.keys(afkGrupo)) { if (soNumero(j) === soNumero(c)) { jidAfk = j; break } } if (jidAfk) break }
-      if (jidAfk && afkGrupo[jidAfk]) {
-        const info = afkGrupo[jidAfk]
-        const tempo = formatarTempo(Date.now() - info.desde)
-        delete afkGrupo[jidAfk]; afks[remetente] = afkGrupo; db.salvarAfk(afks)
-        await sock.sendMessage(remetente, { text: "💧 @" + soNumero(jidAfk) + " voltou! Ficou AFK " + tempo, mentions: [jidAfk] })
-      }
-
-      const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
-      const mencionados = ctx.mentionedJid || []
-      for (const m of mencionados) {
-        for (const [j, info] of Object.entries(afkGrupo)) {
-          if (soNumero(j) === soNumero(m)) {
-            const tempo = formatarTempo(Date.now() - info.desde)
-            await sock.sendMessage(remetente, { text: "💧❄️ AFK: @" + soNumero(j) + "\nHa " + tempo + "\nMotivo: " + info.motivo, mentions: [j] })
+        if (conf.palavrao && !podeBurlar) {
+          const lista = db.palavroes()[remetente] || []
+          const normalizar = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim()
+          const textoNorm = normalizar(getTexto(msg))
+          const temPalavrao = lista.some(p => {
+            const pl = normalizar(p)
+            if (!pl) return false
+            return new RegExp("\\b" + pl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(textoNorm)
+          })
+          if (lista.length && textoNorm && temPalavrao) {
+            try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+            const n = adicionarAviso(remetente, sender, "palavrao")
+            if (n >= 3) {
+              limparAvisos(remetente, sender, "palavrao")
+              await sock.sendMessage(remetente, { text: "@" + soNumero(sender) + " 3/3 palavras proibidas!", mentions: [sender] })
+              try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
+            } else {
+              await sock.sendMessage(remetente, { text: "@" + soNumero(sender) + " palavra proibida - " + n + "/3", mentions: [sender] })
+            }
+            return
           }
         }
-      }
 
-      if (conf.antilink && !podeBurlar) {
-        const textoMsg = getTexto(msg)
-        const linkGrupo = /(chat\.whatsapp\.com|wa\.me\/)/i.test(textoMsg)
-        const linkGeral = /(https?:\/\/|www\.|\.com|\.net|\.br|\.io|\.org|\.xyz|\.tv|\.me|\.gg)/i.test(textoMsg)
+        const afks = db.afk()
+        const afkGrupo = afks[remetente] || {}
+        let jidAfk = null
+        for (const c of senderCands) { for (const j of Object.keys(afkGrupo)) { if (soNumero(j) === soNumero(c)) { jidAfk = j; break } } if (jidAfk) break }
+        if (jidAfk && afkGrupo[jidAfk]) {
+          const info = afkGrupo[jidAfk]
+          const tempo = formatarTempo(Date.now() - info.desde)
+          delete afkGrupo[jidAfk]; afks[remetente] = afkGrupo; db.salvarAfk(afks)
+          await sock.sendMessage(remetente, { text: "💧 @" + soNumero(jidAfk) + " voltou! Ficou AFK " + tempo, mentions: [jidAfk] })
+        }
 
-        if (linkGrupo) {
-          const parcerias = db.parcerias()
-          const p = parcerias[remetente] || {}
-          const parceiros = p.parceiros || {}
-          const modoParceria = p.ativo === true
-
-          let encontrado = null
-          for (const [jidP, info] of Object.entries(parceiros)) {
-            if (senderCands.some(cand => cand === soNumero(jidP))) { encontrado = info; break }
+        const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
+        const mencionados = ctx.mentionedJid || []
+        for (const m of mencionados) {
+          for (const [j, info] of Object.entries(afkGrupo)) {
+            if (soNumero(j) === soNumero(m)) {
+              const tempo = formatarTempo(Date.now() - info.desde)
+              await sock.sendMessage(remetente, { text: "💧❄️ AFK: @" + soNumero(j) + "\nHa " + tempo + "\nMotivo: " + info.motivo, mentions: [j] })
+            }
           }
+        }
 
-          if (modoParceria && encontrado && encontrado.usados < encontrado.total) {
-            encontrado.usados++
-            db.salvarParcerias(parcerias)
-            const restantes = encontrado.total - encontrado.usados
-            const extra = restantes === 0 ? "⚠️ *Esse foi o seu último link de hoje!*" : `✨ Ainda tem *${restantes}* link(s) restante(s).`
+        if (conf.antilink && !podeBurlar) {
+          const textoMsg = getTexto(msg)
+          const linkGrupo = /(chat\.whatsapp\.com|wa\.me\/)/i.test(textoMsg)
+          const linkGeral = /(https?:\/\/|www\.|\.com|\.net|\.br|\.io|\.org|\.xyz|\.tv|\.me|\.gg)/i.test(textoMsg)
+
+          if (linkGrupo) {
+            const parcerias = db.parcerias()
+            const p = parcerias[remetente] || {}
+            const parceiros = p.parceiros || {}
+            const modoParceria = p.ativo === true
+
+            let encontrado = null
+            for (const [jidP, info] of Object.entries(parceiros)) {
+              if (senderCands.some(cand => cand === soNumero(jidP))) { encontrado = info; break }
+            }
+
+            if (modoParceria && encontrado && encontrado.usados < encontrado.total) {
+              encontrado.usados++
+              db.salvarParcerias(parcerias)
+              const restantes = encontrado.total - encontrado.usados
+              const extra = restantes === 0 ? "⚠️ *Esse foi o seu último link de hoje!*" : `✨ Ainda tem *${restantes}* link(s) restante(s).`
+              try { 
+                await sock.sendMessage(remetente, { 
+                  text: `💧 • 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀 𝐀𝐏𝐑𝐎𝐕𝐀𝐃𝐀 •\n\n╭─〔 ❄️ 𝐀𝐂𝐄𝐒𝐒𝐎 𝐋𝐈𝐁𝐄𝐑𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, o link foi autorizado!\n╰──────────────\n\n📊 𝐔𝐬𝐨:\n╰➜ ${encontrado.usados}/${encontrado.total} links enviados.\n\n${extra}\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
+                  mentions: [sender] 
+                }) 
+              } catch (_) {}
+              return
+            }
+
+            try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+            
             try { 
               await sock.sendMessage(remetente, { 
-                text: `💧 • 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀 𝐀𝐏𝐑𝐎𝐕𝐀𝐃𝐀 •\n\n╭─〔 ❄️ 𝐀𝐂𝐄𝐒𝐒𝐎 𝐋𝐈𝐁𝐄𝐑𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, o link foi autorizado!\n╰──────────────\n\n📊 𝐔𝐬𝐨:\n╰➜ ${encontrado.usados}/${encontrado.total} links enviados.\n\n${extra}\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
+                text: `💧 • 𝐀𝐕𝐈𝐒𝐎 𝐃𝐄 𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 •\n\n╭─〔 🚫 𝐋𝐈𝐍𝐊 𝐀𝐏𝐀𝐆𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, link apagado por falta de aliança.\n╰──────────────\n\n『 𝐏𝐀𝐒𝐒𝐎 𝐀 𝐏𝐀𝐒𝐒𝐎 』 ↴\n\n1️⃣ Chame um dos Admins no **Privado (PV)**.\n2️⃣ Peça para ele colocar o link do nosso grupo no grupo dele.\n3️⃣ Após isso, use o comando abaixo:\n\n📜 𝐒𝐨𝐥𝐮𝐜̧𝐚̃𝐨:\n╰➜ \`+cadastrarparceria <link_do_seu_grupo>\`\n\n_(Isso te dará +5 links por dia)_\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
                 mentions: [sender] 
               }) 
-            } catch (_) {}
+            } catch (e) { console.log("Erro aviso link grupo:", e.message) }
             return
           }
 
-          try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
-          
-          try { 
-            await sock.sendMessage(remetente, { 
-              text: `💧 • 𝐀𝐕𝐈𝐒𝐎 𝐃𝐄 𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 •\n\n╭─〔 🚫 𝐋𝐈𝐍𝐊 𝐀𝐏𝐀𝐆𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, link apagado por falta de aliança.\n╰──────────────\n\n『 𝐏𝐀𝐒𝐒𝐎 𝐀 𝐏𝐀𝐒𝐒𝐎 』 ↴\n\n1️⃣ Chame um dos Admins no **Privado (PV)**.\n2️⃣ Peça para ele colocar o link do nosso grupo no grupo dele.\n3️⃣ Após isso, use o comando abaixo:\n\n📜 𝐒𝐨𝐥𝐮𝐜̧𝐚̃𝐨:\n╰➜ \`+cadastrarparceria <link_do_seu_grupo>\`\n\n_(Isso te dará +5 links por dia)_\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
-              mentions: [sender] 
-            }) 
-          } catch (e) { console.log("Erro aviso link grupo:", e.message) }
-          return
+          if (linkGeral) {
+            try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+            const n = adicionarAviso(remetente, sender, "link")
+            if (n >= 3) {
+              limparAvisos(remetente, sender, "link")
+              await sock.sendMessage(remetente, { 
+                text: `💧 • 𝐄𝐗𝐏𝐔𝐋𝐒𝐎 •\n\n╭─〔 💀 𝐀𝐌𝐄𝐀𝐂̧𝐀 〕\n│ @${soNumero(sender)} atingiu 3/3 avisos.\n╰──────────────\n\n> _"Veldora, cuide disso."_\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
+                mentions: [sender] 
+              })
+              try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
+            } else {
+              await sock.sendMessage(remetente, { 
+                text: `💧 • 𝐀𝐍𝐓𝐈-𝐋𝐈𝐍𝐊 •\n\n╭─〔 🐉 𝐈𝐍𝐓𝐄𝐑𝐂𝐄𝐏𝐓𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, links não são permitidos aqui.\n╰──────────────\n\n⚠️ 𝐀𝐯𝐢𝐬𝐨𝐬:\n╰➜ ${n}/3\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
+                mentions: [sender] 
+              })
+            }
+            return
+          }
         }
 
-        if (linkGeral) {
-          try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
-          const n = adicionarAviso(remetente, sender, "link")
-          if (n >= 3) {
-            limparAvisos(remetente, sender, "link")
-            await sock.sendMessage(remetente, { 
-              text: `💧 • 𝐄𝐗𝐏𝐔𝐋𝐒𝐎 •\n\n╭─〔 💀 𝐀𝐌𝐄𝐀𝐂̧𝐀 〕\n│ @${soNumero(sender)} atingiu 3/3 avisos.\n╰──────────────\n\n> _"Veldora, cuide disso."_\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
-              mentions: [sender] 
-            })
-            try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
-          } else {
-            await sock.sendMessage(remetente, { 
-              text: `💧 • 𝐀𝐍𝐓𝐈-𝐋𝐈𝐍𝐊 •\n\n╭─〔 🐉 𝐈𝐍𝐓𝐄𝐑𝐂𝐄𝐏𝐓𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, links não são permitidos aqui.\n╰──────────────\n\n⚠️ 𝐀𝐯𝐢𝐬𝐨𝐬:\n╰➜ ${n}/3\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
-              mentions: [sender] 
-            })
+        const antimap = [
+          { cond: conf.antiaudio && msg.message && msg.message.audioMessage, tipo: "audio", nome: "Audio" },
+          { cond: conf.antivideo && msg.message && msg.message.videoMessage, tipo: "video", nome: "Video" },
+          { cond: conf.antifoto && msg.message && msg.message.imageMessage, tipo: "foto", nome: "Foto" },
+          { cond: conf.antifig && msg.message && msg.message.stickerMessage, tipo: "fig", nome: "Figurinha" }
+        ]
+        for (const a of antimap) {
+          if (a.cond && !podeBurlar) {
+            const n = adicionarAviso(remetente, sender, a.tipo)
+            try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+            if (n >= 3) {
+              limparAvisos(remetente, sender, a.tipo)
+              await sock.sendMessage(remetente, { text: "@" + soNumero(sender) + " 3/3 " + a.nome + "s!", mentions: [sender] })
+              try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
+            } else {
+              await sock.sendMessage(remetente, { text: a.nome + "! " + n + "/3", mentions: [sender] })
+            }
+            return
           }
-          return
         }
-      }
-
-      const antimap = [
-        { cond: conf.antiaudio && msg.message && msg.message.audioMessage, tipo: "audio", nome: "Audio" },
-        { cond: conf.antivideo && msg.message && msg.message.videoMessage, tipo: "video", nome: "Video" },
-        { cond: conf.antifoto && msg.message && msg.message.imageMessage, tipo: "foto", nome: "Foto" },
-        { cond: conf.antifig && msg.message && msg.message.stickerMessage, tipo: "fig", nome: "Figurinha" }
-      ]
-      for (const a of antimap) {
-        if (a.cond && !podeBurlar) {
-          const n = adicionarAviso(remetente, sender, a.tipo)
-          try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
-          if (n >= 3) {
-            limparAvisos(remetente, sender, a.tipo)
-            await sock.sendMessage(remetente, { text: "@" + soNumero(sender) + " 3/3 " + a.nome + "s!", mentions: [sender] })
-            try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
-          } else {
-            await sock.sendMessage(remetente, { text: a.nome + "! " + n + "/3", mentions: [sender] })
-          }
-          return
-        }
-      }
+      } catch (e) { console.log("Erro nas checagens do grupo:", e.message) }
     }
 
-    const hoje = dataBrasil()
-    const cfgAll = db.config()
-    if (cfgAll.ultimoReset !== hoje) {
-      const parceriasAll = db.parcerias()
-      for (const jid of Object.keys(parceriasAll)) {
-        const p = parceriasAll[jid]
-        if (p && p.parceiros) for (const jidP of Object.keys(p.parceiros)) p.parceiros[jidP].usados = 0
+    try {
+      const hoje = dataBrasil()
+      const cfgAll = db.config()
+      if (cfgAll.ultimoReset !== hoje) {
+        const parceriasAll = db.parcerias()
+        for (const jid of Object.keys(parceriasAll)) {
+          const p = parceriasAll[jid]
+          if (p && p.parceiros) for (const jidP of Object.keys(p.parceiros)) p.parceiros[jidP].usados = 0
+        }
+        db.salvarParcerias(parceriasAll)
+        cfgAll.ultimoReset = hoje
+        db.salvarConfig(cfgAll)
       }
-      db.salvarParcerias(parceriasAll)
-      cfgAll.ultimoReset = hoje
-      db.salvarConfig(cfgAll)
-    }
+    } catch (_) {}
 
     const grupos = db.grupos()
     const confGrupo = grupos[remetente] || {}
