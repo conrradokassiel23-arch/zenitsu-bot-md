@@ -1,5 +1,5 @@
 /* ============================================================
-   💧❄️🧊 MENU ADM - RIMURU BOT MD (COMPLETO E CORRIGIDO)
+   💧❄️🧊 MENU ADM - RIMURU BOT MD (COMPLETO)
    ============================================================ */
 
 const fs = require("fs")
@@ -827,6 +827,21 @@ ${item(`${p}rmfig (reply) / ${p}listafig`)}
         let txt = `💧 • 𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 •\n\n❄️ @${numUser} pede aliança.\n\n🧊 Admins:\n`
         admins.forEach((a, i) => { txt += `🧊 ${i + 1}. @${utils.soNumero(a)}\n` })
         txt += `\n🧊 Use: \`${p}addparceria @${numUser} <qtd>\`\n\n"${nomeBot}"`
+        await sock.sendMessage(jid, { text: txt, mentions: [msg.key.participant || msg.key.remoteJid, ...admins] }, { quoted: msg })
+      }
+    },
+
+    adms: {
+      aliases: ["admins", "chamaradm"],
+      adminOnly: false, grupoOnly: true,
+      async executar({ sock, msg, db, groupMetadata, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const numUser = utils.soNumero(msg.key.participant || msg.key.remoteJid)
+        if (!groupMetadata) return; const admins = groupMetadata.participants.filter(pa => pa.admin === "admin" || pa.admin === "superadmin").map(pa => pa.id)
+        if (admins.length === 0) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐀𝐃𝐌𝐒", "Sem admin no grupo.", "Avise o dono", null, nomeBot) }, { quoted: msg }) }
+        await reagir(sock, msg, "💧")
+        let txt = `💧 • 𝐂𝐇𝐀𝐌𝐀𝐍𝐃𝐎 𝐀𝐃𝐌𝐈𝐍𝐒 •\n\n❄️ @${numUser} está chamando os administradores.\n\n🧊 Admins:\n`
+        admins.forEach((a, i) => { txt += `🧊 ${i + 1}. @${utils.soNumero(a)}\n` })
+        txt += `\n💡 _Aguarde o retorno de um deles._\n\n"${nomeBot}"`
         await sock.sendMessage(jid, { text: txt, mentions: [msg.key.participant || msg.key.remoteJid, ...admins] }, { quoted: msg })
       }
     },
