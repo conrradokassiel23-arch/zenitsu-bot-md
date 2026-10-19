@@ -1,5 +1,5 @@
 /* ============================================================
-   🔥 AKAZA BOT MD
+   🔥 AKAZA/RIMURU BOT MD - INDEX COMPLETO
    ============================================================ */
 
 const {
@@ -84,7 +84,7 @@ const db = {
   salvarGrupos: (d) => dbSalvar("grupos.json", d),
   advs: () => dbLer("advs.json", {}),
   salvarAdvs: (d) => dbSalvar("advs.json", d),
-  config: () => dbLer("config.json", { fotoMenu: null, prefixoGlobal: null, slow: false, subdonos: [], nomeBot: "Akaza" }),
+  config: () => dbLer("config.json", { fotoMenu: null, prefixoGlobal: null, slow: false, subdonos: [], nomeBot: "Rimuru" }),
   salvarConfig: (d) => dbSalvar("config.json", d),
   canal: () => dbLer("canal.json", { jid: null, nome: null, link: null }),
   salvarCanal: (d) => dbSalvar("canal.json", d),
@@ -145,7 +145,6 @@ function getTextoBotao(msg) {
     if (msg.message && msg.message.buttonsResponseMessage) return msg.message.buttonsResponseMessage.selectedButtonId || ""
     if (msg.message && msg.message.templateButtonReplyMessage) return msg.message.templateButtonReplyMessage.selectedId || ""
     if (msg.message && msg.message.listResponseMessage) return msg.message.listResponseMessage.singleSelectReply && msg.message.listResponseMessage.singleSelectReply.selectedRowId || ""
-    
     const msgStr = JSON.stringify(msg.message)
     if (msgStr.includes('"selectedId":"menu"') || msgStr.includes('"id":"menu"') || msgStr.includes('menu')) {
       if (msg.message.interactiveResponseMessage || msg.message.buttonsResponseMessage || msgStr.includes("nativeFlowResponse")) {
@@ -217,92 +216,8 @@ function dataBrasil() {
   return new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).split("/").reverse().join("-")
 }
 
-async function notificarX9(sock, groupJid, tipo, autor, alvo) {
-  try {
-    const conf = db.grupos()[groupJid] || {}
-    if (!conf.x9) return
-    const meta = await sock.groupMetadata(groupJid)
-    const autorNum = soNumero(autor)
-    const alvoNum = alvo ? soNumero(alvo) : null
-    const nomeGrupo = meta.subject || "Grupo"
-    const hora = new Date().toLocaleString("pt-BR")
-    let texto = ""
-    if (tipo === "PROMOTE") texto = "🔥 X9 - @" + autorNum + " promoveu @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
-    else if (tipo === "DEMOTE") texto = "🔥 X9 - @" + autorNum + " rebaixou @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
-    else if (tipo === "REMOVE") texto = "🔥 X9 - @" + autorNum + " removeu @" + alvoNum + "\n" + nomeGrupo + "\n" + hora
-    else return
-    await sock.sendMessage(groupJid, { text: texto, mentions: [autor, alvo].filter(Boolean) })
-  } catch (e) { console.log("X9 erro:", e.message) }
-}
-
 // ============================================================
-// 🎨 AUTOFIX + AUTOTTK
-// ============================================================
-async function processarAutoFig(sock, msg, remetente, isGrupo) {
-  if (!isGrupo) return false
-  const conf = (db.autocfg().grupos && db.autocfg().grupos[remetente]) || {}
-  if (!conf.autofig) return false
-
-  const temImg = msg.message && msg.message.imageMessage
-  const temVid = msg.message && msg.message.videoMessage
-  if (!temImg && !temVid) return false
-
-  try {
-    const sharp = require("sharp")
-    const ff = require("@ffmpeg-installer/ffmpeg").path
-    const os = require("os")
-    const { execSync } = require("child_process")
-
-    const buf = await downloadMediaMessage(msg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
-
-    let wp
-    if (temImg) {
-      wp = await sharp(buf).resize(512, 512, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).webp({ quality: 90 }).toBuffer()
-    } else {
-      const tIn = path.join(os.tmpdir(), "af_" + Date.now() + ".mp4")
-      const tOut = path.join(os.tmpdir(), "af_" + Date.now() + ".webp")
-      fs.writeFileSync(tIn, buf)
-      execSync(`"${ff}" -y -i "${tIn}" -vcodec libwebp -filter:v "fps=15,scale=512:512:force_original_aspect_ratio=decrease" -lossless 0 -compression_level 6 -q:v 50 -loop 0 -preset default -an -vsync 0 -s 512:512 "${tOut}"`, { stdio: "ignore" })
-      wp = fs.readFileSync(tOut)
-      try { fs.unlinkSync(tIn) } catch (_) {}
-      try { fs.unlinkSync(tOut) } catch (_) {}
-    }
-
-    await sock.sendMessage(remetente, { sticker: wp }, { quoted: msg })
-    return true
-  } catch (e) { console.log("Erro autofig:", e.message); return false }
-}
-
-async function processarAutoTtk(sock, msg, remetente, isGrupo) {
-  if (!isGrupo) return false
-  const conf = (db.autocfg().grupos && db.autocfg().grupos[remetente]) || {}
-  if (!conf.autottk) return false
-
-  const texto = getTexto(msg)
-  if (!texto) return false
-  const match = texto.match(/https?:\/\/(www\.|vm\.|vt\.)?tiktok\.com\/[^\s]+/i)
-  if (!match) return false
-
-  try {
-    const r = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(match[0])}&hd=1`)
-    const d = await r.json()
-    if (d.code !== 0 || !d.data || !d.data.play) return false
-
-    const vid = await fetch(d.data.play)
-    const buffer = Buffer.from(await vid.arrayBuffer())
-
-    if (buffer.length > 16 * 1024 * 1024) {
-      await sock.sendMessage(remetente, { text: "🔥 Vídeo muito grande (max 16MB)" }, { quoted: msg })
-      return true
-    }
-
-    await sock.sendMessage(remetente, { video: buffer, mimetype: "video/mp4", fileName: "tiktok.mp4" }, { quoted: msg })
-    return true
-  } catch (e) { console.log("Erro autottk:", e.message); return false }
-}
-
-// ============================================================
-// 🤖 SISTEMA DE IA
+// 🎨 AUTOFIX + AUTOTTK + IA
 // ============================================================
 async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
   if (isGrupo) {
@@ -314,7 +229,7 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
   if (!texto) return false
 
   const botNum = soNumero(sock.user?.id)
-  const botNome = (db.config().nomeBot || "Akaza").toLowerCase()
+  const botNome = (db.config().nomeBot || "Rimuru").toLowerCase()
   
   const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
   const mentionedJid = ctx.mentionedJid || []
@@ -325,40 +240,71 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
 
   if (!mencionadoPorId && !respondendoBot && !mencionadoPorTexto) return false
 
-  let pergunta = texto
-    .replace(/@\d+/g, "")
-    .replace(new RegExp("@" + botNome, "gi"), "")
-    .replace(new RegExp(botNome, "gi"), "")
-    .trim()
-
+  let pergunta = texto.replace(/@\d+/g, "").replace(new RegExp("@" + botNome, "gi"), "").replace(new RegExp(botNome, "gi"), "").trim()
   if (!pergunta) pergunta = "Oi"
 
   try {
     await sock.sendPresenceUpdate("composing", remetente)
-
-    const promptSistema = encodeURIComponent(`Você é o Akaza, um bot de WhatsApp estilo anime/inspirado em Demon Slayer. Responda de forma curta, direta e com personalidade. Use emojis às vezes (❄️⚔️🔥). Não seja muito formal. O usuário disse: ${pergunta}`)
-    
-    const response = await fetch(`https://text.pollinations.ai/${promptSistema}`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'text/plain' },
-      signal: AbortSignal.timeout(30000)
-    })
-
+    const promptSistema = encodeURIComponent(`Você é o ${db.config().nomeBot || "Rimuru"}, um bot de WhatsApp estilo anime/inspirado em Tensei Shitara Slime. Responda de forma curta, direta e com personalidade. Use emojis às vezes (💧❄️🧊). Não seja muito formal. O usuário disse: ${pergunta}`)
+    const response = await fetch(`https://text.pollinations.ai/${promptSistema}`, { method: 'GET', headers: { 'Content-Type': 'text/plain' }, signal: AbortSignal.timeout(30000) })
     if (!response.ok) throw new Error("Erro na API da IA")
-
     const resposta = await response.text()
-
-    if (resposta && resposta.trim()) {
-      await sock.sendMessage(remetente, { text: resposta.trim() }, { quoted: msg })
-    } else {
-      await sock.sendMessage(remetente, { text: "❄️ Não consegui pensar em nada..." }, { quoted: msg })
-    }
+    if (resposta && resposta.trim()) await sock.sendMessage(remetente, { text: resposta.trim() }, { quoted: msg })
+    else await sock.sendMessage(remetente, { text: "❄️ Não consegui pensar em nada..." }, { quoted: msg })
     return true
   } catch (e) {
     console.log("❌ Erro IA:", e.message)
-    await sock.sendMessage(remetente, { text: `❄️ Erro na IA: ${e.message}` }, { quoted: msg })
     return true
   }
+}
+
+async function processarAutoFig(sock, msg, remetente, isGrupo) {
+  if (!isGrupo) return false
+  const conf = (db.autocfg().grupos && db.autocfg().grupos[remetente]) || {}
+  if (!conf.autofig) return false
+  const temImg = msg.message && msg.message.imageMessage
+  const temVid = msg.message && msg.message.videoMessage
+  if (!temImg && !temVid) return false
+  try {
+    const sharp = require("sharp")
+    const ff = require("@ffmpeg-installer/ffmpeg").path
+    const os = require("os")
+    const { execSync } = require("child_process")
+    const buf = await downloadMediaMessage(msg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
+    let wp
+    if (temImg) wp = await sharp(buf).resize(512, 512, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).webp({ quality: 90 }).toBuffer()
+    else {
+      const tIn = path.join(os.tmpdir(), "af_" + Date.now() + ".mp4")
+      const tOut = path.join(os.tmpdir(), "af_" + Date.now() + ".webp")
+      fs.writeFileSync(tIn, buf)
+      execSync(`"${ff}" -y -i "${tIn}" -vcodec libwebp -filter:v "fps=15,scale=512:512:force_original_aspect_ratio=decrease" -lossless 0 -compression_level 6 -q:v 50 -loop 0 -preset default -an -vsync 0 -s 512:512 "${tOut}"`, { stdio: "ignore" })
+      wp = fs.readFileSync(tOut)
+      try { fs.unlinkSync(tIn) } catch (_) {}
+      try { fs.unlinkSync(tOut) } catch (_) {}
+    }
+    await sock.sendMessage(remetente, { sticker: wp }, { quoted: msg })
+    return true
+  } catch (e) { return false }
+}
+
+async function processarAutoTtk(sock, msg, remetente, isGrupo) {
+  if (!isGrupo) return false
+  const conf = (db.autocfg().grupos && db.autocfg().grupos[remetente]) || {}
+  if (!conf.autottk) return false
+  const texto = getTexto(msg)
+  if (!texto) return false
+  const match = texto.match(/https?:\/\/(www\.|vm\.|vt\.)?tiktok\.com\/[^\s]+/i)
+  if (!match) return false
+  try {
+    const r = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(match[0])}&hd=1`)
+    const d = await r.json()
+    if (d.code !== 0 || !d.data || !d.data.play) return false
+    const vid = await fetch(d.data.play)
+    const buffer = Buffer.from(await vid.arrayBuffer())
+    if (buffer.length > 16 * 1024 * 1024) { await sock.sendMessage(remetente, { text: "❄️ Vídeo muito grande (max 16MB)" }, { quoted: msg }); return true }
+    await sock.sendMessage(remetente, { video: buffer, mimetype: "video/mp4", fileName: "tiktok.mp4" }, { quoted: msg })
+    return true
+  } catch (e) { return false }
 }
 
 // ============================================================
@@ -378,7 +324,6 @@ function carregarMenus() {
   for (const pasta of pastas) {
     const caminhoPasta = path.join(MENUS_DIR, pasta)
     if (!fs.statSync(caminhoPasta).isDirectory()) continue
-
     const arquivos = fs.readdirSync(caminhoPasta).filter(f => f.endsWith(".js"))
 
     for (const arq of arquivos) {
@@ -387,17 +332,10 @@ function carregarMenus() {
         delete require.cache[require.resolve(arquivo)]
         const mod = require(arquivo)
         if (!mod.commands) continue
-
-        if (typeof mod.rendaAutomatica === "function") {
-          global.rendasAutomaticas.push(mod.rendaAutomatica)
-          console.log("[" + pasta + "/" + arq + "] renda automatica registrada!")
-        }
-
-        const menuCfg = {
-          grupoOnly: mod.grupoOnly || false,
-          adminOnly: mod.adminOnly || false,
-          donoOnly: mod.donoOnly || false
-        }
+        if (typeof mod.rendaAutomatica === "function") global.rendasAutomaticas.push(mod.rendaAutomatica)
+        
+        const menuCfg = { grupoOnly: mod.grupoOnly || false, adminOnly: mod.adminOnly || false, donoOnly: mod.donoOnly || false }
+        
         for (const [nome, cmd] of Object.entries(mod.commands)) {
           const pacote = {
             nome,
@@ -410,26 +348,19 @@ function carregarMenus() {
           }
           comandos.set(nome, pacote)
           for (const a of pacote.aliases) aliases.set(a, nome)
-          console.log("[" + pasta + "/" + arq + "] " + nome + " ~ carregado!")
         }
       } catch (e) {
         console.log("Erro ao carregar " + pasta + "/" + arq + ":", e.message)
-        console.log(e.stack)
       }
     }
   }
 
   const categorias = {}
-  for (const [nome, cmd] of comandos.entries()) {
-    const cat = cmd.categoria || "outros"
-    categorias[cat] = (categorias[cat] || 0) + 1
-  }
+  for (const [nome, cmd] of comandos.entries()) { const cat = cmd.categoria || "outros"; categorias[cat] = (categorias[cat] || 0) + 1 }
   global.totalComandos = comandos.size
   global.totalAliases = aliases.size
   global.comandosPorCategoria = categorias
-
-  console.log("\n🔥 Akaza Bot carregou " + comandos.size + " comandos...")
-  console.log(aliases.size + " aliases registrados\n")
+  console.log("\n🔥 Bot carregou " + comandos.size + " comandos e " + aliases.size + " aliases...\n")
 }
 
 global.__carregarMenus = carregarMenus
@@ -450,18 +381,13 @@ function envolverSendMessage(sock) {
       const temBotoes = content && (content.buttons || content.sections || content.templateButtons || content.buttonText || content.interactiveButtons || content.listMessage)
       if (temBotoes) return original(jid, content, options)
       if (options.edit) return original(jid, content, options)
-      
       if (options.ignorarCanal) return original(jid, content, options)
 
       if (!canalCache) recarregarCanal()
       const c = canalCache
       if (c && c.jid && c.jid !== "0@newsletter") {
         content.contextInfo = content.contextInfo || {}
-        content.contextInfo.forwardedNewsletterMessageInfo = {
-          newsletterJid: c.jid,
-          newsletterName: c.nome || "Canal",
-          serverMessageId: 0
-        }
+        content.contextInfo.forwardedNewsletterMessageInfo = { newsletterJid: c.jid, newsletterName: c.nome || "Canal", serverMessageId: 0 }
         content.contextInfo.forwardingScore = 1
         content.contextInfo.isForwarded = true
       }
@@ -476,20 +402,18 @@ function envolverSendMessage(sock) {
 async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo, isDono, isSubDono) {
   if (!isGrupo) return false
   if (msg.key.fromMe) return false
-
   try {
     const textoOriginal = getTexto(msg).trim()
     if (!textoOriginal) return false
     const texto = textoOriginal.toLowerCase()
-
     const cfg = db.config()
-    const nomeBot = (cfg.nomeBot || "akaza").toLowerCase().trim()
+    const nomeBot = (cfg.nomeBot || "rimuru").toLowerCase().trim()
     if (!nomeBot) return false
 
     const textoSemEspaco = texto.replace(/\s+/g, " ")
     const nomeSemEspaco = nomeBot.replace(/\s+/g, "")
-
     let comando = null
+
     if (textoSemEspaco.startsWith(nomeBot)) {
       const resto = textoSemEspaco.slice(nomeBot.length).trim()
       if (resto === "fecha") comando = "fecha"
@@ -503,64 +427,36 @@ async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo,
         else if (resto === "abre") comando = "abre"
       }
     }
-
     if (!comando) return false
 
     let ehAdmin = false
     try {
       const meta = await sock.groupMetadata(remetente)
-      const p = meta.participants.find(x => 
-        x.id === sender || 
-        soNumero(x.id) === soNumero(sender) || 
-        soNumero(x.lid) === soNumero(sender)
-      )
+      const p = meta.participants.find(x => x.id === sender || soNumero(x.id) === soNumero(sender) || soNumero(x.lid) === soNumero(sender))
       ehAdmin = p && (p.admin === "admin" || p.admin === "superadmin")
-    } catch (e) { console.log("Erro ao verificar admin:", e.message) }
+    } catch (e) {}
 
     if (!ehAdmin && !isDono && !isSubDono) {
-      await sock.sendMessage(remetente, {
-        text: "🔥⚔️ *SEM PERMISSÃO*\n\n" +
-          "> 👁️ _\"Meus olhos veem que você não é admin.\"_\n" +
-          "> _\"Não posso obedecer.\"_\n\n> ⚔️ _\"Respeite a hierarquia.\"_"
-      }, { quoted: msg })
+      await sock.sendMessage(remetente, { text: "❄️ *SEM PERMISSÃO*\n\n> _\"Meus olhos veem que você não é admin.\"_" }, { quoted: msg })
       return true
     }
 
     if (comando === "fecha") {
       try {
         await sock.groupSettingUpdate(remetente, "announcement")
-        await sock.sendMessage(remetente, {
-          text: "🔥🔒 *GRUPO FECHADO*\n\n" +
-            "> _\"A força observa em silêncio.\"_\n" +
-            "> _\"Só os dignos falam.\"_\n\n" +
-            "━━━━━━━━━━━━━━━━━━━━━━\n" +
-            "⚔️ _Respiração... 3ª Forma: Aniquilação._"
-        }, { quoted: msg })
-      } catch (e) {
-        await sock.sendMessage(remetente, { text: "🔥 *Erro ao fechar:* " + e.message }, { quoted: msg })
-      }
+        await sock.sendMessage(remetente, { text: "❄️🔒 *GRUPO FECHADO*\n\n> _\"Só os dignos falam.\"_\n\n⚔️ _Respiração... Aniquilação._" }, { quoted: msg })
+      } catch (e) { await sock.sendMessage(remetente, { text: "❄️ *Erro ao fechar:* " + e.message }, { quoted: msg }) }
       return true
     }
 
     if (comando === "abre") {
       try {
         await sock.groupSettingUpdate(remetente, "not_announcement")
-        await sock.sendMessage(remetente, {
-          text: "🔥🔓 *GRUPO ABERTO*\n\n" +
-            "> _\"A força ilumina todos.\"_\n" +
-            "> _\"Respirem, mortais.\"_\n\n" +
-            "━━━━━━━━━━━━━━━━━━━━━━\n" +
-            "⚔️ _Respirando Lua Crescente..._"
-        }, { quoted: msg })
-      } catch (e) {
-        await sock.sendMessage(remetente, { text: "🔥 *Erro ao abrir:* " + e.message }, { quoted: msg })
-      }
+        await sock.sendMessage(remetente, { text: "❄️🔓 *GRUPO ABERTO*\n\n> _\"Respirem, mortais.\"_\n\n⚔️ _Lua Crescente..._" }, { quoted: msg })
+      } catch (e) { await sock.sendMessage(remetente, { text: "❄️ *Erro ao abrir:* " + e.message }, { quoted: msg }) }
       return true
     }
-
-  } catch (e) {
-    console.log("Erro comando sem prefixo:", e.message)
-  }
+  } catch (e) {}
   return false
 }
 
@@ -579,22 +475,14 @@ async function processarFigCmd(sock, msg, remetente, sender, isGrupo, isDono, is
 
     const buf = await downloadMediaMessage(msg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
     if (!buf || !buf.length) return false
-
     const hash = crypto.createHash("md5").update(buf).digest("hex")
     const dados = grupo[hash]
-
     if (!dados) return false
 
     const cmdExecutar = getComando(dados.comando)
-    if (!cmdExecutar) {
-      console.log("🎴 Figcmd registrada mas comando não existe:", dados.comando)
-      return false
-    }
+    if (!cmdExecutar) return false
 
-    console.log("🎴 Figurinha comando detectada:", dados.comando, "por", soNumero(sender))
-
-    let groupMetadata = null
-    let isAdmin = false
+    let groupMetadata = null; let isAdmin = false
     try {
       groupMetadata = await sock.groupMetadata(remetente)
       const p = groupMetadata.participants.find(x => x.id === sender || soNumero(x.id) === soNumero(sender) || soNumero(x.lid) === soNumero(sender))
@@ -602,49 +490,26 @@ async function processarFigCmd(sock, msg, remetente, sender, isGrupo, isDono, is
     } catch (_) {}
 
     const ehSub = ehSubAdmin(remetente, sender)
-    const permitidoSub = ["mute", "desmute", "ban", "kick", "link", "linkgp", "fechar", "closenow", "abrir", "opennow"]
-    const ehComandoSub = permitidoSub.includes(cmdExecutar.nome) || (cmdExecutar.aliases || []).some(a => permitidoSub.includes(a))
-    const podeAdmin = isAdmin || isDono || isSubDono || (ehSub && ehComandoSub)
+    const podeAdmin = isAdmin || isDono || isSubDono
 
-    if (cmdExecutar.donoOnly && !isDono && !isSubDono) {
-      await sock.sendMessage(remetente, { text: "🔥 Esse comando é só do mestre!" }, { quoted: msg })
-      return true
-    }
-    if (cmdExecutar.adminOnly && !podeAdmin && !isSubDono) {
-      await sock.sendMessage(remetente, { text: "🔥 Esse comando é de adm!" }, { quoted: msg })
-      return true
-    }
+    if (cmdExecutar.donoOnly && !isDono && !isSubDono) return true
+    if (cmdExecutar.adminOnly && !podeAdmin) return true
 
     try {
       await cmdExecutar.executar({
-        sock, msg, args: [],
-        sender, isGrupo, isAdmin, isDono, isSubDono,
-        ehSub, podeAdmin,
-        groupMetadata, config, prefixoAtivo: db.config().prefixoGlobal || config.prefixo || "!",
+        sock, msg, args: [], sender, isGrupo, isAdmin, isDono, isSubDono, ehSub, podeAdmin, groupMetadata, config,
+        prefixoAtivo: db.config().prefixoGlobal || config.prefixo || "+",
         db,
-        utils: {
-          getAlvo, soNumero, getTexto, downloadMediaMessage, recarregarCanal,
-          naListaNegra, aluguelAtivo, grupoTemAluguel, formatarTempo,
-          adicionarAviso, limparAvisos, DATA_DIR, botEhAdmin,
-          dbLer, dbSalvar, getTextoBotao, ehSubAdmin
-        }
+        utils: { getAlvo, soNumero, getTexto, downloadMediaMessage, recarregarCanal, naListaNegra, aluguelAtivo, grupoTemAluguel, formatarTempo, adicionarAviso, limparAvisos, DATA_DIR, botEhAdmin, dbLer, dbSalvar, getTextoBotao, ehSubAdmin }
       })
-    } catch (e) {
-      console.log("Erro ao executar figcmd:", e.message)
-    }
-
+    } catch (e) {}
     return true
-
-  } catch (e) {
-    console.log("Erro detector figcmd:", e.message)
-    return false
-  }
+  } catch (e) { return false }
 }
 
 // ============================================================
 // 🚀 START
 // ============================================================
-let NUMERO_PAREAMENTO = null
 let sockGlobal = null
 
 async function iniciar() {
@@ -671,43 +536,32 @@ async function iniciar() {
   if (!state.creds.registered) {
     setTimeout(async () => {
       try {
-        console.log("\n═══════════════════════════════")
-        console.log("   🔥 AKAZA BOT - MD")
-        console.log("═══════════════════════════════\n")
-        console.log("Digite o NUMERO do bot (com DDI, so digitos):")
-        console.log("Exemplo: 5511999999999\n")
-
+        console.log("\n═══════════════════════════════\n   🔥 BOT - MD\n═══════════════════════════════\n")
+        console.log("Digite o NUMERO do bot (com DDI, so digitos):\nExemplo: 5511999999999\n")
         const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
         rl.question("Numero: ", async (numeroDigitado) => {
           rl.close()
           const numero = String(numeroDigitado).replace(/\D/g, "")
           if (!numero || numero.length < 10) { console.log("\nNumero invalido! Reinicie o bot."); process.exit(1) }
-          NUMERO_PAREAMENTO = numero
           console.log("\nNumero salvo: " + numero + "\nGerando codigo de pareamento...\n")
           try {
             const code = await sock.requestPairingCode(numero)
-            console.log("╔═══════════════════════════════╗")
-            console.log("║   CODIGO DE PAREAMENTO        ║")
-            console.log("╠═══════════════════════════════╣")
+            console.log("╔═══════════════════════════════╗\n║   CODIGO DE PAREAMENTO        ║\n╠═══════════════════════════════╣")
             console.log("║   " + code + "                       ║")
             console.log("╚═══════════════════════════════╝\n")
             console.log("WhatsApp > Aparelhos conectados > Conectar > Conectar com numero\n")
           } catch (e) { console.log("Erro ao gerar codigo:", e.message) }
         })
-      } catch (e) { console.log("Erro:", e.message) }
+      } catch (e) {}
     }, 5000)
   }
 
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
     if (connection === "close") {
-      const motivo = (lastDisconnect?.error instanceof Boom)
-        ? lastDisconnect.error.output.statusCode
-        : null
+      const motivo = (lastDisconnect?.error instanceof Boom) ? lastDisconnect.error.output.statusCode : null
       if (motivo === DisconnectReason.loggedOut) process.exit(1)
       else setTimeout(() => iniciar(), 3000)
-    } else if (connection === "open") {
-      console.log("\n🔥 CONECTADO! Akaza Bot online\n")
-    }
+    } else if (connection === "open") { console.log("\n🔥 CONECTADO! Bot online\n") }
   })
 
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
@@ -738,8 +592,7 @@ async function iniciar() {
 
     const numerosDono = (Array.isArray(config.dono) ? config.dono : [config.dono]).map(soNumero)
     const senderCandidatos = [
-      sender, senderRaw,
-      msg.key && msg.key.participant, msg.key && msg.key.participantPn,
+      sender, senderRaw, msg.key && msg.key.participant, msg.key && msg.key.participantPn,
       msg.key && msg.key.participantLid, msg.key && msg.key.remoteJid, msg.participant,
       sock.user && sock.user.id, sock.user && sock.user.lid
     ].filter(Boolean)
@@ -773,15 +626,9 @@ async function iniciar() {
     if (isGrupo && !msg.key.fromMe) {
       try {
         const confAuto = (db.autocfg().grupos && db.autocfg().grupos[remetente]) || {}
-        if (confAuto.autottk) {
-          const feito = await processarAutoTtk(sock, msg, remetente, isGrupo)
-          if (feito) return
-        }
-        if (confAuto.autofig) {
-          const feito = await processarAutoFig(sock, msg, remetente, isGrupo)
-          if (feito) return
-        }
-      } catch (e) { console.log("Erro auto:", e.message) }
+        if (confAuto.autottk) { const feito = await processarAutoTtk(sock, msg, remetente, isGrupo); if (feito) return }
+        if (confAuto.autofig) { const feito = await processarAutoFig(sock, msg, remetente, isGrupo); if (feito) return }
+      } catch (e) {}
     }
 
     if (isGrupo && !msg.key.fromMe) {
@@ -798,10 +645,7 @@ async function iniciar() {
             rpg.usuarios[num].moedas = (rpg.usuarios[num].moedas || 0) + 100
             rpg.usuarios[num].ultimoGanho = dataHoje
             db.salvarRpg(rpg)
-            await sock.sendMessage(remetente, {
-              text: "🔥💰 Gold diario! +100 pra @" + num + "\nSaldo: " + rpg.usuarios[num].moedas,
-              mentions: [sender]
-            })
+            await sock.sendMessage(remetente, { text: "💧💰 Gold diario! +100 pra @" + num + "\nSaldo: " + rpg.usuarios[num].moedas, mentions: [sender] })
           }
         }
       } catch (_) {}
@@ -823,12 +667,7 @@ async function iniciar() {
       const conf = grupos[remetente] || {}
       const meta = await sock.groupMetadata(remetente).catch(() => null)
 
-      const senderCands = [
-        sender, senderRaw,
-        msg.key && msg.key.participant, msg.key && msg.key.participantPn,
-        msg.key && msg.key.participantLid, msg.key && msg.key.remoteJid
-      ].filter(Boolean).map(soNumero)
-
+      const senderCands = [sender, senderRaw, msg.key && msg.key.participant, msg.key && msg.key.participantPn, msg.key && msg.key.participantLid, msg.key && msg.key.remoteJid].filter(Boolean).map(soNumero)
       const isAdm = meta && meta.participants.find(p => {
         const pIds = [p.id, p.lid, p.phoneNumber].filter(Boolean).map(soNumero)
         return senderCands.some(cand => pIds.includes(cand))
@@ -841,15 +680,10 @@ async function iniciar() {
       const mutadosG = mutados[remetente] || {}
       let jidMutado = null
       for (const c of senderCands) {
-        for (const j of Object.keys(mutadosG)) {
-          if (soNumero(j) === soNumero(c) && mutadosG[j] > Date.now()) { jidMutado = j; break }
-        }
+        for (const j of Object.keys(mutadosG)) { if (soNumero(j) === soNumero(c) && mutadosG[j] > Date.now()) { jidMutado = j; break } }
         if (jidMutado) break
       }
-      if (jidMutado && !podeBurlar) {
-        try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
-        return
-      }
+      if (jidMutado && !podeBurlar) { try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {} return }
 
       if (conf.palavrao && !podeBurlar) {
         const lista = db.palavroes()[remetente] || []
@@ -877,22 +711,12 @@ async function iniciar() {
       const afks = db.afk()
       const afkGrupo = afks[remetente] || {}
       let jidAfk = null
-      for (const c of senderCands) {
-        for (const j of Object.keys(afkGrupo)) {
-          if (soNumero(j) === soNumero(c)) { jidAfk = j; break }
-        }
-        if (jidAfk) break
-      }
+      for (const c of senderCands) { for (const j of Object.keys(afkGrupo)) { if (soNumero(j) === soNumero(c)) { jidAfk = j; break } } if (jidAfk) break }
       if (jidAfk && afkGrupo[jidAfk]) {
         const info = afkGrupo[jidAfk]
         const tempo = formatarTempo(Date.now() - info.desde)
-        delete afkGrupo[jidAfk]
-        afks[remetente] = afkGrupo
-        db.salvarAfk(afks)
-        await sock.sendMessage(remetente, {
-          text: "🔥 @" + soNumero(jidAfk) + " voltou! Ficou AFK " + tempo,
-          mentions: [jidAfk]
-        })
+        delete afkGrupo[jidAfk]; afks[remetente] = afkGrupo; db.salvarAfk(afks)
+        await sock.sendMessage(remetente, { text: "💧 @" + soNumero(jidAfk) + " voltou! Ficou AFK " + tempo, mentions: [jidAfk] })
       }
 
       const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
@@ -901,10 +725,7 @@ async function iniciar() {
         for (const [j, info] of Object.entries(afkGrupo)) {
           if (soNumero(j) === soNumero(m)) {
             const tempo = formatarTempo(Date.now() - info.desde)
-            await sock.sendMessage(remetente, {
-              text: "🔥💤 AFK: @" + soNumero(j) + "\nHa " + tempo + "\nMotivo: " + info.motivo,
-              mentions: [j]
-            })
+            await sock.sendMessage(remetente, { text: "💧❄️ AFK: @" + soNumero(j) + "\nHa " + tempo + "\nMotivo: " + info.motivo, mentions: [j] })
           }
         }
       }
@@ -924,11 +745,7 @@ async function iniciar() {
           let jidParceiro = null
           for (const [jidP, info] of Object.entries(parceiros)) {
             const jidPNum = soNumero(jidP)
-            if (senderCands.some(cand => cand === jidPNum)) {
-              encontrado = info
-              jidParceiro = jidP
-              break
-            }
+            if (senderCands.some(cand => cand === jidPNum)) { encontrado = info; jidParceiro = jidP; break }
           }
 
           if (modoParceria && encontrado) {
@@ -936,36 +753,18 @@ async function iniciar() {
               encontrado.usados++
               db.salvarParcerias(parcerias)
               const restantes = encontrado.total - encontrado.usados
-              const extra = restantes === 0 
-                ? "⚠️ *Esse foi o seu último link de hoje!* Volta amanhã." 
-                : `✨ Ainda tem *${restantes}* link(s) restante(s) hoje.`
-
-              try {
-                await sock.sendMessage(remetente, {
-                  text: `❄️ • 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀 𝐀𝐏𝐑𝐎𝐕𝐀𝐃𝐀 •\n\n╭─〔 ✅ 𝐀𝐂𝐄𝐒𝐒𝐎 𝐋𝐈𝐁𝐄𝐑𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, o link foi autorizado!\n╰──────────────\n\n『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴\n📊 𝐔𝐬𝐨:\n╰➜ ${encontrado.usados}/${encontrado.total} links enviados.\n\n${extra}\n\n❄️ _"Tempest sempre honra suas alianças."_`,
-                  mentions: [sender]
-                })
-              } catch (e) { console.log("Erro msg parceria:", e.message) }
+              const extra = restantes === 0 ? "⚠️ *Esse foi o seu último link de hoje!*" : `✨ Ainda tem *${restantes}* link(s) restante(s).`
+              try { await sock.sendMessage(remetente, { text: `❄️ • 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀 𝐀𝐏𝐑𝐎𝐕𝐀𝐃𝐀 •\n\n╭─〔 ✅ 𝐀𝐂𝐄𝐒𝐒𝐎 𝐋𝐈𝐁𝐄𝐑𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, o link foi autorizado!\n╰──────────────\n\n📊 𝐔𝐬𝐨:\n╰➜ ${encontrado.usados}/${encontrado.total} links enviados.\n\n${extra}\n\n❄️ _"Tempest sempre honra suas alianças."_`, mentions: [sender] }) } catch (e) {}
               return
             } else {
               try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
-              try {
-                await sock.sendMessage(remetente, {
-                  text: `❄️ • 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀 𝐄𝐒𝐆𝐎𝐓𝐀𝐃𝐀 •\n\n╭─〔 ⚠️ 𝐌𝐀𝐍𝐀 𝐈𝐍𝐒𝐔𝐅𝐈𝐂𝐈𝐄𝐍𝐓𝐄 〕\n│ @${soNumero(sender)}, você já usou todos os seus links hoje.\n╰──────────────\n\n『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴\n📊 𝐔𝐬𝐨:\n╰➜ ${encontrado.usados}/${encontrado.total} links diários.\n\n⏰ 𝐑𝐞𝐬𝐭𝐚𝐮𝐫𝐚𝐜̧𝐚̃𝐨:\n╰➜ Meia-noite (00:00).\n\n❄️ _"Descanse, slime. Amanhã você tenta de novo."_`,
-                  mentions: [sender]
-                })
-              } catch (e) { console.log("Erro msg esgotada:", e.message) }
+              try { await sock.sendMessage(remetente, { text: `❄️ • 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀 𝐄𝐒𝐆𝐎𝐓𝐀𝐃𝐀 •\n\n╭─〔 ⚠️ 𝐌𝐀𝐍𝐀 𝐈𝐍𝐒𝐔𝐅𝐈𝐂𝐈𝐄𝐍𝐓𝐄 〕\n│ @${soNumero(sender)}, você já usou todos os seus links hoje.\n╰──────────────\n\n⏰ Restauração: Meia-noite (00:00).`, mentions: [sender] }) } catch (e) {}
               return
             }
           }
 
           try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
-          try {
-            await sock.sendMessage(remetente, {
-              text: `❄️ • 𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 𝐒𝐀́𝐁𝐈𝐎 𝐀𝐍𝐀𝐋𝐈𝐒𝐎𝐔 •\n\n╭─〔 🚫 𝐋𝐈𝐍𝐊 𝐃𝐄𝐕𝐎𝐑𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, você tentou enviar um link de grupo sem autorização.\n╰──────────────\n\n『 𝐑𝐄𝐋𝐀𝐓𝐎́𝐑𝐈𝐎 』 ↴\n🧊 𝐀𝐜̧𝐚̃𝐨:\n╰➜ _Ativando [Predador]... Link apagado._\n\n📜 𝐌𝐨𝐭𝐢𝐯𝐨:\n╰➜ Sem aliança/parceria com o Reino de Tempest.\n\n💡 𝐒𝐨𝐥𝐮𝐜̧𝐚̃𝐨:\n╰➜ Peça para um administrador usar:\n   \`!parceria\`\n\n❄️ _"O Grande Sábio não tolera spam."_`,
-              mentions: [sender]
-            })
-          } catch (e) { console.log("Erro msg bloqueio:", e.message) }
+          try { await sock.sendMessage(remetente, { text: `❄️ • 𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 𝐒𝐀́𝐁𝐈𝐎 𝐀𝐍𝐀𝐋𝐈𝐒𝐎𝐔 •\n\n╭─〔 🚫 𝐋𝐈𝐍𝐊 𝐃𝐄𝐕𝐎𝐑𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, link sem autorização.\n╰──────────────\n\n❄️ _"O Grande Sábio não tolera spam."_`, mentions: [sender] }) } catch (e) {}
           return
         }
 
@@ -974,16 +773,10 @@ async function iniciar() {
           const n = adicionarAviso(remetente, sender, "link")
           if (n >= 3) {
             limparAvisos(remetente, sender, "link")
-            await sock.sendMessage(remetente, { 
-              text: `❄️ • 𝐄𝐗𝐏𝐔𝐋𝐒𝐎 𝐃𝐄 𝐓𝐄𝐌𝐏𝐄𝐒𝐓 •\n\n╭─〔 💀 𝐀𝐌𝐄𝐀𝐂̧𝐀 〕\n│ @${soNumero(sender)} atingiu 3/3 avisos.\n╰──────────────\n\n> _"Veldora, cuide disso."_`, 
-              mentions: [sender] 
-            })
+            await sock.sendMessage(remetente, { text: `❄️ • 𝐄𝐗𝐏𝐔𝐋𝐒𝐎 •\n\n╭─〔 💀 𝐀𝐌𝐄𝐀𝐂̧𝐀 〕\n│ @${soNumero(sender)} atingiu 3/3 avisos.\n╰──────────────\n\n> _"Veldora, cuide disso."_`, mentions: [sender] })
             try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
           } else {
-            await sock.sendMessage(remetente, { 
-              text: `❄️ • 𝐀𝐍𝐓𝐈-𝐋𝐈𝐍𝐊 𝐀𝐓𝐈𝐕𝐀𝐃𝐎 •\n\n╭─〔 🐉 𝐕𝐄𝐋𝐃𝐎𝐑𝐀 𝐈𝐍𝐓𝐄𝐑𝐂𝐄𝐏𝐓𝐎𝐔 〕\n│ @${soNumero(sender)}, links externos não são permitidos aqui.\n╰──────────────\n\n『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴\n⚠️ 𝐀𝐯𝐢𝐬𝐨𝐬:\n╰➜ ${n}/3\n\n💡 _Pare de spammar ou será devorado._\n\n❄️ _"A tempestade se aproxima..."_`, 
-              mentions: [sender] 
-            })
+            await sock.sendMessage(remetente, { text: `❄️ • 𝐀𝐍𝐓𝐈-𝐋𝐈𝐍𝐊 •\n\n╭─〔 🐉 𝐈𝐍𝐓𝐄𝐑𝐂𝐄𝐏𝐓𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, links não são permitidos aqui.\n╰──────────────\n\n⚠️ 𝐀𝐯𝐢𝐬𝐨𝐬:\n╰➜ ${n}/3`, mentions: [sender] })
           }
           return
         }
@@ -1028,7 +821,7 @@ async function iniciar() {
     const confGrupo = grupos[remetente] || {}
     const cfgGlobal = db.config()
 
-    const prefixoGlobal = cfgGlobal.prefixoGlobal || config.prefixo || "!"
+    const prefixoGlobal = cfgGlobal.prefixoGlobal || config.prefixo || "+"
     let prefixosAtivos
     if (isGrupo && confGrupo.multiprefixo && confGrupo.prefixo) prefixosAtivos = [confGrupo.prefixo]
     else prefixosAtivos = [prefixoGlobal]
@@ -1061,51 +854,21 @@ async function iniciar() {
     if (cmdName.toLowerCase() === "prefixo") {
       const p = prefixoGlobal
       const numUser = soNumero(sender)
-      const nomeBot = db.config().nomeBot || "Akaza Bot"
+      const nomeBot = db.config().nomeBot || "Rimuru Bot"
       const cfgCmd = db.config()
       const mencoes = sender ? [sender] : []
 
-      const textoBase = 
-`💜 • 𝐂𝐎𝐍𝐅𝐈𝐆𝐔𝐑𝐀𝐂̧𝐀̃𝐎 •
+      const textoBase = `💜 • 𝐂𝐎𝐍𝐅𝐈𝐆𝐔𝐑𝐀𝐂̧𝐀̃𝐎 •\n\n╭─〔 🦄 𝐒𝐈𝐒𝐓𝐄𝐌𝐀 〕\n│ Olá @${numUser}, este é o meu prefixo.\n╰──────────────\n\n🫟 𝐏𝐫𝐞𝐟𝐢𝐱𝐨 𝐀𝐭𝐮𝐚𝐥:\n╰➜ 『 ${p} 』\n\n💡 Para usar meus comandos, digite:\n╰➜ ${p}menu\n\n💜 _"Use com sabedoria."_\n\n"${nomeBot}"`
 
-╭─〔 🦄 𝐒𝐈𝐒𝐓𝐄𝐌𝐀 〕
-│ Olá @${numUser}, este é o meu prefixo.
-╰──────────────
-
-🫟 𝐏𝐫𝐞𝐟𝐢𝐱𝐨 𝐀𝐭𝐮𝐚𝐥:
-╰➜ 『 ${p} 』
-
-💡 Para usar meus comandos, digite:
-╰➜ ${p}menu
-
-💜 _"Use com sabedoria."_
-
-"${nomeBot}"`
-
-      const opcoesEnvio = { 
-        caption: textoBase, 
-        mentions: mencoes,
-        footer: "⚔️ " + nomeBot,
-        buttons: [
-          { buttonId: prefixoGlobal + "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }
-        ],
-        headerType: 1,
-        ignorarCanal: true
-      }
+      const opcoesEnvio = { caption: textoBase, mentions: mencoes, footer: "⚔️ " + nomeBot, buttons: [{ buttonId: prefixoGlobal + "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }], headerType: 1, ignorarCanal: true }
 
       try {
         if (cfgCmd.fotoCmd) {
           const buf = Buffer.from(cfgCmd.fotoCmd, "base64")
-          if (cfgCmd.tipoFotoCmd === "video") {
-            await sock.sendMessage(remetente, { video: buf, mimetype: "video/mp4", fileName: "akaza.mp4", gifPlayback: true, ...opcoesEnvio }, { quoted: msg })
-          } else {
-            await sock.sendMessage(remetente, { image: buf, ...opcoesEnvio }, { quoted: msg })
-          }
-        } else {
-          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, buttons: opcoesEnvio.buttons, ignorarCanal: true }, { quoted: msg })
-        }
+          if (cfgCmd.tipoFotoCmd === "video") { await sock.sendMessage(remetente, { video: buf, mimetype: "video/mp4", fileName: "rimuru.mp4", gifPlayback: true, ...opcoesEnvio }, { quoted: msg }) }
+          else { await sock.sendMessage(remetente, { image: buf, ...opcoesEnvio }, { quoted: msg }) }
+        } else { await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, buttons: opcoesEnvio.buttons, ignorarCanal: true }, { quoted: msg }) }
       } catch (e) {
-        console.log("Erro ao enviar prefixo com botão:", e.message)
         await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
       }
       return
@@ -1113,71 +876,34 @@ async function iniciar() {
 
     const cmd = getComando(cmdName.toLowerCase())
     if (!cmd) {
-      const p = (isGrupo && confGrupo.multiprefixo && confGrupo.prefixo) ? confGrupo.prefixo : prefixoGlobal
+      // ✅ CORREÇÃO AQUI: Usa o prefixoUsado (se for digitado /) ou o prefixoGlobal (se for +)
+      const p = prefixoUsado || prefixoGlobal
       const cmdLimpo = (cmdName || "").trim().toLowerCase()
       
       const VARIACOES_CMD_ERRADO = [
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •", aviso: "O comando informado não foi reconhecido.", frase: "💡 Verifique a escrita e tente novamente!" },
-        { topo: "🔥 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐕𝐀́𝐋𝐈𝐃𝐎 •", aviso: "Isso não existe no meu repertório.", frase: "💡 Confira antes de tentar novamente." }
+        { topo: "💧 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •", aviso: "O comando informado não foi reconhecido.", frase: "💡 Verifique a escrita e tente novamente!" },
+        { topo: "💧 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐕𝐀́𝐋𝐈𝐃𝐎 •", aviso: "Isso não existe no meu repertório.", frase: "💡 Confira antes de tentar novamente." }
       ]
 
       const v = VARIACOES_CMD_ERRADO[Math.floor(Math.random() * VARIACOES_CMD_ERRADO.length)]
       const numUser = soNumero(sender)
       const hora = new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })
       const data = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
-      const nomeBot = db.config().nomeBot || "Akaza Bot"
+      const nomeBot = db.config().nomeBot || "Rimuru Bot"
       const cmdExibido = cmdLimpo ? (p + cmdLimpo) : p
 
-      const textoBase =
-`${v.topo}
-
-╭─〔 🦄 𝐀𝐕𝐈𝐒𝐎 〕
-│ ${v.aviso}
-╰──────────────
-
-『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴
-
-👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:
-╰➜ @${numUser}
-
-🫟 𝐏𝐫𝐞𝐟𝐢𝐱𝐨:
-╰➜ ${p}
-
-❔ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐮𝐬𝐚𝐝𝐨:
-╰➜ ${cmdExibido}
-
-🕐 𝐇𝐨𝐫𝐚́𝐫𝐢𝐨:
-╰➜ ${hora} — ${data}
-
-${v.frase}
-
-"${nomeBot}"`
+      const textoBase = `${v.topo}\n\n╭─〔 🔷 𝐀𝐕𝐈𝐒𝐎 〕\n│ ${v.aviso}\n╰──────────────\n\n『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴\n\n👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:\n╰➜ @${numUser}\n\n🫟 𝐏𝐫𝐞𝐟𝐢𝐱𝐨:\n╰➜ ${p}\n\n❔ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐮𝐬𝐚𝐝𝐨:\n╰➜ ${cmdExibido}\n\n🕐 𝐇𝐨𝐫𝐚́𝐫𝐢𝐨:\n╰➜ ${hora} — ${data}\n\n${v.frase}\n\n"${nomeBot}"`
 
       const cfgCmd = db.config()
       const mencoes = sender ? [sender] : []
-
-      const opcoesErro = { 
-        caption: textoBase, 
-        mentions: mencoes,
-        footer: "⚔️ " + nomeBot,
-        buttons: [
-          { buttonId: prefixoGlobal + "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }
-        ],
-        headerType: 1,
-        ignorarCanal: true
-      }
+      const opcoesErro = { caption: textoBase, mentions: mencoes, footer: "⚔️ " + nomeBot, buttons: [{ buttonId: prefixoGlobal + "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }], headerType: 1, ignorarCanal: true }
 
       try {
         if (cfgCmd.fotoCmd) {
           const buf = Buffer.from(cfgCmd.fotoCmd, "base64")
-          if (cfgCmd.tipoFotoCmd === "video") {
-            await sock.sendMessage(remetente, { video: buf, mimetype: "video/mp4", fileName: "akaza.mp4", gifPlayback: true, ...opcoesErro }, { quoted: msg })
-          } else {
-            await sock.sendMessage(remetente, { image: buf, ...opcoesErro }, { quoted: msg })
-          }
-        } else {
-          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, buttons: opcoesErro.buttons, ignorarCanal: true }, { quoted: msg })
-        }
+          if (cfgCmd.tipoFotoCmd === "video") { await sock.sendMessage(remetente, { video: buf, mimetype: "video/mp4", fileName: "rimuru.mp4", gifPlayback: true, ...opcoesErro }, { quoted: msg }) }
+          else { await sock.sendMessage(remetente, { image: buf, ...opcoesErro }, { quoted: msg }) }
+        } else { await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, buttons: opcoesErro.buttons, ignorarCanal: true }, { quoted: msg }) }
       } catch (e) {
         await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
       }
@@ -1191,7 +917,7 @@ ${v.frase}
       if (userCidade && userCidade.preso && userCidade.preso > Date.now()) {
         const tempoRestante = formatarTempo(userCidade.preso - Date.now())
         if (cmdName.toLowerCase() !== "prefixo") {
-          await sock.sendMessage(remetente, { text: "🔥🚔 VOCÊ ESTÁ PRESO!\n\n⏰ Tempo: " + tempoRestante }, { quoted: msg })
+          await sock.sendMessage(remetente, { text: "❄️🚔 VOCÊ ESTÁ PRESO!\n\n⏰ Tempo: " + tempoRestante }, { quoted: msg })
           return
         }
       }
@@ -1221,40 +947,25 @@ ${v.frase}
     if (cmd.categoria === "menu-rpg" && isGrupo) {
       const excecoes = ["rpg", "menurpg", "prefixo"]
       if (!excecoes.includes(cmd.nome) && confGrupo.rpgAtivo !== true) {
-        return sock.sendMessage(remetente, { text: "🔥 RPG OFF! Ative com !rpg on" }, { quoted: msg })
+        return sock.sendMessage(remetente, { text: `💧 RPG OFF! Ative com ${prefixoGlobal}rpg on` }, { quoted: msg })
       }
     }
 
-    if (cmd.donoOnly && !isDono && !isSubDono) {
-      return sock.sendMessage(remetente, { text: "🔥 Esse comando e so do mestre!" }, { quoted: msg })
-    }
-    if (cmd.adminOnly && !podeAdmin && !isSubDono) {
-      return sock.sendMessage(remetente, { text: "🔥 Esse comando e de admin!" }, { quoted: msg })
-    }
-    if (cmd.grupoOnly && !isGrupo) {
-      return sock.sendMessage(remetente, { text: "🔥 So em grupo!" }, { quoted: msg })
-    }
+    if (cmd.donoOnly && !isDono && !isSubDono) { return sock.sendMessage(remetente, { text: "❄️ Esse comando e so do mestre!" }, { quoted: msg }) }
+    if (cmd.adminOnly && !podeAdmin && !isSubDono) { return sock.sendMessage(remetente, { text: "❄️ Esse comando e de admin!" }, { quoted: msg }) }
+    if (cmd.grupoOnly && !isGrupo) { return sock.sendMessage(remetente, { text: "❄️ So em grupo!" }, { quoted: msg }) }
 
     try {
       await cmd.executar({
-        sock, msg, args,
-        sender, isGrupo, isAdmin, isDono, isSubDono,
-        ehSub, podeAdmin,
-        groupMetadata, config, prefixoAtivo: prefixoUsado || prefixoGlobal,
+        sock, msg, args, sender, isGrupo, isAdmin, isDono, isSubDono, ehSub, podeAdmin, groupMetadata, config,
+        prefixoAtivo: prefixoUsado || prefixoGlobal,
         db,
-        utils: {
-          getAlvo, soNumero, getTexto, downloadMediaMessage, recarregarCanal,
-          naListaNegra, aluguelAtivo, grupoTemAluguel, formatarTempo,
-          adicionarAviso, limparAvisos, DATA_DIR, botEhAdmin,
-          dbLer, dbSalvar, getTextoBotao, ehSubAdmin
-        }
+        utils: { getAlvo, soNumero, getTexto, downloadMediaMessage, recarregarCanal, naListaNegra, aluguelAtivo, grupoTemAluguel, formatarTempo, adicionarAviso, limparAvisos, DATA_DIR, botEhAdmin, dbLer, dbSalvar, getTextoBotao, ehSubAdmin }
       })
     } catch (e) {
       console.log("ERRO em " + cmd.nome + ":")
       console.log(e)
-      try {
-        await sock.sendMessage(remetente, { text: "🔥 ERRO no comando " + cmd.nome + "\n\n" + e.message }, { quoted: msg })
-      } catch (_) {}
+      try { await sock.sendMessage(remetente, { text: "❄️ ERRO no comando " + cmd.nome + "\n\n" + e.message }, { quoted: msg }) } catch (_) {}
     }
   })
 
@@ -1273,16 +984,6 @@ ${v.frase}
           return { jidReal, melhor, num: soNumero(melhor) }
         }
         return null
-      }
-
-      if (author && conf.x9) {
-        for (const p of participants) {
-          const info = normalizar(p)
-          if (!info) continue
-          if (action === "promote") await notificarX9(sock, id, "PROMOTE", author, info.melhor)
-          else if (action === "demote") await notificarX9(sock, id, "DEMOTE", author, info.melhor)
-          else if (action === "remove") await notificarX9(sock, id, "REMOVE", author, info.melhor)
-        }
       }
 
       if (action === "add") {
@@ -1332,7 +1033,6 @@ ${v.frase}
 function checarAgendamentos() {
   setInterval(async () => {
     if (!sockGlobal) return
-
     try {
       const v = db.vips()
       let vipAlterou = false
@@ -1353,7 +1053,6 @@ function checarAgendamentos() {
       const cidData = dbLer("cidade.json", { usuarios: {}, casas: {}, predios: {} })
       const rpg = db.rpg()
       rpg.usuarios = rpg.usuarios || {}
-
       const INTERVALO = 60 * 60 * 1000
       if (!global._ultimaRendaCidade) global._ultimaRendaCidade = 0
       const agora2 = Date.now()
@@ -1425,7 +1124,7 @@ function checarAgendamentos() {
 // 💻 CONSOLE
 // ============================================================
 function iniciarConsole() {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: "akaza> " })
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: "bot> " })
   rl.prompt()
   rl.on("line", async (linha) => {
     const texto = linha.trim()
