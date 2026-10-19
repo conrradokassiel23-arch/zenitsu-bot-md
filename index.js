@@ -624,10 +624,8 @@ async function iniciar() {
           const modoParceria = p.ativo === true
 
           let encontrado = null
-          let jidParceiro = null
           for (const [jidP, info] of Object.entries(parceiros)) {
-            const jidPNum = soNumero(jidP)
-            if (senderCands.some(cand => cand === jidPNum)) { encontrado = info; jidParceiro = jidP; break }
+            if (senderCands.some(cand => cand === soNumero(jidP))) { encontrado = info; break }
           }
 
           if (modoParceria && encontrado) {
@@ -638,30 +636,42 @@ async function iniciar() {
               const extra = restantes === 0 ? "⚠️ *Esse foi o seu último link de hoje!*" : `✨ Ainda tem *${restantes}* link(s) restante(s).`
               try { 
                 await sock.sendMessage(remetente, { 
-                  text: `💧 • 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀 𝐀𝐏𝐑𝐎𝐕𝐀𝐃𝐀 •\n\n╭─〔 ❄️ 𝐀𝐂𝐄𝐒𝐒𝐎 𝐋𝐈𝐁𝐄𝐑𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, o link foi autorizado!\n╰──────────────\n\n『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴\n\n📊 𝐔𝐬𝐨:\n╰➜ ${encontrado.usados}/${encontrado.total} links enviados.\n\n${extra}\n\n❄️ _"Tempest sempre honra suas alianças."_\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
+                  text: `💧 • 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀 𝐀𝐏𝐑𝐎𝐕𝐀𝐃𝐀 •\n\n╭─〔 ❄️ 𝐀𝐂𝐄𝐒𝐒𝐎 𝐋𝐈𝐁𝐄𝐑𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, o link foi autorizado!\n╰──────────────\n\n📊 𝐔𝐬𝐨:\n╰➜ ${encontrado.usados}/${encontrado.total} links enviados.\n\n${extra}\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
                   mentions: [sender] 
                 }) 
-              } catch (e) {}
+              } catch (_) {}
               return
             } else {
               try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
               try { 
                 await sock.sendMessage(remetente, { 
-                  text: `💧 • 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀 𝐄𝐒𝐆𝐎𝐓𝐀𝐃𝐀 •\n\n╭─〔 🚫 𝐌𝐀𝐍𝐀 𝐈𝐍𝐒𝐔𝐅𝐈𝐂𝐈𝐄𝐍𝐓𝐄 〕\n│ @${soNumero(sender)}, você já usou todos os seus links hoje.\n╰──────────────\n\n『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴\n\n⏰ 𝐑𝐞𝐬𝐭𝐚𝐮𝐫𝐚𝐜̧𝐚̃𝐨:\n╰➜ Meia-noite (00:00).\n\n❄️ _"O Grande Sábio observa."_\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
+                  text: `💧 • 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀 𝐄𝐒𝐆𝐎𝐓𝐀𝐃𝐀 •\n\n╭─〔 🚫 𝐌𝐀𝐍𝐀 𝐈𝐍𝐒𝐔𝐅𝐈𝐂𝐈𝐄𝐍𝐓𝐄 〕\n│ @${soNumero(sender)}, você já usou todos os seus links hoje.\n╰──────────────\n\n⏰ Restauração: Meia-noite (00:00).\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
                   mentions: [sender] 
                 }) 
-              } catch (e) {}
+              } catch (_) {}
               return
             }
           }
 
           try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+          
           try { 
+            let avisoAdms = ""
+            let mentionsAdms = [sender]
+            
+            if (meta) {
+              const adms = meta.participants.filter(pa => pa.admin === "admin" || pa.admin === "superadmin").map(pa => pa.id)
+              mentionsAdms = [sender, ...adms]
+              avisoAdms = `\n\n『 𝐀𝐃𝐌𝐈𝐍𝐈𝐒𝐓𝐑𝐀𝐃𝐎𝐑𝐄𝐒 』 ↴\n`
+              adms.forEach(a => { avisoAdms += `╰➜ @${soNumero(a)}\n` })
+              avisoAdms += `\n💡 Admins, para liberar:\n╰➜ \`+addparceria @${soNumero(sender)} 1\``
+            }
+
             await sock.sendMessage(remetente, { 
-              text: `💧 • 𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 𝐒𝐀́𝐁𝐈𝐎 𝐀𝐍𝐀𝐋𝐈𝐒𝐎𝐔 •\n\n╭─〔 🚫 𝐋𝐈𝐍𝐊 𝐃𝐄𝐕𝐎𝐑𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, você tentou enviar um link de grupo.\n╰──────────────\n\n『 𝐑𝐄𝐋𝐀𝐓𝐎́𝐑𝐈𝐎 』 ↴\n\n🧊 𝐀𝐜̧𝐚̃𝐨:\n╰➜ _Link apagado._\n\n📜 𝐌𝐨𝐭𝐢𝐯𝐨:\n╰➜ Sem aliança/parceria com o Reino.\n\n💡 𝐒𝐨𝐥𝐮𝐜̧𝐚̃𝐨:\n╰➜ Peça para um administrador usar:\n   \`+parceria\`\n\n❄️ _"O Grande Sábio não tolera spam."_\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
-              mentions: [sender] 
+              text: `💧 • 𝐋𝐈𝐍𝐊 𝐃𝐄𝐕𝐎𝐑𝐀𝐃𝐎 •\n\n╭─〔 🚫 𝐀𝐕𝐈𝐒𝐎 〕\n│ @${soNumero(sender)}, link apagado por falta de aliança.\n╰──────────────\n\n📜 𝐒𝐨𝐥𝐮𝐜̧𝐚̃𝐨:\n╰➜ Peça parceria usando:\n   \`+parceria\`\n${avisoAdms}\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
+              mentions: mentionsAdms 
             }) 
-          } catch (e) { console.log("Erro aviso link:", e.message) }
+          } catch (e) { console.log("Erro aviso link grupo:", e.message) }
           return
         }
 
@@ -677,7 +687,7 @@ async function iniciar() {
             try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
           } else {
             await sock.sendMessage(remetente, { 
-              text: `💧 • 𝐀𝐍𝐓𝐈-𝐋𝐈𝐍𝐊 •\n\n╭─〔 🐉 𝐈𝐍𝐓𝐄𝐑𝐂𝐄𝐏𝐓𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, links não são permitidos aqui.\n╰──────────────\n\n⚠️ 𝐀𝐯𝐢𝐬𝐨𝐬:\n╰➜ ${n}/3\n\n❄️ _"A tempestade se aproxima..."_\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
+              text: `💧 • 𝐀𝐍𝐓𝐈-𝐋𝐈𝐍𝐊 •\n\n╭─〔 🐉 𝐈𝐍𝐓𝐄𝐑𝐂𝐄𝐏𝐓𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, links não são permitidos aqui.\n╰──────────────\n\n⚠️ 𝐀𝐯𝐢𝐬𝐨𝐬:\n╰➜ ${n}/3\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
               mentions: [sender] 
             })
           }
@@ -1045,8 +1055,7 @@ function iniciarConsole() {
       if (sub === "ver") {
         const c1 = db.canal()
         console.log(c1 && c1.jid ? "\n" + c1.nome + " | " + c1.link + "\n" : "\nNenhum canal.\n")
-        rl.prompt(); return
-      }
+        rl.prompt(); return      }
       if (sub === "0" || sub === "off") {
         db.salvarCanal({ jid: null, nome: null, link: null })
         recarregarCanal()
