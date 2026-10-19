@@ -1,5 +1,5 @@
 /* ============================================================
-   💧❄️🧊 MENU VIP - RIMURU BOT MD
+   💧❄️🧊 MENU VIP - RIMURU BOT MD (PREFIXO DINÂMICO)
    ============================================================ */
 
 const fs = require("fs")
@@ -53,22 +53,10 @@ function detectarCargo({ sender, config, db, groupMetadata, isDono, isSubDono, i
   const num = String(sender || "").split("@")[0].split(":")[0].replace(/\D/g, "")
   const donos = (Array.isArray(config?.dono) ? config.dono : [config?.dono]).map(n => String(n).split("@")[0].split(":")[0].replace(/\D/g, "")).filter(Boolean)
   if (isDono || donos.includes(num)) return "👑 𝐆𝐑𝐀𝐍𝐃𝐄 𝐒𝐀́𝐁𝐈𝐎"
-  try {
-    const subs = (db.config?.().subdonos || []).map(n => String(n).split("@")[0].split(":")[0].replace(/\D/g, ""))
-    if (isSubDono || subs.includes(num)) return "💠 𝐋𝐔𝐀 𝐒𝐔𝐏𝐄𝐑𝐈𝐎𝐑"
-  } catch (_) {}
-  try {
-    const vips = (db.vips?.() || {}).vips || {}
-    for (const [j, info] of Object.entries(vips)) {
-      const jn = String(j).split("@")[0].split(":")[0].replace(/\D/g, "")
-      if (jn === num && (info.expira === "inf" || info.expira > Date.now())) return "❄️ 𝐍𝐎𝐁𝐑𝐄 𝐀𝐋𝐈𝐀𝐃𝐎"
-    }
-  } catch (_) {}
+  try { const subs = (db.config?.().subdonos || []).map(n => String(n).split("@")[0].split(":")[0].replace(/\D/g, "")); if (isSubDono || subs.includes(num)) return "💠 𝐋𝐔𝐀 𝐒𝐔𝐏𝐄𝐑𝐈𝐎𝐑" } catch (_) {}
+  try { const vips = (db.vips?.() || {}).vips || {}; for (const [j, info] of Object.entries(vips)) { const jn = String(j).split("@")[0].split(":")[0].replace(/\D/g, ""); if (jn === num && (info.expira === "inf" || info.expira > Date.now())) return "❄️ 𝐍𝐎𝐁𝐑𝐄 𝐀𝐋𝐈𝐀𝐃𝐎" } } catch (_) {}
   if (isAdmin) return "⚔️ 𝐂𝐎𝐌𝐀𝐍𝐃𝐀𝐍𝐓𝐄"
-  try {
-    const subsAdm = (db.subadmins?.() || {})[groupMetadata?.id] || []
-    if (subsAdm.some(s => String(s).split("@")[0].split(":")[0].replace(/\D/g, "") === num)) return "🛡️ 𝐆𝐔𝐀𝐑𝐃𝐀 𝐑𝐄𝐀𝐋"
-  } catch (_) {}
+  try { const subsAdm = (db.subadmins?.() || {})[groupMetadata?.id] || []; if (subsAdm.some(s => String(s).split("@")[0].split(":")[0].replace(/\D/g, "") === num)) return "🛡️ 𝐆𝐔𝐀𝐑𝐃𝐀 𝐑𝐄𝐀𝐋" } catch (_) {}
   return "👤 𝐒𝐋𝐈𝐌𝐄 𝐂𝐎𝐌𝐔𝐌"
 }
 
@@ -169,56 +157,66 @@ module.exports = {
       aliases: ["vipmenu", "menuv"],
       async executar({ sock, msg, prefixoAtivo, db, sender, config, isDono, isSubDono, isAdmin, groupMetadata }) {
         const jid = msg.key.remoteJid
-        const p = prefixoAtivo
-        const nomeBot = nomeBotDb(db)
-        const { pushName, nomeDono, cargo } = getCargoETexto({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin, msg })
+        const p = prefixoAtivo || "+"
+        const cfg = db.config()
+        const { pushName, nomeDono, cargo, nomeBot } = getCargoETexto({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin, msg })
+        
+        // Verifica se é VIP
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        const ehVipUser = checarVip(db, sJ, isDono, isSubDono)
+        
+        if (!ehVipUser) {
+          await reagir(sock, msg, "❄️")
+          return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Você não é um aliado nobre.\n\n_"O Grande Sábio não te reconhece."_\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+
         await reagir(sock, msg, "💧")
+        
         const texto = `${cardPerfil({ nomeBot, nomeUsuario: pushName, cargo, dono: nomeDono })}
 
 ${secao("🎵 ᴍᴜ́sɪᴄᴀ")}
-${item("!play <nome> / !spot <link>")}
-${item("!soundcloud <nome>")}
+${item(`${p}play <nome> / ${p}spot <link>`)}
+${item(`${p}soundcloud <nome>`)}
 
 ${secao("📥 ᴅᴏᴡɴʟᴏᴀᴅs")}
-${item("!insta <link> / !tiktok <link>")}
-${item("!pinterest <busca>")}
+${item(`${p}insta <link> / ${p}tiktok <link>`)}
+${item(`${p}pinterest <busca>`)}
 
 ${secao("📰 ɴᴏᴛɪ́ᴄɪᴀs")}
-${item("!g1 / !uol / !jovempan")}
-${item("!vasco")}
+${item(`${p}g1 / ${p}uol / ${p}jovempan`)}
+${item(`${p}vasco`)}
 
 ${secao("🔍 ᴇsᴛᴀᴛɪ́sᴛɪᴄᴀs")}
-${item("!tiktoktag <hashtag>")}
+${item(`${p}tiktoktag <hashtag>`)}
 
 ${secao("🎨 ғɪɢᴜʀɪɴʜᴀs")}
-${item("!brat / !s / !rename")}
-${item("!smeme / !s3")}
-${item("!procurado / !wasted / !revela")}
+${item(`${p}brat / ${p}s / ${p}rename`)}
+${item(`${p}smeme / ${p}s3`)}
+${item(`${p}procurado / ${p}wasted / ${p}revela`)}
 
 ${secao("🛠️ ғᴇʀʀᴀᴍᴇɴᴛᴀs")}
-${item("!gerarnick <txt>")}
-${item("!llamacoder <desc>")}
+${item(`${p}gerarnick <txt>`)}
+${item(`${p}llamacoder <desc>`)}
 
 ${secao("🤖 ɪɴᴛᴇʟɪɢᴇ̂ɴᴄɪᴀ")}
-${item("!unliai <pergunta>")}
-${item("!axis <pergunta>")}
-${item("!mito / !napoleao / !fraseprofunda")}
+${item(`${p}unliai <pergunta>`)}
+${item(`${p}axis <pergunta>`)}
+${item(`${p}mito / ${p}napoleao / ${p}fraseprofunda`)}
 
 ${secao("📅 ᴜᴛɪʟɪᴅᴀᴅᴇs")}
-${item("!feriados [ano]")}
+${item(`${p}feriados [ano]`)}
 
 ${secao("🌸 ᴅɪᴠᴇʀsᴀ̃ᴏ")}
-${item("!waifu")}
+${item(`${p}waifu`)}
 
 ${secao("⚙️ ᴀᴜᴛᴏ")}
-${item("!autofig on/off")}
-${item("!autottk on/off")}
+${item(`${p}autofig on/off`)}
+${item(`${p}autottk on/off`)}
 
 💧 Prefixo: \`${p}\`
 
 "${nomeBot}"`
-        const cfg = db.config()
+
         if (cfg.fotoMenu) {
           const buf = Buffer.from(cfg.fotoMenu, "base64")
           if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "rimuru.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
@@ -230,12 +228,12 @@ ${item("!autottk on/off")}
 
     play: {
       aliases: ["tocar", "musica", "music"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
         if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Música é privilégio dos nobres.\n\n"${nomeBot}"` }, { quoted: msg }) }
         const busca = args.join(" ").trim()
-        if (!busca) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐋𝐀𝐘 •\n\n❄️ Me diga o que quer ouvir.\n🧊 \`!play <nome>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!busca) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐋𝐀𝐘 •\n\n❄️ Me diga o que quer ouvir.\n🧊 \`${p}play <nome>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: `💧 • 𝐁𝐔𝐒𝐂𝐀𝐍𝐃𝐎 •\n\n❄️ Procurando a música...\n\n"${nomeBot}"` }, { quoted: msg })
         const res = await baixarMusica(busca, 32)
@@ -248,12 +246,12 @@ ${item("!autottk on/off")}
 
     spot: {
       aliases: ["spotify", "musicaspot", "spotdl"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
         if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         const link = args[0]
-        if (!link || !/open\.spotify\.com/i.test(link)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐏𝐎𝐓 •\n\n❄️ Informe um link do Spotify.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!link || !/open\.spotify\.com/i.test(link)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐏𝐎𝐓 •\n\n❄️ Informe um link do Spotify.\n🧊 \`${p}spot <link>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: `💧 • 𝐒𝐏𝐎𝐓𝐈𝐅𝐘 •\n\n❄️ Baixando...\n\n"${nomeBot}"` }, { quoted: msg })
         try {
@@ -279,12 +277,12 @@ ${item("!autottk on/off")}
 
     soundcloud: {
       aliases: ["sc"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
         if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         const busca = args.join(" ").trim()
-        if (!busca) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎𝐔𝐍𝐃𝐂𝐋𝐎𝐔𝐃 •\n\n❄️ Informe a música.\n🧊 \`!soundcloud <nome>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!busca) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎𝐔𝐍𝐃𝐂𝐋𝐎𝐔𝐃 •\n\n❄️ Informe a música.\n🧊 \`${p}soundcloud <nome>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: `💧 • 𝐒𝐎𝐔𝐍𝐃𝐂𝐋𝐎𝐔𝐃 •\n\n❄️ Procurando...\n\n"${nomeBot}"` }, { quoted: msg })
         try {
@@ -308,12 +306,12 @@ ${item("!autottk on/off")}
 
     pinterest: {
       aliases: ["pin"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
         if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         const busca = args.join(" ").trim()
-        if (!busca) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐈𝐍𝐓𝐄𝐑𝐄𝐒𝐓 •\n\n❄️ Informe a busca.\n🧊 \`!pinterest <busca>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!busca) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐈𝐍𝐓𝐄𝐑𝐄𝐒𝐓 •\n\n❄️ Informe a busca.\n🧊 \`${p}pinterest <busca>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: `💧 • 𝐏𝐈𝐍𝐓𝐄𝐑𝐄𝐒𝐓 •\n\n❄️ Procurando "${busca}"...\n\n"${nomeBot}"` }, { quoted: msg })
         try {
@@ -328,12 +326,12 @@ ${item("!autottk on/off")}
 
     tiktoktag: {
       aliases: ["hashtag", "tttag"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
         if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         const busca = args.join(" ").trim()
-        if (!busca) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐓𝐈𝐊𝐓𝐎𝐊 𝐓𝐀𝐆 •\n\n❄️ Informe a hashtag.\n🧊 \`!tiktoktag <tag>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!busca) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐓𝐈𝐊𝐓𝐎𝐊 𝐓𝐀𝐆 •\n\n❄️ Informe a hashtag.\n🧊 \`${p}tiktoktag <tag>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: `💧 • 𝐓𝐈𝐊𝐓𝐎𝐊 𝐓𝐀𝐆 •\n\n❄️ Analisando #${busca}...\n\n"${nomeBot}"` }, { quoted: msg })
         try {
@@ -351,12 +349,12 @@ ${item("!autottk on/off")}
 
     axis: {
       aliases: ["axiais"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
         if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         const pergunta = args.join(" ").trim()
-        if (!pergunta) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐗𝐈𝐒 •\n\n❄️ Informe a pergunta.\n🧊 \`!axis <pergunta>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!pergunta) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐗𝐈𝐒 •\n\n❄️ Informe a pergunta.\n🧊 \`${p}axis <pergunta>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         try {
           await sock.sendPresenceUpdate("composing", jid)
@@ -431,12 +429,12 @@ ${item("!autottk on/off")}
 
     gerarnick: {
       aliases: ["nick", "nickname"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
         if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         const texto = args.join(" ").trim()
-        if (!texto) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐆𝐄𝐑𝐀𝐑𝐍𝐈𝐂𝐊 •\n\n❄️ Informe o texto.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!texto) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐆𝐄𝐑𝐀𝐑𝐍𝐈𝐂𝐊 •\n\n❄️ Informe o texto.\n🧊 \`${p}gerarnick <txt>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         try {
           const textoLimpo = texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -453,8 +451,8 @@ ${item("!autottk on/off")}
 
     feriados: {
       aliases: ["feriado", "calendario"],
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const ano = (args[0] && /^\d{4}$/.test(args[0].trim())) ? args[0].trim() : new Date().getFullYear()
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const ano = (args[0] && /^\d{4}$/.test(args[0].trim())) ? args[0].trim() : new Date().getFullYear()
         await reagir(sock, msg, "💧")
         try {
           const r = await fetch(`https://obanai-apis.eu.cc/api/outros/feriados?ano=${ano}&apitoken=rj8SpI`)
@@ -468,9 +466,9 @@ ${item("!autottk on/off")}
 
     unliai: {
       aliases: ["ia", "unli", "chatia"],
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const pergunta = args.join(" ").trim()
-        if (!pergunta) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐔𝐍𝐋𝐈𝐀𝐈 •\n\n❄️ Informe a pergunta.\n\n"${nomeBot}"` }, { quoted: msg }) }
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const pergunta = args.join(" ").trim()
+        if (!pergunta) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐔𝐍𝐋𝐈𝐀𝐈 •\n\n❄️ Informe a pergunta.\n🧊 \`${p}unliai <pergunta>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         try {
           await sock.sendPresenceUpdate("composing", jid)
@@ -484,12 +482,12 @@ ${item("!autottk on/off")}
 
     insta: {
       aliases: ["instagram", "instadl", "ig"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
         if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         const link = args[0]
-        if (!link || !/instagram\.com|instagr\.am/i.test(link)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐈𝐍𝐒𝐓𝐀 •\n\n❄️ Informe um link.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!link || !/instagram\.com|instagr\.am/i.test(link)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐈𝐍𝐒𝐓𝐀 •\n\n❄️ Informe um link.\n🧊 \`${p}insta <link>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         try {
           const res = await baixarInstagram(link)
@@ -504,12 +502,12 @@ ${item("!autottk on/off")}
 
     tiktok: {
       aliases: ["tt", "ttk"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
         if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         const link = args[0]
-        if (!link || !/tiktok\.com|vm\.tiktok|vt\.tiktok/i.test(link)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐓𝐈𝐊𝐓𝐎𝐊 •\n\n❄️ Informe um link.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!link || !/tiktok\.com|vm\.tiktok|vt\.tiktok/i.test(link)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐓𝐈𝐊𝐓𝐎𝐊 •\n\n❄️ Informe um link.\n🧊 \`${p}tiktok <link>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         try {
           const url = await baixarTikTok(link)
@@ -521,8 +519,8 @@ ${item("!autottk on/off")}
 
     autofig: {
       aliases: ["autosticker", "autofigu"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
         if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         if (!jid.endsWith("@g.us")) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐔𝐓𝐎𝐅𝐈𝐆 •\n\n❄️ Só em grupos.\n\n"${nomeBot}"` }, { quoted: msg }) }
@@ -533,7 +531,7 @@ ${item("!autottk on/off")}
         if (!["on", "off"].includes(op)) {
           const s = ac.grupos[jid].autofig ? "ON ✅" : "OFF ❌"
           await reagir(sock, msg, "❄️")
-          return sock.sendMessage(jid, { text: `💧 • 𝐀𝐔𝐓𝐎𝐅𝐈𝐆 •\n\n❄️ Status: ${s}\n🧊 \`!autofig on/off\`\n\n"${nomeBot}"` }, { quoted: msg })
+          return sock.sendMessage(jid, { text: `💧 • 𝐀𝐔𝐓𝐎𝐅𝐈𝐆 •\n\n❄️ Status: ${s}\n🧊 \`${p}autofig on/off\`\n\n"${nomeBot}"` }, { quoted: msg })
         }
         ac.grupos[jid].autofig = op === "on"
         dbSalvar("autocfg.json", ac)
@@ -544,8 +542,8 @@ ${item("!autottk on/off")}
 
     autottk: {
       aliases: ["autotiktok", "autott"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
         if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         if (!jid.endsWith("@g.us")) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐔𝐓𝐎𝐓𝐓𝐊 •\n\n❄️ Só em grupos.\n\n"${nomeBot}"` }, { quoted: msg }) }
@@ -556,7 +554,7 @@ ${item("!autottk on/off")}
         if (!["on", "off"].includes(op)) {
           const s = ac.grupos[jid].autottk ? "ON ✅" : "OFF ❌"
           await reagir(sock, msg, "❄️")
-          return sock.sendMessage(jid, { text: `💧 • 𝐀𝐔𝐓𝐎𝐓𝐓𝐊 •\n\n❄️ Status: ${s}\n🧊 \`!autottk on/off\`\n\n"${nomeBot}"` }, { quoted: msg })
+          return sock.sendMessage(jid, { text: `💧 • 𝐀𝐔𝐓𝐎𝐓𝐓𝐊 •\n\n❄️ Status: ${s}\n🧊 \`${p}autottk on/off\`\n\n"${nomeBot}"` }, { quoted: msg })
         }
         ac.grupos[jid].autottk = op === "on"
         dbSalvar("autocfg.json", ac)
@@ -567,13 +565,13 @@ ${item("!autottk on/off")}
 
     revela: {
       aliases: ["revelar", "reveal", "ver"],
-      async executar({ sock, msg, db, utils, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, db, utils, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
         if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         let q = ctx.quotedMessage
-        if (!q) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐑𝐄𝐕𝐄𝐋𝐀 •\n\n❄️ Responda uma msg de ver uma vez.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!q) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐑𝐄𝐕𝐄𝐋𝐀 •\n\n❄️ Responda uma msg de ver uma vez.\n🧊 \`${p}revela\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         let isVU = false
         if (q.viewOnceMessageV2) { q = q.viewOnceMessageV2.message || q.viewOnceMessageV2; isVU = true }
         else if (q.viewOnceMessage) { q = q.viewOnceMessage.message || q.viewOnceMessage; isVU = true }
@@ -597,12 +595,12 @@ ${item("!autottk on/off")}
 
     brat: {
       aliases: ["figbrat"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
         if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         const t = args.join(" ").trim()
-        if (!t) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐁𝐑𝐀𝐓 •\n\n❄️ Informe o texto.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!t) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐁𝐑𝐀𝐓 •\n\n❄️ Informe o texto.\n🧊 \`${p}brat <txt>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         try {
           const sharp = require("sharp")
@@ -623,13 +621,13 @@ ${item("!autottk on/off")}
 
     s: {
       aliases: ["sticker", "fig"],
-      async executar({ sock, msg, db, isDono, isSubDono, utils }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, db, isDono, isSubDono, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}; const q = ctx.quotedMessage
         const eImg = q && q.imageMessage; const eVid = q && q.videoMessage
-        if (!eImg && !eVid) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒 •\n\n❄️ Responda foto ou vídeo.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!eImg && !eVid) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒 •\n\n❄️ Responda foto ou vídeo.\n🧊 \`${p}s\` (reply)\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         try {
           const sharp = require("sharp"); const ff = require("@ffmpeg-installer/ffmpeg").path; const { execSync } = require("child_process")
@@ -650,13 +648,13 @@ ${item("!autottk on/off")}
 
     s3: {
       aliases: ["esticar", "stretch", "gordo"],
-      async executar({ sock, msg, db, isDono, isSubDono, utils }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, db, isDono, isSubDono, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}; const q = ctx.quotedMessage
         const eSti = q && q.stickerMessage; const eImg = q && q.imageMessage; const eVid = q && q.videoMessage
-        if (!eSti && !eImg && !eVid) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝟑 •\n\n❄️ Responda fig, foto ou vídeo.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!eSti && !eImg && !eVid) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝟑 •\n\n❄️ Responda fig, foto ou vídeo.\n🧊 \`${p}s3\` (reply)\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         try {
           const sharp = require("sharp"); const ff = require("@ffmpeg-installer/ffmpeg").path; const { execSync } = require("child_process")
@@ -680,12 +678,12 @@ ${item("!autottk on/off")}
 
     smeme: {
       aliases: ["smem", "memefig"],
-      async executar({ sock, msg, args, db, isDono, isSubDono, utils }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, args, db, isDono, isSubDono, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         const t = args.join(" ").trim()
-        if (!t) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐌𝐄𝐌𝐄 •\n\n❄️ Informe o texto.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!t) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐌𝐄𝐌𝐄 •\n\n❄️ Informe o texto.\n🧊 \`${p}smeme <txt>\` (reply)\n\n"${nomeBot}"` }, { quoted: msg }) }
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}; const q = ctx.quotedMessage
         if (!q || !q.stickerMessage) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐌𝐄𝐌𝐄 •\n\n❄️ Responda uma figurinha.\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
@@ -696,12 +694,12 @@ ${item("!autottk on/off")}
 
     procurado: {
       aliases: ["wanted", "procurase"],
-      async executar({ sock, msg, db, isDono, isSubDono, utils }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, db, isDono, isSubDono, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}; const q = ctx.quotedMessage
-        if (!q || !q.stickerMessage) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐑𝐎𝐂𝐔𝐑𝐀𝐃𝐎 •\n\n❄️ Responda uma figurinha.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!q || !q.stickerMessage) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐑𝐎𝐂𝐔𝐑𝐀𝐃𝐎 •\n\n❄️ Responda uma figurinha.\n🧊 \`${p}procurado\` (reply)\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         try {
           const sharp = require("sharp")
@@ -719,12 +717,12 @@ ${item("!autottk on/off")}
 
     wasted: {
       aliases: ["morto", "morreu"],
-      async executar({ sock, msg, db, isDono, isSubDono, utils }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, db, isDono, isSubDono, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}; const q = ctx.quotedMessage
-        if (!q || !q.stickerMessage) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐖𝐀𝐒𝐓𝐄𝐃 •\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!q || !q.stickerMessage) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐖𝐀𝐒𝐓𝐄𝐃 •\n\n❄️ Responda uma figurinha.\n🧊 \`${p}wasted\` (reply)\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         try {
           const sharp = require("sharp")
@@ -743,12 +741,12 @@ ${item("!autottk on/off")}
 
     rename: {
       aliases: ["renomear", "nomefig", "setnome"],
-      async executar({ sock, msg, args, db, isDono, isSubDono, utils }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, args, db, isDono, isSubDono, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
         const t = args.join(" ").trim()
-        if (!t) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐑𝐄𝐍𝐀𝐌𝐄 •\n\n❄️ Informe o nome.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!t) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐑𝐄𝐍𝐀𝐌𝐄 •\n\n❄️ Informe o nome.\n🧊 \`${p}rename <txt>\` (reply)\n\n"${nomeBot}"` }, { quoted: msg }) }
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}; const q = ctx.quotedMessage
         if (!q || !q.stickerMessage) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐑𝐄𝐍𝐀𝐌𝐄 •\n\n❄️ Responda uma figurinha.\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
