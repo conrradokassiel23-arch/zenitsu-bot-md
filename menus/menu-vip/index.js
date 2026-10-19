@@ -1,5 +1,5 @@
 /* ============================================================
-   🟣 MENU VIP - RIMURU BOT MD
+   ❄️ MENU VIP - AKAZA BOT MD
    ============================================================ */
 
 const fs = require("fs")
@@ -33,9 +33,16 @@ function checarVip(db, sJ, isD, isS) {
 }
 
 function nomeBotDb(db) {
-  try { return db.config().nomeBot || "Rimuru Bot" } catch { return "Rimuru Bot" }
+  try { return db.config().nomeBot || "Akaza Bot" } catch { return "Akaza Bot" }
 }
 
+function lineEmoji(emoji, label, valor) {
+  return `${emoji} ${label}:\n╰➜ ${valor}`
+}
+
+// ============================================================
+// 🎵 BAIXAR MÚSICA (API obanai → fallback youtube-dl-exec)
+// ============================================================
 async function baixarMusica(busca, qualidade = 64) {
   try {
     const apiRes = await fetch(`https://obanai-apis.eu.cc/api/dl/play?q=${encodeURIComponent(busca)}&apitoken=rj8SpI`)
@@ -47,19 +54,22 @@ async function baixarMusica(busca, qualidade = 64) {
         return { ok: true, buffer, titulo: apiData.data.titulo || busca, info: apiData.data }
       }
       if (buffer.length >= 16 * 1024 * 1024) {
-        return { ok: false, erro: "Música muito grande (limite 16MB)" }
+        return { ok: false, erro: "Música muito grande (limite 16MB do WhatsApp)" }
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    console.log("🎵 API obanai play falhou:", e.message)
+  }
+
   try {
     const youtubeDl = require("youtube-dl-exec")
     const tmpDir = os.tmpdir()
     const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
-    const outTpl = path.join(tmpDir, "rimuru_mus_" + id + ".%(ext)s")
+    const outTpl = path.join(tmpDir, "akaza_mus_" + id + ".%(ext)s")
     const ehUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(busca)
     const alvo = ehUrl ? busca : "ytsearch1:" + busca
     await youtubeDl(alvo, { extractAudio: true, audioFormat: "mp3", audioQuality: qualidade + "K", output: outTpl, noPlaylist: true, maxFilesize: "16M", noWarnings: true, noCheckCertificates: true, extractorArgs: "youtube:player_client=web,web_safari,web_embedded", noCacheDir: true })
-    const prefixo = "rimuru_mus_" + id
+    const prefixo = "akaza_mus_" + id
     const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && (f.endsWith(".mp3") || f.endsWith(".m4a") || f.endsWith(".webm") || f.endsWith(".opus")))
     if (arquivos.length > 0) {
       const caminho = path.join(tmpDir, arquivos[0])
@@ -68,7 +78,8 @@ async function baixarMusica(busca, qualidade = 64) {
       if (buffer.length < 16 * 1024 * 1024) return { ok: true, buffer, titulo: busca }
       return { ok: false, erro: "Música muito grande (limite 16MB)" }
     }
-  } catch (e) {}
+  } catch (e) { console.log("🎵 youtube-dl-exec falhou:", e.message) }
+
   return { ok: false, erro: "Todas as tentativas falharam. Tente outra música." }
 }
 
@@ -77,9 +88,9 @@ async function baixarVideoYoutube(link) {
     const youtubeDl = require("youtube-dl-exec")
     const tmpDir = os.tmpdir()
     const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
-    const outTpl = path.join(tmpDir, "rimuru_vid_" + id + ".%(ext)s")
+    const outTpl = path.join(tmpDir, "akaza_vid_" + id + ".%(ext)s")
     await youtubeDl(link, { format: "best[ext=mp4][filesize<16M]/best[filesize<16M]", output: outTpl, noPlaylist: true, maxFilesize: "16M", noWarnings: true, noCheckCertificates: true, extractorArgs: "youtube:player_client=web,web_safari,web_embedded", noCacheDir: true })
-    const prefixo = "rimuru_vid_" + id
+    const prefixo = "akaza_vid_" + id
     const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && f.endsWith(".mp4"))
     if (arquivos.length > 0) {
       const caminho = path.join(tmpDir, arquivos[0])
@@ -89,6 +100,7 @@ async function baixarVideoYoutube(link) {
     }
     return { ok: false, erro: "Arquivo não encontrado" }
   } catch (e) {
+    console.log("🎥 Erro baixarVideoYoutube:", e.message)
     return { ok: false, erro: e.message }
   }
 }
@@ -98,9 +110,9 @@ async function baixarInstagram(link) {
     const youtubeDl = require("youtube-dl-exec")
     const tmpDir = os.tmpdir()
     const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
-    const outTpl = path.join(tmpDir, "rimuru_insta_" + id + ".%(ext)s")
+    const outTpl = path.join(tmpDir, "akaza_insta_" + id + ".%(ext)s")
     await youtubeDl(link, { output: outTpl, noPlaylist: true, noWarnings: true, noCheckCertificates: true })
-    const prefixo = "rimuru_insta_" + id
+    const prefixo = "akaza_insta_" + id
     const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && !f.endsWith(".part") && !f.endsWith(".ytdl"))
     if (arquivos.length > 0) {
       const caminho = path.join(tmpDir, arquivos[0])
@@ -111,6 +123,7 @@ async function baixarInstagram(link) {
     }
     return { ok: false, erro: "Arquivo não encontrado" }
   } catch (e) {
+    console.log("Erro baixarInstagram:", e.message)
     return { ok: false, erro: e.message }
   }
 }
@@ -137,7 +150,7 @@ async function enviarFigTexto(sock, jid, buf, texto, quoted) {
     const ov = await sharp(Buffer.from(svg)).png().toBuffer()
     const out = await sharp(buf, { animated: false }).resize(T, T, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).composite([{ input: ov, top: 0, left: 0 }]).webp({ quality: 90 }).toBuffer()
     await sock.sendMessage(jid, { sticker: out }, { quoted })
-  } catch (e) { await sock.sendMessage(jid, { text: "🟣💢 " + e.message }, { quoted }) }
+  } catch (e) { await sock.sendMessage(jid, { text: "❄️💢 " + e.message }, { quoted }) }
 }
 
 module.exports = {
@@ -155,6 +168,7 @@ module.exports = {
         const p = prefixoAtivo
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        const numUser = String(msg.key.participant || msg.key.remoteJid).split("@")[0].split(":")[0].replace(/\D/g, "")
 
         let infoVip = null
         const vips = (db.vips() || {}).vips || {}
@@ -169,15 +183,66 @@ module.exports = {
         }
 
         if (!infoVip && !isDono && !isSubDono) {
-          return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Você não é um aliado nobre.\n╰──────────────\n\n_"O Grande Sábio não te reconhece."_\n\n"${nomeBot}"` }, { quoted: msg })
+          return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Você não é nobre.\n╰──────────────\n\n_"Vá embora."_\n\n"${nomeBot}"` }, { quoted: msg })
         }
 
-        const texto = `🟣 • 𝐌𝐄𝐍𝐔 𝐕𝐈𝐏 •\n\n╭─〔 💜 𝐀́𝐑𝐄𝐀 𝐍𝐎𝐁𝐑𝐄 〕\n│ Apenas nobres podem ver esses segredos.\n╰──────────────\n\n『 𝐂𝐚𝐭𝐞𝐠𝐨𝐫𝐢𝐚𝐬 』 ↴\n\n🎵 𝐌𝐔́𝐒𝐈𝐂𝐀\n╰➜ \`${p}play <nome ou link>\`\n╰➜ \`${p}spot <link>\`\n╰➜ \`${p}soundcloud <nome>\`\n\n📥 𝐃𝐎𝐖𝐍𝐋𝐎𝐀𝐃𝐒\n╰➜ \`${p}insta <link>\`\n╰➜ \`${p}tiktok <link>\`\n╰➜ \`${p}pinterest <busca>\`\n\n📰 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀𝐒\n╰➜ \`${p}g1\`\n╰➜ \`${p}uol\`\n╰➜ \`${p}jovempan\`\n╰➜ \`${p}vasco\`\n\n🔍 𝐄𝐒𝐓𝐀𝐓𝐈́𝐒𝐓𝐈𝐂𝐀𝐒\n╰➜ \`${p}tiktoktag <hashtag>\`\n\n🎨 𝐅𝐈𝐆𝐔𝐑𝐈𝐍𝐇𝐀𝐒\n╰➜ \`${p}brat / ${p}s / ${p}rename\`\n╰➜ \`${p}smeme / ${p}s3\`\n╰➜ \`${p}procurado / ${p}wasted / ${p}revela\`\n\n🛠️ 𝐅𝐄𝐑𝐑𝐀𝐌𝐄𝐍𝐓𝐀𝐒\n╰➜ \`${p}gerarnick <texto>\`\n╰➜ \`${p}llamacoder <desc>\`\n\n🤖 𝐈𝐍𝐓𝐄𝐋𝐈𝐆𝐄̂𝐍𝐂𝐈𝐀\n╰➜ \`${p}unliai <pergunta>\`\n╰➜ \`${p}axis <pergunta>\`\n\n📅 𝐔𝐓𝐈𝐋𝐈𝐃𝐀𝐃𝐄𝐒\n╰➜ \`${p}feriados [ano]\`\n\n🌸 𝐃𝐈𝐕𝐄𝐑𝐒𝐀̃𝐎\n╰➜ \`${p}waifu\`\n\n🟣 _"Tempest recompensa os aliados."_\n\n"${nomeBot}"`
+        const cargo = isDono ? "👑 ᴍᴇsᴛʀᴇ" : isSubDono ? "🌙 ʟᴜᴀ sᴜᴘᴇʀɪᴏʀ" : "💠 ɴᴏʙʀᴇ"
+
+        const texto = 
+`╔┉━─━┈━──━┈━──━┈━─━┉┉⟐
+║╭┈ׅ᳝𑂳໋֕𔓕᳝┉۪࣮᪲۟۫─ׅ͚᷂࠭━⵿໋݊┅᮫ׅ᳝۫🌊࣭࣪࣪┅⵿᳝۟━໋ׅ࣪࣪─໋͚ׅ۪֘┉᳝ׅ᪲𔓕໋۪࣪┈᩿࣪╮
+║࣪│᨞⁞🔹️⃞⃞⟡ ʙᴏᴛ: ${nomeBot}
+║࣪│᨞⁞🔹️⃞⃞⟡ ᴜsᴜᴀʀɪᴏ: ${numUser}
+║࣪│᨞⁞🔹️⃞⃞⟡ ᴄᴀʀɢᴏ: ${cargo}
+║࣪│᨞⁞🔹️⃞⃞⟡ ᴘʀᴇғɪxᴏ: ${p}
+║╰┈ׅ᳝𑂳໋֕𔓕᳝┉۪࣮᪲۟۫─ׅ͚᷂࠭━⵿໋݊┅᮫ׅ᳝۫🌊࣭࣪࣪┅⵿᳝۟━໋ׅ࣪࣪─໋͚ׅ۪֘┉᳝ׅ᪲𔓕໋۪࣪┈᩿࣪╯
+╚┉━─━┈━──━┈━──━┈━─━┉┉⟐
+
+╔╼╍━⋅⊹⋅⋅𖥔࣪⊹⋅⋅𖥔࣪✰࣪𖥔࣪⋅⋅⊹𖥔࣪⋅⋅⊹⋅━╍╾╾╗
+║✰  *ᴄᴏᴍᴀɴᴅᴏs ᴅᴇ ᴍᴜ́sɪᴄᴀ*ׅ
+╚╼╍━⋅⊹⋅⋅𖥔࣪⊹⋅⋅𖥔࣪✰࣪𖥔࣪⋅⋅⊹𖥔࣪⋅⋅⊹⋅━╍╾╾╝
+║࣪│᨞⁞🔹️⃞⃞⟡ ${p}play <nome ou link>
+║࣪│᨞⁞🔹️⃞⃞⟡ ${p}spot <link>
+║࣪│᨞⁞🔹️⃞⃞⟡ ${p}soundcloud <nome>
+
+╔╼╍━⋅⊹⋅⋅𖥔࣪⊹⋅⋅𖥔࣪✰࣪𖥔࣪⋅⋅⊹𖥔࣪⋅⋅⊹⋅━╍╾╾╗
+║✰  *ᴄᴏᴍᴀɴᴅᴏs ᴅᴇ ᴅᴏᴡɴʟᴏᴀᴅs*ׅ
+╚╼╍━⋅⊹⋅⋅𖥔࣪⊹⋅⋅𖥔࣪✰࣪𖥔࣪⋅⋅⊹𖥔࣪⋅⋅⊹⋅━╍╾╾╝
+║࣪│᨞⁞🔹️⃞⃞⟡ ${p}insta <link>
+║࣪│᨞⁞🔹️⃞⃞⟡ ${p}tiktok <link>
+║࣪│᨞⁞🔹️⃞⃞⟡ ${p}pinterest <busca>
+
+╔╼╍━⋅⊹⋅⋅𖥔࣪⊹⋅⋅𖥔࣪✰࣪𖥔࣪⋅⋅⊹𖥔࣪⋅⋅⊹⋅━╍╾╾╗
+║✰  *ᴄᴏᴍᴀɴᴅᴏs ᴅᴇ ɴᴏᴛɪ́ᴄɪᴀs*ׅ
+╚╼╍━⋅⊹⋅⋅𖥔࣪⊹⋅⋅𖥔࣪✰࣪𖥔࣪⋅⋅⊹𖥔࣪⋅⋅⊹⋅━╍╾╾╝
+║࣪│᨞⁞🔹️⃞⃞⟡ ${p}g1
+║࣪│᨞⁞🔹️⃞⃞⟡ ${p}uol
+║࣪│᨞⁞🔹️⃞⃞⟡ ${p}jovempan
+║࣪│᨞⁞🔹️⃞⃞⟡ ${p}vasco
+
+╔╼╍━⋅⊹⋅⋅𖥔࣪⊹⋅⋅𖥔࣪✰࣪𖥔࣪⋅⋅⊹𖥔࣪⋅⋅⊹⋅━╍╾╾╗
+║✰  *ᴄᴏᴍᴀɴᴅᴏs ᴅᴇ ғɪɢᴜʀɪɴʜᴀs*ׅ
+╚╼╍━⋅⊹⋅⋅𖥔࣪⊹⋅⋅𖥔࣪✰࣪𖥔࣪⋅⋅⊹𖥔࣪⋅⋅⊹⋅━╍╾╾╝
+║࣪│᨞⁞🔹️⃞⃞⟡ ${p}brat
+║࣪│᨞⁞🔹️⃞⃞⟡ ${p}s
+║࣪│᨞⁞🔹️⃞⃞⟡ ${p}rename
+║࣪│᨞⁞🔹️⃞⃞⟡ ${p}smeme
+║࣪│᨞⁞🔹️⃞⃞⟡ ${p}procurado
+
+╔╼╍━⋅⊹⋅⋅𖥔࣪⊹⋅⋅𖥔࣪✰࣪𖥔࣪⋅⋅⊹𖥔࣪⋅⋅⊹⋅━╍╾╾╗
+║✰  *ᴄᴏᴍᴀɴᴅᴏs ᴅᴇ ɪɴᴛᴇʟɪɢᴇ̂ɴᴄɪᴀ*ׅ
+╚╼╍━⋅⊹⋅⋅𖥔࣪⊹⋅⋅𖥔࣪✰࣪𖥔࣪⋅⋅⊹𖥔࣪⋅⋅⊹⋅━╍╾╾╝
+║࣪│᨞⁞🔹️⃞⃞⟡ ${p}unliai <pergunta>
+║࣪│᨞⁞🔹️⃞⃞⟡ ${p}axis <pergunta>
+
+╚┉━─━┈━──━┈━──━┈━─━┉┉⟐
+
+🌊 _"A força recompensa os nobres."_`
 
         const cfg = db.config()
         if (cfg.fotoMenu) {
           const buf = Buffer.from(cfg.fotoMenu, "base64")
-          if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "rimuru.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
+          if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "akaza.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
           return sock.sendMessage(jid, { image: buf, caption: texto }, { quoted: msg })
         }
         await sock.sendMessage(jid, { text: texto }, { quoted: msg })
@@ -190,18 +255,31 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Música é privilégio dos nobres.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Música é privilégio dos nobres.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+
         const busca = args.join(" ").trim()
-        if (!busca) return sock.sendMessage(jid, { text: `🟣 • 𝐏𝐋𝐀𝐘 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Me diga o que quer ouvir.\n╰──────────────\n\n💡 \`!play <nome>\`\n\n"${nomeBot}"` }, { quoted: msg })
-        await sock.sendMessage(jid, { text: `🟣 • 𝐁𝐔𝐒𝐂𝐀𝐍𝐃𝐎 •\n\n╭─〔 💜 𝐀𝐆𝐔𝐀𝐑𝐃𝐄 〕\n│ Procurando a música...\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!busca) return sock.sendMessage(jid, { text: `❄️ • 𝐏𝐋𝐀𝐘 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Me diga o que quer ouvir.\n╰──────────────\n\n💡 \`!play <nome>\`\n\n"${nomeBot}"` }, { quoted: msg })
+
+        await sock.sendMessage(jid, { text: `❄️ • 𝐁𝐔𝐒𝐂𝐀𝐍𝐃𝐎 •\n\n╭─〔 ♦️ 𝐀𝐆𝐔𝐀𝐑𝐃𝐄 〕\n│ Procurando a música...\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+
         const res = await baixarMusica(busca, 32)
-        if (!res.ok) return sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${res.erro}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!res.ok) {
+          return sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${res.erro}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+
         if (res.info && res.info.thumb) {
           try {
-            await sock.sendMessage(jid, { image: { url: res.info.thumb }, caption: `🟣 • 𝐏𝐋𝐀𝐘 •\n\n╭─〔 🎵 𝐈𝐍𝐅𝐎𝐑𝐌𝐀𝐂̧𝐎̃𝐄𝐒 〕\n│ Tocando agora\n╰──────────────\n\n🎵 ${res.info.titulo || busca}\n👤 ${res.info.canal || "?"}\n⏱️ ${res.info.duracao || "?"}\n\n"${nomeBot}"` }, { quoted: msg })
+            await sock.sendMessage(jid, {
+              image: { url: res.info.thumb },
+              caption: `❄️ • 𝐏𝐋𝐀𝐘 •\n\n╭─〔 🎵 𝐈𝐍𝐅𝐎𝐑𝐌𝐀𝐂̧𝐎̃𝐄𝐒 〕\n│ Tocando agora\n╰──────────────\n\n🎵 ${res.info.titulo || busca}\n👤 ${res.info.canal || "?"}\n⏱️ ${res.info.duracao || "?"}\n\n"${nomeBot}"`
+            }, { quoted: msg })
           } catch (_) {}
         }
-        if (res.buffer.length > 16 * 1024 * 1024) return sock.sendMessage(jid, { text: `🟣 • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Limite: 16MB\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+
+        if (res.buffer.length > 16 * 1024 * 1024) {
+          return sock.sendMessage(jid, { text: `❄️ • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Limite: 16MB\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+
         await sock.sendMessage(jid, { audio: res.buffer, mimetype: "audio/mpeg", ptt: false, fileName: busca.slice(0, 30) + ".mp3" }, { quoted: msg })
       }
     },
@@ -212,15 +290,15 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         const link = args[0]
-        if (!link || !/open\.spotify\.com/i.test(link)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐏𝐎𝐓 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe um link do Spotify.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
-        await sock.sendMessage(jid, { text: `🟣 • 𝐒𝐏𝐎𝐓𝐈𝐅𝐘 •\n\n╭─〔 💜 𝐁𝐔𝐒𝐂𝐀𝐍𝐃𝐎 〕\n│ Baixando...\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!link || !/open\.spotify\.com/i.test(link)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐏𝐎𝐓 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe um link do Spotify.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐒𝐏𝐎𝐓𝐈𝐅𝐘 •\n\n╭─〔 ♦️ 𝐁𝐔𝐒𝐂𝐀𝐍𝐃𝐎 〕\n│ Baixando...\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         try {
           const SpottyDL = require("spottydl")
           const tmpDir = os.tmpdir()
           const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
-          const pastaTemp = path.join(tmpDir, "rimuru_spot_" + id)
+          const pastaTemp = path.join(tmpDir, "akaza_spot_" + id)
           if (!fs.existsSync(pastaTemp)) fs.mkdirSync(pastaTemp, { recursive: true })
           const trackInfo = await SpottyDL.getTrack(link)
           if (!trackInfo || !trackInfo.title) throw new Error("Link inválido")
@@ -231,10 +309,10 @@ module.exports = {
           const buffer = fs.readFileSync(arquivoBaixado)
           try { fs.unlinkSync(arquivoBaixado) } catch (_) {}
           try { fs.rmSync(pastaTemp, { recursive: true, force: true }) } catch (_) {}
-          if (buffer.length > 16 * 1024 * 1024) return sock.sendMessage(jid, { text: `🟣 • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Limite: 16MB\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          if (buffer.length > 16 * 1024 * 1024) return sock.sendMessage(jid, { text: `❄️ • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Limite: 16MB\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           await sock.sendMessage(jid, { audio: buffer, mimetype: "audio/mpeg", ptt: false, fileName: trackInfo.title + ".mp3" }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -245,27 +323,27 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         const busca = args.join(" ").trim()
-        if (!busca) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎𝐔𝐍𝐃𝐂𝐋𝐎𝐔𝐃 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe a música.\n╰──────────────\n\n💡 \`!soundcloud <nome>\`\n\n"${nomeBot}"` }, { quoted: msg })
-        await sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎𝐔𝐍𝐃𝐂𝐋𝐎𝐔𝐃 •\n\n╭─〔 💜 𝐁𝐔𝐒𝐂𝐀𝐍𝐃𝐎 〕\n│ Procurando...\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!busca) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎𝐔𝐍𝐃𝐂𝐋𝐎𝐔𝐃 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe a música.\n╰──────────────\n\n💡 \`!soundcloud <nome>\`\n\n"${nomeBot}"` }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎𝐔𝐍𝐃𝐂𝐋𝐎𝐔𝐃 •\n\n╭─〔 ♦️ 𝐁𝐔𝐒𝐂𝐀𝐍𝐃𝐎 〕\n│ Procurando...\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         try {
           const sR = await fetch(`https://obanai-apis.eu.cc/api/search/soundcloud?q=${encodeURIComponent(busca)}&apitoken=rj8SpI`)
           const sD = await sR.json()
-          if (!sD.success || !sD.data?.data?.length) return sock.sendMessage(jid, { text: `🟣 • 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐄𝐈 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Nada encontrado.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          if (!sD.success || !sD.data?.data?.length) return sock.sendMessage(jid, { text: `❄️ • 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐄𝐈 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Nada encontrado.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           const m = sD.data.data[0]
           const segs = parseInt(m.duration)
           const durFmt = `${Math.floor(segs / 60)}:${(segs % 60).toString().padStart(2, "0")}`
-          await sock.sendMessage(jid, { image: { url: m.thumbnail }, caption: `🟣 • 𝐒𝐎𝐔𝐍𝐃𝐂𝐋𝐎𝐔𝐃 •\n\n📌 ${m.title}\n🎤 ${m.artist}\n⏱️ ${durFmt}\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { image: { url: m.thumbnail }, caption: `❄️ • 𝐒𝐎𝐔𝐍𝐃𝐂𝐋𝐎𝐔𝐃 •\n\n📌 ${m.title}\n🎤 ${m.artist}\n⏱️ ${durFmt}\n\n"${nomeBot}"` }, { quoted: msg })
           const dlR = await fetch(`https://obanai-apis.eu.cc/api/dl/soundcloud?url=${encodeURIComponent(m.url)}&apitoken=rj8SpI`)
           const dlD = await dlR.json()
-          if (!dlD.success || !dlD.data?.download_url) return sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Falha ao baixar.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          if (!dlD.success || !dlD.data?.download_url) return sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Falha ao baixar.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           const aR = await fetch(dlD.data.download_url)
           const aBuf = Buffer.from(await aR.arrayBuffer())
-          if (aBuf.length > 16 * 1024 * 1024) return sock.sendMessage(jid, { text: `🟣 • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Limite: 16MB\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          if (aBuf.length > 16 * 1024 * 1024) return sock.sendMessage(jid, { text: `❄️ • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Limite: 16MB\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           await sock.sendMessage(jid, { audio: aBuf, mimetype: "audio/mpeg", ptt: false }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -276,30 +354,34 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+
         const busca = args.join(" ").trim()
-        if (!busca) return sock.sendMessage(jid, { text: `🟣 • 𝐏𝐈𝐍𝐓𝐄𝐑𝐄𝐒𝐓 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe a busca.\n╰──────────────\n\n💡 \`!pinterest <busca>\`\n\n"${nomeBot}"` }, { quoted: msg })
-        await sock.sendMessage(jid, { text: `🟣 • 𝐏𝐈𝐍𝐓𝐄𝐑𝐄𝐒𝐓 •\n\n╭─〔 💜 𝐁𝐔𝐒𝐂𝐀𝐍𝐃𝐎 〕\n│ Procurando "${busca}"...\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!busca) return sock.sendMessage(jid, { text: `❄️ • 𝐏𝐈𝐍𝐓𝐄𝐑𝐄𝐒𝐓 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe a busca.\n╰──────────────\n\n💡 \`!pinterest <busca>\`\n\n"${nomeBot}"` }, { quoted: msg })
+
+        await sock.sendMessage(jid, { text: `❄️ • 𝐏𝐈𝐍𝐓𝐄𝐑𝐄𝐒𝐓 •\n\n╭─〔 ♦️ 𝐁𝐔𝐒𝐂𝐀𝐍𝐃𝐎 〕\n│ Procurando "${busca}"...\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+
         try {
           const r = await fetch(`https://obanai-apis.eu.cc/api/dl/pinterest?q=${encodeURIComponent(busca)}&apitoken=rj8SpI`)
           const data = await r.json()
           if (!data.success || !data.data || !data.data.length) {
-            return sock.sendMessage(jid, { text: `🟣 • 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐄𝐈 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Nenhuma imagem encontrada.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+            return sock.sendMessage(jid, { text: `❄️ • 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐄𝐈 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Nenhuma imagem encontrada.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           }
           const items = data.data.slice(0, 5)
           let enviadas = 0
           for (const item of items) {
             try {
-              await sock.sendMessage(jid, { image: { url: item.image }, caption: `🟣 • 𝐏𝐈𝐍𝐓𝐄𝐑𝐄𝐒𝐓 •\n\n📌 ${item.title || "Sem título"}\n👤 ${msg.pushName || "?"}\n\n"${nomeBot}"` }, { quoted: msg })
+              await sock.sendMessage(jid, { image: { url: item.image }, caption: `❄️ • 𝐏𝐈𝐍𝐓𝐄𝐑𝐄𝐒𝐓 •\n\n📌 ${item.title || "Sem título"}\n👤 ${msg.pushName || "?"}\n\n"${nomeBot}"` }, { quoted: msg })
               enviadas++
               await new Promise(r => setTimeout(r, 600))
             } catch (e) { console.log("Erro enviar pinterest:", e.message) }
           }
           if (enviadas === 0) {
-            await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Falha ao enviar imagens.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+            await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Falha ao enviar imagens.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           }
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          console.error("Erro pinterest:", e.message)
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -310,16 +392,23 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+
         const busca = args.join(" ").trim()
-        if (!busca) return sock.sendMessage(jid, { text: `🟣 • 𝐓𝐈𝐊𝐓𝐎𝐊 𝐓𝐀𝐆 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe a hashtag.\n╰──────────────\n\n💡 \`!tiktoktag <hashtag>\`\n📌 Ex: \`!tiktoktag animes\`\n\n"${nomeBot}"` }, { quoted: msg })
-        await sock.sendMessage(jid, { text: `🟣 • 𝐓𝐈𝐊𝐓𝐎𝐊 𝐓𝐀𝐆 •\n\n╭─〔 💜 𝐁𝐔𝐒𝐂𝐀𝐍𝐃𝐎 〕\n│ Analisando #${busca}...\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!busca) return sock.sendMessage(jid, { text: `❄️ • 𝐓𝐈𝐊𝐓𝐎𝐊 𝐓𝐀𝐆 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe a hashtag.\n╰──────────────\n\n💡 \`!tiktoktag <hashtag>\`\n📌 Ex: \`!tiktoktag animes\`\n\n"${nomeBot}"` }, { quoted: msg })
+
+        await sock.sendMessage(jid, { text: `❄️ • 𝐓𝐈𝐊𝐓𝐎𝐊 𝐓𝐀𝐆 •\n\n╭─〔 ♦️ 𝐁𝐔𝐒𝐂𝐀𝐍𝐃𝐎 〕\n│ Analisando #${busca}...\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+
         try {
-          const r = await fetch(`https://obanai-apis.eu.cc/api/search/tiktok-tag?q=${encodeURIComponent(busca)}&apitoken=rj8SpI`, { headers: { "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36" } })
+          const r = await fetch(`https://obanai-apis.eu.cc/api/search/tiktok-tag?q=${encodeURIComponent(busca)}&apitoken=rj8SpI`, {
+            headers: { "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36" }
+          })
           const data = await r.json()
-          if (!data.success) return sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Não consegui obter estatísticas.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          if (!data.success) {
+            return sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Não consegui obter estatísticas.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          }
           const res = data.data
-          let txt = `🟣 • 𝐓𝐈𝐊𝐓𝐎𝐊 #${busca} •\n\n╭─〔 📊 𝐄𝐒𝐓𝐀𝐓𝐈́𝐒𝐓𝐈𝐂𝐀𝐒 〕\n│ Dados da hashtag\n╰──────────────\n\n`
+          let txt = `❄️ • 𝐓𝐈𝐊𝐓𝐎𝐊 #${busca} •\n\n╭─〔 📊 𝐄𝐒𝐓𝐀𝐓𝐈́𝐒𝐓𝐈𝐂𝐀𝐒 〕\n│ Dados da hashtag\n╰──────────────\n\n`
           txt += `📌 𝐏𝐨𝐬𝐭𝐬:\n╰➜ ${res.posts || "N/A"}\n\n`
           txt += `👁️ 𝐕𝐢𝐞𝐰𝐬:\n╰➜ ${res.views || "N/A"}\n\n`
           txt += `📈 𝐕𝐢𝐞𝐰𝐬 𝐩𝐨𝐫 𝐩𝐨𝐬𝐭:\n╰➜ ${res.viewsPerPost || "N/A"}\n\n`
@@ -335,7 +424,8 @@ module.exports = {
           txt += `\n"${nomeBot}"`
           await sock.sendMessage(jid, { text: txt }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          console.error("Erro tiktoktag:", e.message)
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -346,18 +436,24 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+
         const pergunta = args.join(" ").trim()
-        if (!pergunta) return sock.sendMessage(jid, { text: `🟣 • 𝐀𝐗𝐈𝐒 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe a pergunta.\n╰──────────────\n\n💡 \`!axis <pergunta>\`\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!pergunta) return sock.sendMessage(jid, { text: `❄️ • 𝐀𝐗𝐈𝐒 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe a pergunta.\n╰──────────────\n\n💡 \`!axis <pergunta>\`\n\n"${nomeBot}"` }, { quoted: msg })
+
         try {
           await sock.sendPresenceUpdate("composing", jid)
-          await sock.sendMessage(jid, { text: `🟣 • 𝐀𝐗𝐈𝐒 •\n\n╭─〔 💜 𝐏𝐄𝐍𝐒𝐀𝐍𝐃𝐎 〕\n│ Consultando o Grande Sábio...\n╰──────────────\n\n❔ ${pergunta}\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐀𝐗𝐈𝐒 •\n\n╭─〔 ♦️ 𝐏𝐄𝐍𝐒𝐀𝐍𝐃𝐎 〕\n│ Consultando a IA...\n╰──────────────\n\n❔ ${pergunta}\n\n"${nomeBot}"` }, { quoted: msg })
+
           const r = await fetch(`https://obanai-apis.eu.cc/api/ias/axis?q=${encodeURIComponent(pergunta)}&apitoken=rj8SpI`)
           const data = await r.json()
-          if (!data?.success) return sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Não consegui acessar a IA.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          if (!data?.success) {
+            return sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Não consegui acessar a IA.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          }
           await sock.sendMessage(jid, { text: data.data.texto }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          console.error("Erro axis:", e.message)
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -370,11 +466,11 @@ module.exports = {
         try {
           const r = await fetch(`https://obanai-apis.eu.cc/api/noticias/g1?apitoken=rj8SpI`)
           const data = await r.json()
-          if (!data?.status || !data.data?.resultado?.length) return sock.sendMessage(jid, { text: `🟣 • 𝐆𝟏 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Erro.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          if (!data?.status || !data.data?.resultado?.length) return sock.sendMessage(jid, { text: `❄️ • 𝐆𝟏 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Erro.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           const n = data.data.resultado[Math.floor(Math.random() * data.data.resultado.length)]
-          await sock.sendMessage(jid, { text: `🟣 • 𝐆𝟏 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀𝐒 •\n\n╭─〔 📰 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀 〕\n│ Aleatória\n╰──────────────\n\n📌 ${n.noticia}\n\n📁 ${n.secao}\n🕒 ${n.data}\n\n📝 ${n.desc}\n\n🔗 ${n.link}\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐆𝟏 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀𝐒 •\n\n╭─〔 📰 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀 〕\n│ Aleatória\n╰──────────────\n\n📌 ${n.noticia}\n\n📁 ${n.secao}\n🕒 ${n.data}\n\n📝 ${n.desc}\n\n🔗 ${n.link}\n\n"${nomeBot}"` }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -387,11 +483,11 @@ module.exports = {
         try {
           const r = await fetch(`https://obanai-apis.eu.cc/api/noticias/uol?apitoken=rj8SpI`)
           const data = await r.json()
-          if (!data?.status || !data.data?.resultado?.length) return sock.sendMessage(jid, { text: `🟣 • 𝐔𝐎𝐋 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Erro.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          if (!data?.status || !data.data?.resultado?.length) return sock.sendMessage(jid, { text: `❄️ • 𝐔𝐎𝐋 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Erro.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           const n = data.data.resultado[Math.floor(Math.random() * data.data.resultado.length)]
-          await sock.sendMessage(jid, { text: `🟣 • 𝐔𝐎𝐋 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀𝐒 •\n\n╭─〔 📰 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀 〕\n│ Aleatória\n╰──────────────\n\n📌 ${n.noticia}\n\n📁 ${n.secao}\n\n📝 ${n.desc}\n\n🔗 ${n.link}\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐔𝐎𝐋 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀𝐒 •\n\n╭─〔 📰 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀 〕\n│ Aleatória\n╰──────────────\n\n📌 ${n.noticia}\n\n📁 ${n.secao}\n\n📝 ${n.desc}\n\n🔗 ${n.link}\n\n"${nomeBot}"` }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -404,11 +500,11 @@ module.exports = {
         try {
           const r = await fetch(`https://obanai-apis.eu.cc/api/noticias/jovempan?apitoken=rj8SpI`)
           const data = await r.json()
-          if (!data?.status || !data.data?.resultado?.length) return sock.sendMessage(jid, { text: `🟣 • 𝐉𝐎𝐕𝐄𝐌 𝐏𝐀𝐍 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Erro.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          if (!data?.status || !data.data?.resultado?.length) return sock.sendMessage(jid, { text: `❄️ • 𝐉𝐎𝐕𝐄𝐌 𝐏𝐀𝐍 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Erro.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           const n = data.data.resultado[Math.floor(Math.random() * data.data.resultado.length)]
-          await sock.sendMessage(jid, { text: `🟣 • 𝐉𝐎𝐕𝐄𝐌 𝐏𝐀𝐍 •\n\n╭─〔 📰 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀 〕\n│ Aleatória\n╰──────────────\n\n📌 ${n.noticia}\n\n📁 ${n.secao}\n🕒 ${n.data}\n\n📝 ${n.desc}\n\n🔗 ${n.link}\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐉𝐎𝐕𝐄𝐌 𝐏𝐀𝐍 •\n\n╭─〔 📰 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀 〕\n│ Aleatória\n╰──────────────\n\n📌 ${n.noticia}\n\n📁 ${n.secao}\n🕒 ${n.data}\n\n📝 ${n.desc}\n\n🔗 ${n.link}\n\n"${nomeBot}"` }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -421,11 +517,11 @@ module.exports = {
         try {
           const r = await fetch(`https://obanai-apis.eu.cc/api/noticias/vasco?apitoken=rj8SpI`)
           const data = await r.json()
-          if (!data?.status || !data.data?.resultado?.length) return sock.sendMessage(jid, { text: `⚓ • 𝐕𝐀𝐒𝐂𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Erro.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          if (!data?.status || !data.data?.resultado?.length) return sock.sendMessage(jid, { text: `⚓ • 𝐕𝐀𝐒𝐂𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Erro.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           const n = data.data.resultado[Math.floor(Math.random() * data.data.resultado.length)]
           await sock.sendMessage(jid, { text: `⚓ • 𝐕𝐀𝐒𝐂𝐎 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀𝐒 •\n\n╭─〔 📰 𝐍𝐎𝐓𝐈́𝐂𝐈𝐀 〕\n│ Aleatória\n╰──────────────\n\n📌 ${n.noticia}\n\n📝 ${n.desc}\n\n🔗 ${n.link}\n\n"${nomeBot}"` }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `⚓ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `⚓ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -436,20 +532,20 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         const texto = args.join(" ").trim()
-        if (!texto) return sock.sendMessage(jid, { text: `🟣 • 𝐆𝐄𝐑𝐀𝐑𝐍𝐈𝐂𝐊 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe o texto.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!texto) return sock.sendMessage(jid, { text: `❄️ • 𝐆𝐄𝐑𝐀𝐑𝐍𝐈𝐂𝐊 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe o texto.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         try {
           const textoLimpo = texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
           const r = await fetch(`https://obanai-apis.eu.cc/api/tools/gerarnick?texto=${encodeURIComponent(textoLimpo)}&apitoken=rj8SpI`)
           const data = await r.json()
-          if (!data?.success || !data.data?.length) return sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Não consegui gerar.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
-          let txt = `🟣 • 𝐄𝐒𝐓𝐈𝐋𝐎𝐒 𝐏𝐀𝐑𝐀 "${textoLimpo}" •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
+          if (!data?.success || !data.data?.length) return sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Não consegui gerar.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          let txt = `❄️ • 𝐄𝐒𝐓𝐈𝐋𝐎𝐒 𝐏𝐀𝐑𝐀 "${textoLimpo}" •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`
           data.data.forEach((n, i) => { txt += `${i + 1}. \`${n.nome}\`\n\n` })
           txt += `💡 Toque e segure pra copiar.\n\n"${nomeBot}"`
           await sock.sendMessage(jid, { text: txt }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -463,11 +559,11 @@ module.exports = {
         try {
           const r = await fetch(`https://obanai-apis.eu.cc/api/outros/feriados?ano=${ano}&apitoken=rj8SpI`)
           const data = await r.json()
-          if (!data?.success || !data.data?.total) return sock.sendMessage(jid, { text: `🟣 • 𝐅𝐄𝐑𝐈𝐀𝐃𝐎𝐒 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Nenhum feriado.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          if (!data?.success || !data.data?.total) return sock.sendMessage(jid, { text: `❄️ • 𝐅𝐄𝐑𝐈𝐀𝐃𝐎𝐒 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Nenhum feriado.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           const lista = data.data.feriados.map(f => `📌 *${f.date}* — ${f.name} _(${f.weekday})_`).join("\n")
-          await sock.sendMessage(jid, { text: `🟣 • 𝐅𝐄𝐑𝐈𝐀𝐃𝐎𝐒 ${data.data.ano} •\n\n${lista}\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐅𝐄𝐑𝐈𝐀𝐃𝐎𝐒 ${data.data.ano} •\n\n${lista}\n\n"${nomeBot}"` }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -478,15 +574,15 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const pergunta = args.join(" ").trim()
-        if (!pergunta) return sock.sendMessage(jid, { text: `🟣 • 𝐔𝐍𝐋𝐈𝐀𝐈 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe a pergunta.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!pergunta) return sock.sendMessage(jid, { text: `❄️ • 𝐔𝐍𝐋𝐈𝐀𝐈 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe a pergunta.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         try {
           await sock.sendPresenceUpdate("composing", jid)
           const r = await fetch(`https://obanai-apis.eu.cc/api/ias/unliai?q=${encodeURIComponent(pergunta)}&apitoken=rj8SpI`)
           const data = await r.json()
-          if (!data?.success || !data?.response) return sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ IA indisponível.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          if (!data?.success || !data?.response) return sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ IA indisponível.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           await sock.sendMessage(jid, { text: data.response }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -497,18 +593,18 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         const link = args[0]
-        if (!link || !/instagram\.com|instagr\.am/i.test(link)) return sock.sendMessage(jid, { text: `🟣 • 𝐈𝐍𝐒𝐓𝐀 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe um link.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!link || !/instagram\.com|instagr\.am/i.test(link)) return sock.sendMessage(jid, { text: `❄️ • 𝐈𝐍𝐒𝐓𝐀 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe um link.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         try {
           const res = await baixarInstagram(link)
-          if (!res.ok) return sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${res.erro}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          if (!res.ok) return sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${res.erro}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
           const buffer = res.buffer
-          if (buffer.length > 16 * 1024 * 1024) return sock.sendMessage(jid, { text: `🟣 • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n"${nomeBot}"` }, { quoted: msg })
+          if (buffer.length > 16 * 1024 * 1024) return sock.sendMessage(jid, { text: `❄️ • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n"${nomeBot}"` }, { quoted: msg })
           if (res.ehVideo) await sock.sendMessage(jid, { video: buffer, mimetype: "video/mp4", fileName: "instagram.mp4" }, { quoted: msg })
-          else await sock.sendMessage(jid, { image: buffer, caption: `🟣 • 𝐈𝐍𝐒𝐓𝐀𝐆𝐑𝐀𝐌 •\n\n╭─〔 💜 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Mídia baixada.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          else await sock.sendMessage(jid, { image: buffer, caption: `❄️ • 𝐈𝐍𝐒𝐓𝐀𝐆𝐑𝐀𝐌 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Mídia baixada.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -519,15 +615,15 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         const link = args[0]
-        if (!link || !/tiktok\.com|vm\.tiktok|vt\.tiktok/i.test(link)) return sock.sendMessage(jid, { text: `🟣 • 𝐓𝐈𝐊𝐓𝐎𝐊 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe um link.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!link || !/tiktok\.com|vm\.tiktok|vt\.tiktok/i.test(link)) return sock.sendMessage(jid, { text: `❄️ • 𝐓𝐈𝐊𝐓𝐎𝐊 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe um link.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         try {
           const url = await baixarTikTok(link)
           const r = await fetch(url)
           await sock.sendMessage(jid, { video: Buffer.from(await r.arrayBuffer()), mimetype: "video/mp4", fileName: "tiktok.mp4" }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -538,19 +634,19 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
-        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: `🟣 • 𝐀𝐔𝐓𝐎𝐅𝐈𝐆 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só em grupos.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: `❄️ • 𝐀𝐔𝐓𝐎𝐅𝐈𝐆 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só em grupos.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         const op = (args[0] || "").toLowerCase()
         const ac = dbLer("autocfg.json", { grupos: {} })
         ac.grupos = ac.grupos || {}
         ac.grupos[jid] = ac.grupos[jid] || {}
         if (!["on", "off"].includes(op)) {
           const s = ac.grupos[jid].autofig ? "ON ✅" : "OFF ❌"
-          return sock.sendMessage(jid, { text: `🟣 • 𝐀𝐔𝐓𝐎𝐅𝐈𝐆 •\n\n╭─〔 💜 𝐒𝐓𝐀𝐓𝐔𝐒 〕\n│ ${s}\n╰──────────────\n\n💡 \`!autofig on/off\`\n\n"${nomeBot}"` }, { quoted: msg })
+          return sock.sendMessage(jid, { text: `❄️ • 𝐀𝐔𝐓𝐎𝐅𝐈𝐆 •\n\n╭─〔 ♦️ 𝐒𝐓𝐀𝐓𝐔𝐒 〕\n│ ${s}\n╰──────────────\n\n💡 \`!autofig on/off\`\n\n"${nomeBot}"` }, { quoted: msg })
         }
         ac.grupos[jid].autofig = op === "on"
         dbSalvar("autocfg.json", ac)
-        await sock.sendMessage(jid, { text: `🟣 • 𝐀𝐔𝐓𝐎𝐅𝐈𝐆 •\n\n╭─〔 💜 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ ${op.toUpperCase()}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐀𝐔𝐓𝐎𝐅𝐈𝐆 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ ${op.toUpperCase()}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -560,19 +656,19 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
-        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: `🟣 • 𝐀𝐔𝐓𝐎𝐓𝐓𝐊 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só em grupos.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!jid.endsWith("@g.us")) return sock.sendMessage(jid, { text: `❄️ • 𝐀𝐔𝐓𝐎𝐓𝐓𝐊 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só em grupos.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         const op = (args[0] || "").toLowerCase()
         const ac = dbLer("autocfg.json", { grupos: {} })
         ac.grupos = ac.grupos || {}
         ac.grupos[jid] = ac.grupos[jid] || {}
         if (!["on", "off"].includes(op)) {
           const s = ac.grupos[jid].autottk ? "ON ✅" : "OFF ❌"
-          return sock.sendMessage(jid, { text: `🟣 • 𝐀𝐔𝐓𝐎𝐓𝐓𝐊 •\n\n╭─〔 💜 𝐒𝐓𝐀𝐓𝐔𝐒 〕\n│ ${s}\n╰──────────────\n\n💡 \`!autottk on/off\`\n\n"${nomeBot}"` }, { quoted: msg })
+          return sock.sendMessage(jid, { text: `❄️ • 𝐀𝐔𝐓𝐎𝐓𝐓𝐊 •\n\n╭─〔 ♦️ 𝐒𝐓𝐀𝐓𝐔𝐒 〕\n│ ${s}\n╰──────────────\n\n💡 \`!autottk on/off\`\n\n"${nomeBot}"` }, { quoted: msg })
         }
         ac.grupos[jid].autottk = op === "on"
         dbSalvar("autocfg.json", ac)
-        await sock.sendMessage(jid, { text: `🟣 • 𝐀𝐔𝐓𝐎𝐓𝐓𝐊 •\n\n╭─〔 💜 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ ${op.toUpperCase()}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐀𝐔𝐓𝐎𝐓𝐓𝐊 •\n\n╭─〔 ✅ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ ${op.toUpperCase()}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -582,10 +678,10 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         let q = ctx.quotedMessage
-        if (!q) return sock.sendMessage(jid, { text: `🟣 • 𝐑𝐄𝐕𝐄𝐋𝐀 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Responda uma msg de ver uma vez.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!q) return sock.sendMessage(jid, { text: `❄️ • 𝐑𝐄𝐕𝐄𝐋𝐀 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Responda uma msg de ver uma vez.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         let isVU = false
         if (q.viewOnceMessageV2) { q = q.viewOnceMessageV2.message || q.viewOnceMessageV2; isVU = true }
         else if (q.viewOnceMessage) { q = q.viewOnceMessage.message || q.viewOnceMessage; isVU = true }
@@ -593,17 +689,17 @@ module.exports = {
         if (img && img.viewOnce) isVU = true
         if (vid && vid.viewOnce) isVU = true
         if (aud && aud.viewOnce) isVU = true
-        if (!isVU) return sock.sendMessage(jid, { text: `🟣 • 𝐍𝐀̃𝐎 𝐄́ 𝐕𝐄𝐑 𝐔𝐌𝐀 𝐕𝐄𝐙 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ Não é oculta.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
-        if (!img && !vid && !aud) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐄𝐌 𝐌𝐈́𝐃𝐈𝐀 •\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!isVU) return sock.sendMessage(jid, { text: `❄️ • 𝐍𝐀̃𝐎 𝐄́ 𝐕𝐄𝐑 𝐔𝐌𝐀 𝐕𝐄𝐙 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ Não é oculta.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!img && !vid && !aud) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐄𝐌 𝐌𝐈́𝐃𝐈𝐀 •\n\n"${nomeBot}"` }, { quoted: msg })
         try {
           const tipo = img ? "image" : vid ? "video" : "audio"
           const alvo = Object.assign({}, msg, { message: tipo === "image" ? { imageMessage: img } : tipo === "video" ? { videoMessage: vid } : { audioMessage: aud } })
           const buf = await utils.downloadMediaMessage(alvo, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
-          if (tipo === "image") await sock.sendMessage(jid, { image: buf, caption: `🟣 • 𝐑𝐄𝐕𝐄𝐋𝐀𝐃𝐎 •\n\n"${nomeBot}"` }, { quoted: msg })
-          else if (tipo === "video") await sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", caption: `🟣 • 𝐑𝐄𝐕𝐄𝐋𝐀𝐃𝐎 •\n\n"${nomeBot}"` }, { quoted: msg })
+          if (tipo === "image") await sock.sendMessage(jid, { image: buf, caption: `❄️ • 𝐑𝐄𝐕𝐄𝐋𝐀𝐃𝐎 •\n\n"${nomeBot}"` }, { quoted: msg })
+          else if (tipo === "video") await sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", caption: `❄️ • 𝐑𝐄𝐕𝐄𝐋𝐀𝐃𝐎 •\n\n"${nomeBot}"` }, { quoted: msg })
           else await sock.sendMessage(jid, { audio: buf, mimetype: "audio/mp4", ptt: false }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -614,9 +710,9 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Só nobres!\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         const t = args.join(" ").trim()
-        if (!t) return sock.sendMessage(jid, { text: `🟣 • 𝐁𝐑𝐀𝐓 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe o texto.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!t) return sock.sendMessage(jid, { text: `❄️ • 𝐁𝐑𝐀𝐓 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe o texto.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         try {
           const sharp = require("sharp")
           const T = 512
@@ -642,7 +738,7 @@ module.exports = {
           const buf = await sharp(Buffer.from(svg)).webp({ quality: 90 }).toBuffer()
           await sock.sendMessage(jid, { sticker: buf }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -653,12 +749,12 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg })
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         const q = ctx.quotedMessage
         const eImg = q && q.imageMessage
         const eVid = q && q.videoMessage
-        if (!eImg && !eVid) return sock.sendMessage(jid, { text: `🟣 • 𝐒 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Responda foto ou vídeo.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!eImg && !eVid) return sock.sendMessage(jid, { text: `❄️ • 𝐒 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Responda foto ou vídeo.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         try {
           const sharp = require("sharp")
           const ff = require("@ffmpeg-installer/ffmpeg").path
@@ -679,7 +775,7 @@ module.exports = {
           }
           await sock.sendMessage(jid, { sticker: wp }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -690,13 +786,13 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg })
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         const q = ctx.quotedMessage
         const eSti = q && q.stickerMessage
         const eImg = q && q.imageMessage
         const eVid = q && q.videoMessage
-        if (!eSti && !eImg && !eVid) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝟑 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Responda fig, foto ou vídeo.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!eSti && !eImg && !eVid) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝟑 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Responda fig, foto ou vídeo.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         try {
           const sharp = require("sharp")
           const ff = require("@ffmpeg-installer/ffmpeg").path
@@ -723,7 +819,7 @@ module.exports = {
           }
           await sock.sendMessage(jid, { sticker: resultado }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -734,18 +830,18 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg })
         const t = args.join(" ").trim()
-        if (!t) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐌𝐄𝐌𝐄 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe o texto.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!t) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐌𝐄𝐌𝐄 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe o texto.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         const q = ctx.quotedMessage
-        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐌𝐄𝐌𝐄 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Responda uma figurinha.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐌𝐄𝐌𝐄 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Responda uma figurinha.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         try {
           const alvo = Object.assign({}, msg, { message: { stickerMessage: q.stickerMessage } })
           const buf = await utils.downloadMediaMessage(alvo, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
           await enviarFigTexto(sock, jid, buf, t, msg)
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n╭─〔 ❌ 𝐄𝐑𝐑𝐎 〕\n│ ${e.message}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -756,10 +852,10 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg })
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         const q = ctx.quotedMessage
-        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: `🟣 • 𝐏𝐑𝐎𝐂𝐔𝐑𝐀𝐃𝐎 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Responda uma figurinha.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: `❄️ • 𝐏𝐑𝐎𝐂𝐔𝐑𝐀𝐃𝐎 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Responda uma figurinha.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         try {
           const sharp = require("sharp")
           const alvo = Object.assign({}, msg, { message: { stickerMessage: q.stickerMessage } })
@@ -771,7 +867,7 @@ module.exports = {
           const res = await sharp(cartaz).composite([{ input: foto, top: 138, left: Math.floor((T-(FT+12))/2) }]).webp({ quality: 92 }).toBuffer()
           await sock.sendMessage(jid, { sticker: res }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -782,10 +878,10 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg })
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         const q = ctx.quotedMessage
-        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: `🟣 • 𝐖𝐀𝐒𝐓𝐄𝐃 •\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: `❄️ • 𝐖𝐀𝐒𝐓𝐄𝐃 •\n\n"${nomeBot}"` }, { quoted: msg })
         try {
           const sharp = require("sharp")
           const alvo = Object.assign({}, msg, { message: { stickerMessage: q.stickerMessage } })
@@ -798,7 +894,7 @@ module.exports = {
           const res = await sharp(baseGray).composite([{ input: ov, top: 0, left: 0 }]).webp({ quality: 92 }).toBuffer()
           await sock.sendMessage(jid, { sticker: res }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -809,12 +905,12 @@ module.exports = {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `🟣 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!checarVip(db, sJ, isDono, isSubDono)) return sock.sendMessage(jid, { text: `❄️ • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n"${nomeBot}"` }, { quoted: msg })
         const t = args.join(" ").trim()
-        if (!t) return sock.sendMessage(jid, { text: `🟣 • 𝐑𝐄𝐍𝐀𝐌𝐄 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe o nome.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!t) return sock.sendMessage(jid, { text: `❄️ • 𝐑𝐄𝐍𝐀𝐌𝐄 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Informe o nome.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         const q = ctx.quotedMessage
-        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: `🟣 • 𝐑𝐄𝐍𝐀𝐌𝐄 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Responda uma figurinha.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!q || !q.stickerMessage) return sock.sendMessage(jid, { text: `❄️ • 𝐑𝐄𝐍𝐀𝐌𝐄 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Responda uma figurinha.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
         try {
           const alvo = Object.assign({}, msg, { message: { stickerMessage: q.stickerMessage } })
           const buf = await utils.downloadMediaMessage(alvo, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
@@ -823,17 +919,17 @@ module.exports = {
             const { Image } = require("node-webpmux")
             const img = new Image()
             await img.load(buf)
-            const json = { "sticker-pack-id": "com.rimuru." + Date.now(), "sticker-pack-name": t, "sticker-pack-publisher": t, "emojis": ["🟣", "🦠"] }
+            const json = { "sticker-pack-id": "com.akaza." + Date.now(), "sticker-pack-name": t, "sticker-pack-publisher": t, "emojis": ["❄️", "♦️"] }
             const exifAttr = Buffer.from([0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x41, 0x57, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00])
             const jsonBuf = Buffer.from(JSON.stringify(json), "utf8")
             const exif = Buffer.concat([exifAttr, jsonBuf])
             exif.writeUIntLE(jsonBuf.length, 14, 4)
             img.exif = exif
             outBuf = await img.save(null)
-          } catch (e) {}
+          } catch (e) { console.log("Aviso exif:", e.message) }
           await sock.sendMessage(jid, { sticker: outBuf, packname: t, author: t }, { quoted: msg })
         } catch (e) {
-          await sock.sendMessage(jid, { text: `🟣 • 𝐄𝐑𝐑𝐎 •\n\n"${nomeBot}"` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `❄️ • 𝐄𝐑𝐑𝐎 •\n\n"${nomeBot}"` }, { quoted: msg })
         }
       }
     },
@@ -855,9 +951,9 @@ module.exports = {
           }
           if (info) break
         }
-        if (isDono || isSubDono) return sock.sendMessage(jid, { text: `🟣 • 𝐌𝐄𝐔 𝐕𝐈𝐏 •\n\n╭─〔 👑 𝐀𝐔𝐓𝐎𝐑𝐈𝐃𝐀𝐃𝐄 〕\n│ Você é o mestre.\n╰──────────────\n\n💠 ${isDono ? "GRANDE SÁBIO" : "LUA SUPERIOR"}\n\n"${nomeBot}"` }, { quoted: msg })
-        if (!info) return sock.sendMessage(jid, { text: `🟣 • 𝐌𝐄𝐔 𝐕𝐈𝐏 •\n\n╭─〔 🦠 𝐀𝐕𝐈𝐒𝐎 〕\n│ Você não é nobre.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
-        await sock.sendMessage(jid, { text: `🟣 • 𝐌𝐄𝐔 𝐕𝐈𝐏 •\n\n╭─〔 🔮 𝐒𝐓𝐀𝐓𝐔𝐒 〕\n│ 💠 ${info.expira === "inf" ? "INFINITO ♾️" : "Expira em " + new Date(info.expira).toLocaleString("pt-BR")}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        if (isDono || isSubDono) return sock.sendMessage(jid, { text: `❄️ • 𝐌𝐄𝐔 𝐕𝐈𝐏 •\n\n╭─〔 👑 𝐀𝐔𝐓𝐎𝐑𝐈𝐃𝐀𝐃𝐄 〕\n│ Você é o mestre.\n╰──────────────\n\n💠 ${isDono ? "IMPERADOR" : "LUA SUPERIOR"}\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!info) return sock.sendMessage(jid, { text: `❄️ • 𝐌𝐄𝐔 𝐕𝐈𝐏 •\n\n╭─〔 ⚠️ 𝐀𝐕𝐈𝐒𝐎 〕\n│ Você não é nobre.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `❄️ • 𝐌𝐄𝐔 𝐕𝐈𝐏 •\n\n╭─〔 ♦️ 𝐒𝐓𝐀𝐓𝐔𝐒 〕\n│ 💠 ${info.expira === "inf" ? "INFINITO ♾️" : "Expira em " + new Date(info.expira).toLocaleString("pt-BR")}\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
       }
     }
 
