@@ -1,5 +1,5 @@
 /* ============================================================
-   🔥 AKAZA/RIMURU BOT MD - INDEX COMPLETO E FINAL
+   🔥 RIMURU BOT MD - INDEX COMPLETO E FINAL
    ============================================================ */
 
 const {
@@ -677,7 +677,7 @@ async function iniciar() {
             try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
           } else {
             await sock.sendMessage(remetente, { 
-              text: `💧 • 𝐀𝐍𝐓𝐈-𝐋𝐈𝐍𝐊 •\n\n╭─〔 🐉 𝐈𝐍𝐓𝐄𝐑𝐂𝐄𝐏𝐓𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, links não são permitidos aqui.\n╰──────────────\n\n⚠️ 𝐀𝐯𝐢𝐬𝐨𝐬:\n╰➜ ${n}/3\n\n❄️ _"A tempestade se aproxima..."_\n\n"${db.config().nomeBot || "Rimuru Bot}"`, 
+              text: `💧 • 𝐀𝐍𝐓𝐈-𝐋𝐈𝐍𝐊 •\n\n╭─〔 🐉 𝐈𝐍𝐓𝐄𝐑𝐂𝐄𝐏𝐓𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, links não são permitidos aqui.\n╰──────────────\n\n⚠️ 𝐀𝐯𝐢𝐬𝐨𝐬:\n╰➜ ${n}/3\n\n❄️ _"A tempestade se aproxima..."_\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
               mentions: [sender] 
             })
           }
