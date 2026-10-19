@@ -1,5 +1,5 @@
 /* ============================================================
-   💧❄️🧊 MENU ADM - RIMURU BOT MD (PREFIXO DINÂMICO - FIX BAN)
+   💧❄️🧊 MENU ADM - RIMURU BOT MD (COMPLETO E CORRIGIDO)
    ============================================================ */
 
 const fs = require("fs")
