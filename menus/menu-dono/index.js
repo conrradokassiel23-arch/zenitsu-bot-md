@@ -1,5 +1,5 @@
 /* ============================================================
-   💧❄️🧊 MENU DONO - RIMURU BOT MD (PREFIXO DINÂMICO)
+   💧❄️🧊 MENU DONO - RIMURU BOT MD (PREFIXO DINÂMICO E RESTART FIX)
    ============================================================ */
 
 const fs = require("fs")
@@ -352,12 +352,17 @@ ${item(`${p}nuke / ${p}limpargp`)}
           await atualizarProgresso(95, "♻️ RECARREGANDO", "Recarregando menus...")
           try { if (global.__carregarMenus) global.__carregarMenus() } catch (e) {}
           await atualizarProgresso(100, "✅ CONCLUÍDO", "Tudo aplicado!")
-          await new Promise(r => setTimeout(r, 1200))
+          
+          await new Promise(r => setTimeout(r, 1000))
           const comandosNovos = extrairComandosDaMsg(commitMsg)
           let blocoComandos = ""
           if (comandosNovos.length) { blocoComandos = `\n\n❄️ Novos:\n`; comandosNovos.forEach(c => { blocoComandos += `🧊 ${c}\n` }) }
+          
           await sock.sendMessage(jid, { text: `💧 • 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐃𝐎 •\n\n❄️ V${versaoAtual} → *V${versaoNova}*\n\n🧊 ${commitMsg}${blocoComandos}\n\n🧊 ${cat.emoji} ${cat.tipo}\n🧊 ${formatarDataHora(commitData)}\n\n🔒 Preservado: auth/ data/ config.js\n\n♦️ Reiniciando em 3s...\n\n"${nomeBot}"`, edit: sent.key })
-          setTimeout(() => process.exit(1), 3000)
+          
+          // ✅ ESPERA 3 SEGUNDOS E FECHA PARA O PM2 REINICIAR
+          await new Promise(r => setTimeout(r, 3000))
+          process.exit(0)
         } catch (e) {
           try { if (zipPath) fs.unlinkSync(zipPath) } catch (_) {}
           try { if (extractDir) fs.rmSync(extractDir, { recursive: true, force: true }) } catch (_) {}
@@ -411,8 +416,18 @@ ${item(`${p}nuke / ${p}limpargp`)}
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         await reagir(sock, msg, "💧")
-        try { await sock.sendMessage(jid, { text: `💧 • 𝐑𝐄𝐂𝐀𝐑𝐑𝐄𝐆𝐀𝐍𝐃𝐎 •\n\n❄️ Recarregando módulos...\n🧊 Bot reinicia em 3s\n\n"${nomeBot}"` }, { quoted: msg }); try { if (global.__carregarMenus) global.__carregarMenus() } catch (_) {}; setTimeout(() => process.exit(1), 3000) }
-        catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
+        try { 
+          await sock.sendMessage(jid, { text: `💧 • 𝐑𝐄𝐂𝐀𝐑𝐑𝐄𝐆𝐀𝐍𝐃𝐎 •\n\n❄️ Recarregando módulos...\n🧊 O bot reiniciará em 3s.\n\n"${nomeBot}"` }, { quoted: msg })
+          
+          try { if (global.__carregarMenus) global.__carregarMenus() } catch (_) {}
+          
+          // ✅ ESPERA 3 SEGUNDOS ANTES DE FECHAR PARA O PM2 REINICIAR
+          await new Promise(r => setTimeout(r, 3000))
+          process.exit(0)
+        } catch (e) { 
+          await reagir(sock, msg, "🧊")
+          await sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) 
+        }
       }
     },
 
@@ -421,8 +436,16 @@ ${item(`${p}nuke / ${p}limpargp`)}
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         await reagir(sock, msg, "💧")
-        try { await sock.sendMessage(jid, { text: `💧 • 𝐑𝐄𝐈𝐍𝐈𝐂𝐈𝐀𝐍𝐃𝐎 •\n\n❄️ Reiniciando...\n🧊 Em 3s\n\n"${nomeBot}"` }, { quoted: msg }); try { if (global.__carregarMenus) global.__carregarMenus() } catch (_) {}; setTimeout(() => process.exit(1), 3000) }
-        catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
+        try { 
+          await sock.sendMessage(jid, { text: `💧 • 𝐑𝐄𝐈𝐍𝐈𝐂𝐈𝐀𝐍𝐃𝐎 •\n\n❄️ Reiniciando o servidor...\n🧊 Aguardem alguns segundos.\n\n"${nomeBot}"` }, { quoted: msg })
+          
+          // ✅ ESPERA 3 SEGUNDOS ANTES DE FECHAR PARA O PM2 REINICIAR
+          await new Promise(r => setTimeout(r, 3000))
+          process.exit(0) 
+        } catch (e) { 
+          await reagir(sock, msg, "🧊")
+          await sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) 
+        }
       }
     },
 
@@ -432,7 +455,10 @@ ${item(`${p}nuke / ${p}limpargp`)}
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: `💧 • 𝐀𝐓𝐄́ 𝐋𝐎𝐆𝐎 •\n\n❄️ Desligando...\n🧊 Até a próxima\n\n💤 _Zzzz..._\n\n"${nomeBot}"` }, { quoted: msg })
-        setTimeout(() => process.exit(2), 3000)
+        
+        // Aqui o processo é morto de verdade sem reiniciar (pm2 stop ou exit 2)
+        await new Promise(r => setTimeout(r, 3000))
+        process.exit(2)
       }
     },
 
