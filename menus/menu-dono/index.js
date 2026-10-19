@@ -1,5 +1,5 @@
 /* ============================================================
-   💧❄️🧊 MENU DONO - RIMURU BOT MD
+   💧❄️🧊 MENU DONO - RIMURU BOT MD (PREFIXO DINÂMICO)
    ============================================================ */
 
 const fs = require("fs")
@@ -59,22 +59,10 @@ function detectarCargo({ sender, config, db, groupMetadata, isDono, isSubDono, i
   const num = String(sender || "").split("@")[0].split(":")[0].replace(/\D/g, "")
   const donos = (Array.isArray(config?.dono) ? config.dono : [config?.dono]).map(n => String(n).split("@")[0].split(":")[0].replace(/\D/g, "")).filter(Boolean)
   if (isDono || donos.includes(num)) return "👑 𝐆𝐑𝐀𝐍𝐃𝐄 𝐒𝐀́𝐁𝐈𝐎"
-  try {
-    const subs = (db.config?.().subdonos || []).map(n => String(n).split("@")[0].split(":")[0].replace(/\D/g, ""))
-    if (isSubDono || subs.includes(num)) return "💠 𝐋𝐔𝐀 𝐒𝐔𝐏𝐄𝐑𝐈𝐎𝐑"
-  } catch (_) {}
-  try {
-    const vips = (db.vips?.() || {}).vips || {}
-    for (const [j, info] of Object.entries(vips)) {
-      const jn = String(j).split("@")[0].split(":")[0].replace(/\D/g, "")
-      if (jn === num && (info.expira === "inf" || info.expira > Date.now())) return "❄️ 𝐍𝐎𝐁𝐑𝐄 𝐀𝐋𝐈𝐀𝐃𝐎"
-    }
-  } catch (_) {}
+  try { const subs = (db.config?.().subdonos || []).map(n => String(n).split("@")[0].split(":")[0].replace(/\D/g, "")); if (isSubDono || subs.includes(num)) return "💠 𝐋𝐔𝐀 𝐒𝐔𝐏𝐄𝐑𝐈𝐎𝐑" } catch (_) {}
+  try { const vips = (db.vips?.() || {}).vips || {}; for (const [j, info] of Object.entries(vips)) { const jn = String(j).split("@")[0].split(":")[0].replace(/\D/g, ""); if (jn === num && (info.expira === "inf" || info.expira > Date.now())) return "❄️ 𝐍𝐎𝐁𝐑𝐄 𝐀𝐋𝐈𝐀𝐃𝐎" } } catch (_) {}
   if (isAdmin) return "⚔️ 𝐂𝐎𝐌𝐀𝐍𝐃𝐀𝐍𝐓𝐄"
-  try {
-    const subsAdm = (db.subadmins?.() || {})[groupMetadata?.id] || []
-    if (subsAdm.some(s => String(s).split("@")[0].split(":")[0].replace(/\D/g, "") === num)) return "🛡️ 𝐆𝐔𝐀𝐑𝐃𝐀 𝐑𝐄𝐀𝐋"
-  } catch (_) {}
+  try { const subsAdm = (db.subadmins?.() || {})[groupMetadata?.id] || []; if (subsAdm.some(s => String(s).split("@")[0].split(":")[0].replace(/\D/g, "") === num)) return "🛡️ 𝐆𝐔𝐀𝐑𝐃𝐀 𝐑𝐄𝐀𝐋" } catch (_) {}
   return "👤 𝐒𝐋𝐈𝐌𝐄 𝐂𝐎𝐌𝐔𝐌"
 }
 
@@ -113,7 +101,7 @@ module.exports = {
       aliases: ["dono", "comandosdono", "menud", "imperador", "grandesabio"],
       async executar({ sock, msg, prefixoAtivo, db, sender, config, isDono, isSubDono, isAdmin, groupMetadata }) {
         const jid = msg.key.remoteJid
-        const p = prefixoAtivo || "!"
+        const p = prefixoAtivo || "+"
         const cfg = db.config() || {}
         const numUser = String(sender || "").split("@")[0].split(":")[0].replace(/\D/g, "")
         const { pushName, nomeDono, cargo, nomeBot } = getCargoETexto({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin, msg })
@@ -128,7 +116,9 @@ module.exports = {
         const commitPath = path.join(DATA_DIR, "ultimo_commit.json")
         let versaoAtual = 0
         if (fs.existsSync(commitPath)) { try { const c = JSON.parse(fs.readFileSync(commitPath, "utf8")); versaoAtual = c.versao || 0 } catch (_) {} }
+        
         await reagir(sock, msg, "💧")
+        
         const texto = `${cardPerfil({ nomeBot, nomeUsuario: pushName, cargo, dono: nomeDono })}
 
 💧 *${saudacao}, mestre.*
@@ -139,41 +129,42 @@ module.exports = {
 _"O conhecimento é a verdadeira força."_
 
 ${secao("🌌 ɢᴇʀᴀʟ")}
-${item("!entrar <link> / !reload / !reiniciar")}
-${item("!botoff / !setfoto (reply)")}
-${item("!fotocmd (reply) / !nomebot <nome>")}
-${item("!teste (reply) / !sora <desc>")}
-${item("!testa @user / !googlevoz <txt>")}
-${item("!get <cmd> (reply)")}
+${item(`${p}entrar <link> / ${p}reload / ${p}reiniciar`)}
+${item(`${p}botoff / ${p}setfoto (reply)`)}
+${item(`${p}fotocmd (reply) / ${p}nomebot <nome>`)}
+${item(`${p}teste (reply) / ${p}sora <desc>`)}
+${item(`${p}testa @user / ${p}googlevoz <txt>`)}
+${item(`${p}get <cmd> (reply)`)}
 
 ${secao("⚙️ sɪsᴛᴇᴍᴀ")}
-${item("!atualizar / !changelog / !dono")}
+${item(`${p}atualizar / ${p}changelog / ${p}dono`)}
 
 ${secao("💜 ᴠɪᴘ")}
-${item("!addvip @user <tempo>")}
-${item("!delvip @user / !listavip")}
+${item(`${p}addvip @user <tempo>`)}
+${item(`${p}delvip @user / ${p}listavip`)}
 
 ${secao("👑 ʟᴜᴀs sᴜᴘᴇʀɪᴏʀᴇs")}
-${item("!addsubdono / !delsubdono / !listasubdono")}
+${item(`${p}addsubdono / ${p}delsubdono / ${p}listasubdono`)}
 
 ${secao("💰 ᴀʟᴜɢᴜᴇʟ")}
-${item("!aluguel on/off")}
-${item("!addaluguel <tempo>")}
-${item("!listaaluguel / !delaluguel")}
+${item(`${p}aluguel on/off`)}
+${item(`${p}addaluguel <tempo>`)}
+${item(`${p}listaaluguel / ${p}delaluguel`)}
 
 ${secao("⚙️ ᴀᴊᴜsᴛᴇs")}
-${item("!prefixoglobal <s>")}
-${item("!slow on/off")}
+${item(`${p}prefixoglobal <s>`)}
+${item(`${p}slow on/off`)}
 
 ${secao("🚫 ʙᴀɴɪᴍᴇɴᴛᴏ")}
-${item("!banirgp / !desbanirgp / !listabangp")}
+${item(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
 
 ${secao("💥 ᴘᴜɴɪᴄ̧ᴀ̃ᴏ")}
-${item("!nuke / !limpargp")}
+${item(`${p}nuke / ${p}limpargp`)}
 
 💧 Prefixo: \`${p}\`
 
 "${nomeBot}"`
+
         if (cfg.fotoMenu) {
           const buf = Buffer.from(cfg.fotoMenu, "base64")
           try {
@@ -187,11 +178,11 @@ ${item("!nuke / !limpargp")}
 
     teste: {
       aliases: ["json", "debugmsg", "verbot"],
-      async executar({ sock, msg, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const ctx = (msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo) || (msg.message && msg.message.imageMessage && msg.message.imageMessage.contextInfo) || (msg.message && msg.message.videoMessage && msg.message.videoMessage.contextInfo) || (msg.message && msg.message.stickerMessage && msg.message.stickerMessage.contextInfo) || {}
         const quoted = ctx.quotedMessage
-        if (!quoted) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐓𝐄𝐒𝐓𝐄 •\n\n❄️ Responda uma mensagem.\n🧊 Use \`!teste\` reply\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!quoted) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐓𝐄𝐒𝐓𝐄 •\n\n❄️ Responda uma mensagem.\n🧊 Use \`${p}teste\` reply\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         const info = { key: { remoteJid: jid, fromMe: false, id: ctx.stanzaId || "", participant: ctx.participant || "" }, messageTimestamp: msg.messageTimestamp, pushName: msg.pushName || "", broadcast: false, message: quoted }
         const jsonStr = JSON.stringify(info, null, 3)
@@ -204,9 +195,9 @@ ${item("!nuke / !limpargp")}
 
     testa: {
       aliases: ["fakereply", "forcarmsg"],
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvo = utils.getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐓𝐄𝐒𝐓𝐀 •\n\n❄️ Marque alguém e responda o anúncio.\n🧊 \`!testa @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+      async executar({ sock, msg, db, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const alvo = utils.getAlvo(msg)
+        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐓𝐄𝐒𝐓𝐀 •\n\n❄️ Marque alguém e responda o anúncio.\n🧊 \`${p}testa @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
         const quoted = ctx.quotedMessage
@@ -219,12 +210,12 @@ ${item("!nuke / !limpargp")}
 
     get: {
       aliases: ["pegar", "getcase", "copiar"],
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         let nomeComando = args[0] ? args[0].toLowerCase().replace(/[^a-z0-9]/g, "") : ""
         const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
         const quoted = ctx.quotedMessage
-        if (!quoted) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐆𝐄𝐓 •\n\n❄️ Responda a mensagem do outro bot.\n🧊 \`!get <nome>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!quoted) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐆𝐄𝐓 •\n\n❄️ Responda a mensagem do outro bot.\n🧊 \`${p}get <nome>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         const textoResposta = quoted.conversation || (quoted.extendedTextMessage && quoted.extendedTextMessage.text) || (quoted.imageMessage && quoted.imageMessage.caption) || (quoted.videoMessage && quoted.videoMessage.caption) || ""
         if (!textoResposta) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐆𝐄𝐓 •\n\n❄️ A msg respondida não tem texto.\n\n"${nomeBot}"` }, { quoted: msg }) }
         if (!nomeComando) { const primeiraPalavra = textoResposta.trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, ""); nomeComando = primeiraPalavra || "comando_novo" }
@@ -237,9 +228,9 @@ ${item("!nuke / !limpargp")}
 
     googlevoz: {
       aliases: ["tts", "falar", "googlevoice"],
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const textoFinal = args.join(" ").trim()
-        if (!textoFinal) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐆𝐎𝐎𝐆𝐋𝐄 𝐕𝐎𝐙 •\n\n❄️ Digite o texto.\n🧊 \`!googlevoz <texto>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const textoFinal = args.join(" ").trim()
+        if (!textoFinal) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐆𝐎𝐎𝐆𝐋𝐄 𝐕𝐎𝐙 •\n\n❄️ Digite o texto.\n🧊 \`${p}googlevoz <texto>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         try {
           await sock.sendMessage(jid, { text: `💧 Gerando voz pra: "${textoFinal}"...` }, { quoted: msg })
@@ -263,9 +254,9 @@ ${item("!nuke / !limpargp")}
 
     sora: {
       aliases: ["gerarvideo", "iavideo"],
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const prompt = args.join(" ").trim()
-        if (!prompt) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎𝐑𝐀 •\n\n❄️ Informe a descrição.\n🧊 \`!sora <desc>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const prompt = args.join(" ").trim()
+        if (!prompt) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎𝐑𝐀 •\n\n❄️ Informe a descrição.\n🧊 \`${p}sora <desc>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: `💧 • 𝐒𝐎𝐑𝐀 •\n\n❄️ Gerando vídeo...\n🧊 Pode levar 2min\n\n"${nomeBot}"` }, { quoted: msg })
         try {
@@ -286,7 +277,7 @@ ${item("!nuke / !limpargp")}
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         const donoArr = Array.isArray(config && config.dono) ? config.dono : [config && config.dono || ""]
         const numerosDono = donoArr.map(n => utils.soNumero(n)).filter(Boolean)
-        const prefixo = (config && config.prefixo) || "!"
+        const prefixo = (config && config.prefixo) || "+"
         const agora = new Date()
         const hora = agora.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })
         const data = agora.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
@@ -364,7 +355,7 @@ ${item("!nuke / !limpargp")}
           await new Promise(r => setTimeout(r, 1200))
           const comandosNovos = extrairComandosDaMsg(commitMsg)
           let blocoComandos = ""
-          if (comandosNovos.length) { blocoComandos = `\n\n❄️ Novos:\n`; comandosNovos.forEach(c => { blocoComandos += `🧊 !${c}\n` }) }
+          if (comandosNovos.length) { blocoComandos = `\n\n❄️ Novos:\n`; comandosNovos.forEach(c => { blocoComandos += `🧊 ${c}\n` }) }
           await sock.sendMessage(jid, { text: `💧 • 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐃𝐎 •\n\n❄️ V${versaoAtual} → *V${versaoNova}*\n\n🧊 ${commitMsg}${blocoComandos}\n\n🧊 ${cat.emoji} ${cat.tipo}\n🧊 ${formatarDataHora(commitData)}\n\n🔒 Preservado: auth/ data/ config.js\n\n♦️ Reiniciando em 3s...\n\n"${nomeBot}"`, edit: sent.key })
           setTimeout(() => process.exit(1), 3000)
         } catch (e) {
@@ -405,9 +396,9 @@ ${item("!nuke / !limpargp")}
 
     nomebot: {
       aliases: ["setnomebot", "nomedobot"],
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const novoNome = args.join(" ").trim()
-        if (!novoNome) { const cfg = db.config(); await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐍𝐎𝐌𝐄 •\n\n❄️ Atual: ${cfg.nomeBot || "Rimuru"}\n🧊 \`!nomebot <nome>\` (máx 20)\n\n"${nomeBot}"` }, { quoted: msg }) }
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const novoNome = args.join(" ").trim()
+        if (!novoNome) { const cfg = db.config(); await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐍𝐎𝐌𝐄 •\n\n❄️ Atual: ${cfg.nomeBot || "Rimuru"}\n🧊 \`${p}nomebot <nome>\` (máx 20)\n\n"${nomeBot}"` }, { quoted: msg }) }
         if (novoNome.length > 20) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐍𝐎𝐌𝐄 𝐋𝐎𝐍𝐆𝐎 •\n\n❄️ Máx 20 caracteres.\n\n"${nomeBot}"` }, { quoted: msg }) }
         const cfg = db.config(); cfg.nomeBot = novoNome; db.salvarConfig(cfg)
         await reagir(sock, msg, "💧")
@@ -447,9 +438,9 @@ ${item("!nuke / !limpargp")}
 
     entrar: {
       aliases: ["entrargp", "join", "joinlink"],
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const link = args[0]
-        if (!link) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐄𝐍𝐓𝐑𝐀𝐑 •\n\n❄️ Informe o link.\n🧊 \`!entrar <link>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const link = args[0]
+        if (!link) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐄𝐍𝐓𝐑𝐀𝐑 •\n\n❄️ Informe o link.\n🧊 \`${p}entrar <link>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         const match = link.match(/chat\.whatsapp\.com\/([A-Za-z0-9]+)/)
         if (!match) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐋𝐈𝐍𝐊 𝐈𝐍𝐕𝐀́𝐋𝐈𝐃𝐎 •\n\n❄️ Não é link de grupo.\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
@@ -460,15 +451,15 @@ ${item("!nuke / !limpargp")}
 
     setfoto: {
       aliases: ["fotomenu", "videomenu"],
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, db, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}
         const quoted = ctx.quotedMessage
         let temImg = (msg.message && msg.message.imageMessage) || (quoted && quoted.imageMessage)
         let temVid = (msg.message && msg.message.videoMessage) || (quoted && quoted.videoMessage)
         if (quoted && quoted.viewOnceMessage) { temImg = temImg || quoted.viewOnceMessage.message?.imageMessage; temVid = temVid || quoted.viewOnceMessage.message?.videoMessage }
         if (quoted && quoted.viewOnceMessageV2) { temImg = temImg || quoted.viewOnceMessageV2.message?.imageMessage; temVid = temVid || quoted.viewOnceMessageV2.message?.videoMessage }
-        if (!temImg && !temVid) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐄𝐓𝐅𝐎𝐓𝐎 •\n\n❄️ Envie/responda imagem/vídeo.\n🧊 \`!setfoto\` (reply)\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!temImg && !temVid) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐄𝐓𝐅𝐎𝐓𝐎 •\n\n❄️ Envie/responda imagem/vídeo.\n🧊 \`${p}setfoto\` (reply)\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         try {
           const cfg = db.config()
@@ -495,15 +486,15 @@ ${item("!nuke / !limpargp")}
 
     fotocmd: {
       aliases: ["fotocomando", "fotonaoencontrado", "setfotocmd"],
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, db, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const ctx = (msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo) || {}
         const quoted = ctx.quotedMessage
         let temImg = (msg.message && msg.message.imageMessage) || (quoted && quoted.imageMessage)
         let temVid = (msg.message && msg.message.videoMessage) || (quoted && quoted.videoMessage)
         if (quoted && quoted.viewOnceMessage) { temImg = temImg || quoted.viewOnceMessage.message?.imageMessage; temVid = temVid || quoted.viewOnceMessage.message?.videoMessage }
         if (quoted && quoted.viewOnceMessageV2) { temImg = temImg || quoted.viewOnceMessageV2.message?.imageMessage; temVid = temVid || quoted.viewOnceMessageV2.message?.videoMessage }
-        if (!temImg && !temVid) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐅𝐎𝐓𝐎𝐂𝐌𝐃 •\n\n❄️ Envie/responda imagem/vídeo.\n🧊 \`!fotocmd\` (reply)\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!temImg && !temVid) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐅𝐎𝐓𝐎𝐂𝐌𝐃 •\n\n❄️ Envie/responda imagem/vídeo.\n🧊 \`${p}fotocmd\` (reply)\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "💧")
         try {
           const cfg = db.config()
@@ -530,9 +521,9 @@ ${item("!nuke / !limpargp")}
 
     addvip: {
       aliases: ["darvip", "setvip"],
-      async executar({ sock, msg, args, db, utils }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvo = utils.getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐃𝐃𝐕𝐈𝐏 •\n\n❄️ Marque o novo nobre.\n🧊 \`!addvip @user <tempo>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+      async executar({ sock, msg, args, db, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const alvo = utils.getAlvo(msg)
+        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐃𝐃𝐕𝐈𝐏 •\n\n❄️ Marque o novo nobre.\n🧊 \`${p}addvip @user <tempo>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         const tempo = (args.find(a => /^(inf|\d+[dhm])$/i.test(a)) || "").toLowerCase()
         if (!tempo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐃𝐃𝐕𝐈𝐏 •\n\n❄️ Informe o tempo.\n🧊 1d / 7d / 30d / inf\n\n"${nomeBot}"` }, { quoted: msg }) }
         let expira = "inf"
@@ -546,9 +537,9 @@ ${item("!nuke / !limpargp")}
 
     delvip: {
       aliases: ["rmvip", "removervip"],
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvo = utils.getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐃𝐄𝐋𝐕𝐈𝐏 •\n\n❄️ Marque o usuário.\n🧊 \`!delvip @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+      async executar({ sock, msg, db, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const alvo = utils.getAlvo(msg)
+        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐃𝐄𝐋𝐕𝐈𝐏 •\n\n❄️ Marque o usuário.\n🧊 \`${p}delvip @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         const v = db.vips()
         if (!v.vips || !v.vips[alvo]) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐍𝐀̃𝐎 𝐄́ 𝐕𝐈𝐏 •\n\n❄️ Meus olhos não erram.\n🧊 @${utils.soNumero(alvo)}\n\n"${nomeBot}"`, mentions: [alvo] }, { quoted: msg }) }
         delete v.vips[alvo]; db.salvarVips(v)
@@ -572,9 +563,9 @@ ${item("!nuke / !limpargp")}
 
     addsubdono: {
       aliases: ["addsub", "darsub"],
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvo = utils.getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐃𝐃𝐒𝐔𝐁 •\n\n❄️ Marque o usuário.\n🧊 \`!addsubdono @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+      async executar({ sock, msg, db, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const alvo = utils.getAlvo(msg)
+        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐃𝐃𝐒𝐔𝐁 •\n\n❄️ Marque o usuário.\n🧊 \`${p}addsubdono @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         const cfg = db.config(); cfg.subdonos = cfg.subdonos || []; const num = utils.soNumero(alvo)
         if (cfg.subdonos.some(s => utils.soNumero(s) === num)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐉𝐀́ 𝐄́ •\n\n❄️ Já é Lua Superior.\n🧊 @${num}\n\n"${nomeBot}"`, mentions: [alvo] }, { quoted: msg }) }
         cfg.subdonos.push(alvo); db.salvarConfig(cfg)
@@ -585,9 +576,9 @@ ${item("!nuke / !limpargp")}
 
     delsubdono: {
       aliases: ["delsub", "rmsub", "rmsubdono"],
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvo = utils.getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐃𝐄𝐋𝐒𝐔𝐁 •\n\n❄️ Marque o usuário.\n🧊 \`!delsubdono @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+      async executar({ sock, msg, db, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const alvo = utils.getAlvo(msg)
+        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐃𝐄𝐋𝐒𝐔𝐁 •\n\n❄️ Marque o usuário.\n🧊 \`${p}delsubdono @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         const cfg = db.config(); const num = utils.soNumero(alvo)
         cfg.subdonos = (cfg.subdonos || []).filter(s => utils.soNumero(s) !== num); db.salvarConfig(cfg)
         await reagir(sock, msg, "💧")
@@ -610,20 +601,20 @@ ${item("!nuke / !limpargp")}
 
     prefixoglobal: {
       aliases: ["setprefixoglobal"],
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = args[0]
-        if (!p || p.length > 3) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 •\n\n❄️ Prefixo curto, pf.\n🧊 \`!prefixoglobal <s>\` (máx 3)\n\n"${nomeBot}"` }, { quoted: msg }) }
-        const cfg = db.config(); cfg.prefixoGlobal = p; db.salvarConfig(cfg)
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const novo = args[0]
+        if (!novo || novo.length > 3) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 •\n\n❄️ Prefixo curto, pf.\n🧊 \`${p}prefixoglobal <s>\` (máx 3)\n\n"${nomeBot}"` }, { quoted: msg }) }
+        const cfg = db.config(); cfg.prefixoGlobal = novo; db.salvarConfig(cfg)
         await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 •\n\n❄️ Alterado\n🧊 \`${p}\`\n\n"${nomeBot}"` }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `💧 • 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 •\n\n❄️ Alterado\n🧊 \`${novo}\`\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
     slow: {
       aliases: ["modolento"],
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐋𝐎𝐖 •\n\n❄️ Use on/off.\n🧊 \`!slow on/off\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const opcao = (args[0] || "").toLowerCase()
+        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐋𝐎𝐖 •\n\n❄️ Use on/off.\n🧊 \`${p}slow on/off\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         const cfg = db.config(); cfg.slow = opcao === "on"; db.salvarConfig(cfg)
         await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: `💧 • 𝐌𝐎𝐃𝐎 𝐋𝐄𝐍𝐓𝐎 •\n\n❄️ ${opcao.toUpperCase()}\n\n"${nomeBot}"` }, { quoted: msg })
@@ -632,9 +623,9 @@ ${item("!nuke / !limpargp")}
 
     aluguel: {
       aliases: ["modoaluguel", "sistaluguel"],
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const opcao = (args[0] || "").toLowerCase(); const a = db.aluguel()
-        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n❄️ Status: ${a.ativo ? "ON ✅" : "OFF ❌"}\n🧊 \`!aluguel on/off\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const opcao = (args[0] || "").toLowerCase(); const a = db.aluguel()
+        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n❄️ Status: ${a.ativo ? "ON ✅" : "OFF ❌"}\n🧊 \`${p}aluguel on/off\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         a.ativo = opcao === "on"; db.salvarAluguel(a)
         await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: `💧 • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n❄️ ${opcao.toUpperCase()}\n\n"${nomeBot}"` }, { quoted: msg })
@@ -643,11 +634,11 @@ ${item("!nuke / !limpargp")}
 
     addaluguel: {
       aliases: ["davaluguel", "setaluguel"], grupoOnly: true,
-      async executar({ sock, msg, args, db, utils }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const tempoStr = args.join(" ").trim().toLowerCase()
-        if (!tempoStr) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐃𝐃𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n❄️ Informe o tempo.\n🧊 1dia, 30min, 1mes...\n\n"${nomeBot}"` }, { quoted: msg }) }
+      async executar({ sock, msg, args, db, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const tempoStr = args.join(" ").trim().toLowerCase()
+        if (!tempoStr) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐃𝐃𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n❄️ Informe o tempo.\n🧊 1dia, 30min, 1mes...\n🧊 \`${p}addaluguel <tempo>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         const partes = tempoStr.split(/\s+/); let totalMs = 0
-        for (const p of partes) { const m = p.match(/^(\d+)(min|h|dia|d|sem|mes|ano)$/); if (!m) continue; const v = parseInt(m[1]); const u = m[2]; let ms = 0; if (u === "min") ms = v * 60 * 1000; else if (u === "h") ms = v * 60 * 60 * 1000; else if (u === "d" || u === "dia") ms = v * 24 * 60 * 60 * 1000; else if (u === "sem") ms = v * 7 * 24 * 60 * 60 * 1000; else if (u === "mes") ms = v * 30 * 24 * 60 * 60 * 1000; else if (u === "ano") ms = v * 365 * 24 * 60 * 60 * 1000; totalMs += ms }
+        for (const part of partes) { const m = part.match(/^(\d+)(min|h|dia|d|sem|mes|ano)$/); if (!m) continue; const v = parseInt(m[1]); const u = m[2]; let ms = 0; if (u === "min") ms = v * 60 * 1000; else if (u === "h") ms = v * 60 * 60 * 1000; else if (u === "d" || u === "dia") ms = v * 24 * 60 * 60 * 1000; else if (u === "sem") ms = v * 7 * 24 * 60 * 60 * 1000; else if (u === "mes") ms = v * 30 * 24 * 60 * 60 * 1000; else if (u === "ano") ms = v * 365 * 24 * 60 * 60 * 1000; totalMs += ms }
         if (totalMs <= 0) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ Formato inválido.\n\n"${nomeBot}"` }, { quoted: msg }) }
         const a = db.aluguel(); a.grupos = a.grupos || {}; const agora = Date.now(); const atual = (a.grupos[jid] > agora) ? a.grupos[jid] : agora
         a.grupos[jid] = atual + totalMs; if (!a.ativo) a.ativo = true; db.salvarAluguel(a)
@@ -672,15 +663,15 @@ ${item("!nuke / !limpargp")}
 
     delaluguel: {
       aliases: ["rmaluguel", "removeraluguel"],
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const a = db.aluguel(); a.grupos = a.grupos || {}
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const a = db.aluguel(); a.grupos = a.grupos || {}
         if (!args.length && jid.endsWith("@g.us")) {
           if (!a.grupos[jid]) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐄𝐌 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n❄️ Vazio.\n\n"${nomeBot}"` }, { quoted: msg }) }
           delete a.grupos[jid]; db.salvarAluguel(a); await reagir(sock, msg, "💧")
           return sock.sendMessage(jid, { text: `💧 • 𝐋𝐈𝐁𝐄𝐑𝐓𝐀𝐃𝐎 •\n\n❄️ Aluguel removido.\n\n"${nomeBot}"` }, { quoted: msg })
         }
         await reagir(sock, msg, "❄️")
-        await sock.sendMessage(jid, { text: `💧 • 𝐃𝐄𝐋𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n❄️ Use em grupo: \`!delaluguel\`\n\n"${nomeBot}"` }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `💧 • 𝐃𝐄𝐋𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n❄️ Use em grupo: \`${p}delaluguel\`\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
