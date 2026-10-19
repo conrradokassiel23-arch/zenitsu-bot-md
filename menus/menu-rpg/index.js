@@ -1,5 +1,5 @@
 /* ============================================================
-   💧❄️🧊 MENU RPG - RIMURU BOT MD
+   💧❄️🧊 MENU RPG - RIMURU BOT MD (PREFIXO DINÂMICO)
    ============================================================ */
 
 const fs = require("fs")
@@ -200,36 +200,36 @@ module.exports = {
       aliases: ["comandosrpg", "menur"],
       async executar({ sock, msg, prefixoAtivo, db, sender, config, isDono, isSubDono, isAdmin, groupMetadata }) {
         const jid = msg.key.remoteJid
-        const p = prefixoAtivo || "!"
+        const p = prefixoAtivo || "+"
         const cfg = db.config()
         const { pushName, nomeDono, cargo, nomeBot } = getCargoETexto({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin, msg })
         await reagir(sock, msg, "💧")
         const texto = `${cardPerfil({ nomeBot, nomeUsuario: pushName, cargo, dono: nomeDono })}
 
 ${secao("💰 ᴇᴄᴏɴᴏᴍɪᴀ")}
-${item("!daily / !trabalhar")}
-${item("!cassino <valor>")}
-${item("!crime / !roubar @user")}
+${item(`${p}daily / ${p}trabalhar`)}
+${item(`${p}cassino <valor>`)}
+${item(`${p}crime / ${p}roubar @user`)}
 
 ${secao("⛏️ ғᴇʀʀᴀᴍᴇɴᴛᴀs")}
-${item("!comprarpicareta / !minerar")}
-${item("!comprarvara / !pescar")}
+${item(`${p}comprarpicareta / ${p}minerar`)}
+${item(`${p}comprarvara / ${p}pescar`)}
 
 ${secao("🗺️ ᴇxᴘʟᴏʀᴀᴄ̧ᴀ̃ᴏ (Nv.3+)")}
-${item("!explorar")}
+${item(`${p}explorar`)}
 
 ${secao("🐾 ᴘᴇᴛs")}
-${item("!lojapet / !comprarpet <nome>")}
-${item("!meupet / !alimentarpet / !curarpet")}
-${item("!batalhapet @user")}
-${item("!corridapet @user")}
-${item("!venderpet / !doarpet")}
+${item(`${p}lojapet / ${p}comprarpet <nome>`)}
+${item(`${p}meupet / ${p}alimentarpet / ${p}curarpet`)}
+${item(`${p}batalhapet @user`)}
+${item(`${p}corridapet @user`)}
+${item(`${p}venderpet / ${p}doarpet`)}
 
 ${secao("👤 ᴘᴇʀғɪʟ")}
-${item("!perfil / !rank")}
+${item(`${p}perfil / ${p}rank`)}
 
 ${secao("💤 ᴀғᴋ")}
-${item("!afk <motivo>")}
+${item(`${p}afk <motivo>`)}
 
 💧 Prefixo: \`${p}\`
 
@@ -241,12 +241,12 @@ ${item("!afk <motivo>")}
 
     rpg: {
       aliases: ["rpgativo", "ativarrpg", "rpgonoff"], adminOnly: true, grupoOnly: true,
-      async executar({ sock, msg, args, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const opcao = (args[0] || "").toLowerCase()
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const opcao = (args[0] || "").toLowerCase()
         if (!["on", "off"].includes(opcao)) {
           const g = db.grupos(); const ativo = g[jid]?.rpgAtivo === true
           await reagir(sock, msg, "❄️")
-          return sock.sendMessage(jid, { text: `💧 • 𝐑𝐏𝐆 •\n\n❄️ Status: ${ativo ? "ON ✅" : "OFF ❌"}\n🧊 \`!rpg on/off\`\n\n"${nomeBot}"` }, { quoted: msg })
+          return sock.sendMessage(jid, { text: `💧 • 𝐑𝐏𝐆 •\n\n❄️ Status: ${ativo ? "ON ✅" : "OFF ❌"}\n🧊 \`${p}rpg on/off\`\n\n"${nomeBot}"` }, { quoted: msg })
         }
         const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].rpgAtivo = opcao === "on"; db.salvarGrupos(g)
         await reagir(sock, msg, "💧")
@@ -284,12 +284,12 @@ ${item("!afk <motivo>")}
       await sock.sendMessage(jid, { text: `💧 • 𝐓𝐑𝐀𝐁𝐀𝐋𝐇𝐎 •\n\n❄️ ${trabalho}\n🧊 +${fmt(salario)} gold${bonus}\n🧊 +15 XP${subiu ? `\n🧊 ⬆️ Subiu ${subiu} nível!` : ""}\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
     }},
 
-    cassino: { aliases: ["bet", "apostar"], async executar({ sock, msg, args, db, utils, sender }) {
-      const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+    cassino: { aliases: ["bet", "apostar"], async executar({ sock, msg, args, db, utils, sender, prefixoAtivo }) {
+      const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { r, u } = getRpg(num)
       const valor = Math.floor(parseInt(args[0]) || 0)
-      if (!valor || valor <= 0) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐀𝐒𝐒𝐈𝐍𝐎 •\n\n❄️ Informe o valor.\n🧊 \`!cassino <valor>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+      if (!valor || valor <= 0) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐀𝐒𝐒𝐈𝐍𝐎 •\n\n❄️ Informe o valor.\n🧊 \`${p}cassino <valor>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
       if (valor > u.moedas) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐀𝐒𝐒𝐈𝐍𝐎 •\n\n❄️ Você só tem ${fmt(u.moedas)} gold.\n\n"${nomeBot}"` }, { quoted: msg }) }
       await reagir(sock, msg, "💧")
       const ganhou = Math.random() < 0.48; const emoji = ["🎰", "🎲", "🃏"][Math.floor(Math.random() * 3)]
@@ -297,9 +297,9 @@ ${item("!afk <motivo>")}
       else { u.moedas = sanearNum(u.moedas - valor); salvarRpg(r); await sock.sendMessage(jid, { text: `${emoji} • 𝐏𝐄𝐑𝐃𝐄𝐔 •\n\n❄️ A sorte não estava do seu lado.\n🧊 -${fmt(valor)}\n🧊 Total: ${fmt(u.moedas)}\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg }) }
     }},
 
-    roubar: { aliases: ["assaltar", "roub4r"], async executar({ sock, msg, db, utils, sender }) {
-      const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvo = utils.getAlvo(msg)
-      if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐑𝐎𝐔𝐁𝐀𝐑 •\n\n❄️ Marque um usuário.\n🧊 \`!roubar @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+    roubar: { aliases: ["assaltar", "roub4r"], async executar({ sock, msg, db, utils, sender, prefixoAtivo }) {
+      const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const alvo = utils.getAlvo(msg)
+      if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐑𝐎𝐔𝐁𝐀𝐑 •\n\n❄️ Marque um usuário.\n🧊 \`${p}roubar @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
       const numReal = await resolverNumero(sock, jid, sender); const numAlvoReal = await resolverNumero(sock, jid, alvo)
       if (!numReal || !numAlvoReal) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐑𝐎𝐔𝐁𝐀𝐑 •\n\n❄️ Não identifiquei.\n\n"${nomeBot}"` }, { quoted: msg }) }
       if (numAlvoReal === numReal) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐑𝐎𝐔𝐁𝐀𝐑 •\n\n❄️ Não pode roubar você mesmo.\n\n"${nomeBot}"` }, { quoted: msg }) }
@@ -382,8 +382,8 @@ ${item("!afk <motivo>")}
       await sock.sendMessage(jid, { text: `💧 • 𝐏𝐄𝐒𝐂𝐀𝐑𝐈𝐀 •\n\n❄️ Peixe fisgado\n🧊 ${peixe.emoji} ${peixe.nome}\n🧊 +${fmt(valor)} gold${bonus}\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
     }},
 
-    lojapet: { aliases: ["petshop", "lojapets"], async executar({ sock, msg, db, utils, sender, isDono, isSubDono }) {
-      const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+    lojapet: { aliases: ["petshop", "lojapets"], async executar({ sock, msg, db, utils, sender, isDono, isSubDono, prefixoAtivo }) {
+      const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { u } = getRpg(num)
       const temUrso = u.pet === "ursoPolar"; const ehVipUser = ehVip(db, sender, isDono, isSubDono)
@@ -392,17 +392,17 @@ ${item("!afk <motivo>")}
       for (const pet of PETS) { const preco = precoComDesconto(pet.preco, temUrso && pet.id !== "unicornio"); const tag = pet.vip ? " ❄️VIP" : ""; txt += `🧊 ${pet.emoji} ${pet.nome}${tag}\n🧊 💰 ${fmt(preco)} gold\n🧊 ${pet.buff}\n\n` }
       if (temUrso) txt += "🐻‍❄️ Urso Polar: -15% em todos!\n"
       if (ehVipUser) txt += "❄️ Você é VIP!\n"
-      txt += `\n🧊 \`!comprarpet <nome>\`\n\n"${nomeBot}"`
+      txt += `\n🧊 \`${p}comprarpet <nome>\`\n\n"${nomeBot}"`
       await sock.sendMessage(jid, { text: txt }, { quoted: msg })
     }},
 
-    comprarpet: { aliases: ["buypet", "adotarpet"], async executar({ sock, msg, args, db, utils, sender, isDono, isSubDono }) {
-      const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+    comprarpet: { aliases: ["buypet", "adotarpet"], async executar({ sock, msg, args, db, utils, sender, isDono, isSubDono, prefixoAtivo }) {
+      const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const { r, u } = getRpg(num)
       if (u.pet) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐄𝐓 •\n\n❄️ Você já tem pet.\n\n"${nomeBot}"` }, { quoted: msg }) }
       const pet = acharPet(args.join(" "))
-      if (!pet) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐄𝐓 •\n\n❄️ Pet não encontrado.\n🧊 Veja !lojapet\n\n"${nomeBot}"` }, { quoted: msg }) }
+      if (!pet) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐄𝐓 •\n\n❄️ Pet não encontrado.\n🧊 Veja \`${p}lojapet\`\n\n"${nomeBot}"` }, { quoted: msg }) }
       if (pet.vip && !ehVip(db, sender, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐄𝐓 •\n\n❄️ ${pet.nome} é VIP.\n\n"${nomeBot}"` }, { quoted: msg }) }
       const preco = precoComDesconto(pet.preco, u.pet === "ursoPolar" && pet.id !== "unicornio")
       if (u.moedas < preco) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐄𝐓 •\n\n❄️ Faltam ${fmt(preco - u.moedas)} gold.\n\n"${nomeBot}"` }, { quoted: msg }) }
@@ -465,9 +465,9 @@ ${item("!afk <motivo>")}
       await sock.sendMessage(jid, { text: `💧 • 𝐏𝐄𝐓 𝐕𝐄𝐍𝐃𝐈𝐃𝐎 •\n\n❄️ ${pet.emoji} ${pet.nome}\n🧊 +${fmt(valor)} gold\n\n"${nomeBot}"`, mentions: [mJid(num)] }, { quoted: msg })
     }},
 
-    doarpet: { aliases: ["givepet", "presentepet"], async executar({ sock, msg, args, db, utils, sender }) {
-      const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvo = utils.getAlvo(msg)
-      if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐃𝐎𝐀𝐑 •\n\n❄️ Marque um usuário.\n🧊 \`!doarpet @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+    doarpet: { aliases: ["givepet", "presentepet"], async executar({ sock, msg, args, db, utils, sender, prefixoAtivo }) {
+      const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const alvo = utils.getAlvo(msg)
+      if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐃𝐎𝐀𝐑 •\n\n❄️ Marque um usuário.\n🧊 \`${p}doarpet @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
       const numReal = await resolverNumero(sock, jid, sender); const numAlvoReal = await resolverNumero(sock, jid, alvo)
       if (!numReal || !numAlvoReal) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐃𝐎𝐀𝐑 •\n\n❄️ Não identifiquei.\n\n"${nomeBot}"` }, { quoted: msg }) }
       if (numAlvoReal === numReal) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐃𝐎𝐀𝐑 •\n\n❄️ Não pode doar pra você.\n\n"${nomeBot}"` }, { quoted: msg }) }
@@ -482,9 +482,9 @@ ${item("!afk <motivo>")}
       await sock.sendMessage(jid, { text: `💧 • 𝐏𝐄𝐓 𝐃𝐎𝐀𝐃𝐎 •\n\n❄️ ${pet.emoji} ${pet.nome}\n🧊 De: @${numReal}\n🧊 Para: @${numAlvoReal}\n\n"${nomeBot}"`, mentions: [mJid(numReal), mJid(numAlvoReal)] }, { quoted: msg })
     }},
 
-    batalhapet: { aliases: ["batalhar", "petbatalha"], async executar({ sock, msg, db, utils, sender }) {
-      const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvo = utils.getAlvo(msg)
-      if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐁𝐀𝐓𝐀𝐋𝐇𝐀 •\n\n❄️ Marque um usuário.\n\n"${nomeBot}"` }, { quoted: msg }) }
+    batalhapet: { aliases: ["batalhar", "petbatalha"], async executar({ sock, msg, db, utils, sender, prefixoAtivo }) {
+      const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const alvo = utils.getAlvo(msg)
+      if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐁𝐀𝐓𝐀𝐋𝐇𝐀 •\n\n❄️ Marque um usuário.\n🧊 \`${p}batalhapet @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
       const numReal = await resolverNumero(sock, jid, sender); const numAlvoReal = await resolverNumero(sock, jid, alvo)
       if (!numReal || !numAlvoReal) { await reagir(sock, msg, "🧊"); return }
       if (numAlvoReal === numReal) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐁𝐀𝐓𝐀𝐋𝐇𝐀 •\n\n❄️ Não pode batalhar consigo.\n\n"${nomeBot}"` }, { quoted: msg }) }
@@ -501,9 +501,9 @@ ${item("!afk <motivo>")}
       else { const dano = Math.floor(u.petVidaMax * 0.3); u.petVida = Math.max(0, u.petVida - dano); uAlvo.moedas = sanearNum(uAlvo.moedas + premio); ganharXp(uAlvo, 20); salvarRpg(r); salvarRpg(rAlvo); await sock.sendMessage(jid, { text: `💧 • 𝐁𝐀𝐓𝐀𝐋𝐇𝐀 •\n\n❄️ ${pet1.emoji} @${numReal} VS ${pet2.emoji} @${numAlvoReal}\n🧊 Vencedor: @${numAlvoReal}\n🧊 +${premio} gold\n\n"${nomeBot}"`, mentions: [mJid(numReal), mJid(numAlvoReal)] }, { quoted: msg }) }
     }},
 
-    corridapet: { aliases: ["corrida", "racepet"], async executar({ sock, msg, db, utils, sender }) {
-      const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvo = utils.getAlvo(msg)
-      if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐎𝐑𝐑𝐈𝐃𝐀 •\n\n❄️ Marque um usuário.\n\n"${nomeBot}"` }, { quoted: msg }) }
+    corridapet: { aliases: ["corrida", "racepet"], async executar({ sock, msg, db, utils, sender, prefixoAtivo }) {
+      const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const alvo = utils.getAlvo(msg)
+      if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐎𝐑𝐑𝐈𝐃𝐀 •\n\n❄️ Marque um usuário.\n🧊 \`${p}corridapet @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
       const numReal = await resolverNumero(sock, jid, sender); const numAlvoReal = await resolverNumero(sock, jid, alvo)
       if (!numReal || !numAlvoReal) { await reagir(sock, msg, "🧊"); return }
       if (numAlvoReal === numReal) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐎𝐑𝐑𝐈𝐃𝐀 •\n\n❄️ Não pode correr consigo.\n\n"${nomeBot}"` }, { quoted: msg }) }
@@ -570,8 +570,8 @@ ${item("!afk <motivo>")}
       await sock.sendMessage(jid, { text: txt, mentions: top.map(p => mJid(p.num)) }, { quoted: msg })
     }},
 
-    afk: { aliases: ["ausente"], async executar({ sock, msg, args, db, utils, sender }) {
-      const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+    afk: { aliases: ["ausente"], async executar({ sock, msg, args, db, utils, sender, prefixoAtivo }) {
+      const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
       if (!jid.endsWith("@g.us")) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐅𝐊 •\n\n❄️ Só em grupos.\n\n"${nomeBot}"` }, { quoted: msg }) }
       const num = await resolverNumero(sock, jid, sender) || utils.soNumero(sender)
       const motivo = args.join(" ").trim() || "Sem motivo"
