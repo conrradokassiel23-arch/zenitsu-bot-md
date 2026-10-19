@@ -1,5 +1,5 @@
 /* ============================================================
-   💧❄️🧊 MENU ADM - RIMURU BOT MD (PREFIXO DINÂMICO - 1 MSG)
+   💧❄️🧊 MENU ADM - RIMURU BOT MD (PREFIXO DINÂMICO - FIX BAN)
    ============================================================ */
 
 const fs = require("fs")
@@ -88,7 +88,6 @@ module.exports = {
         
         await reagir(sock, msg, "💧")
 
-        // ✅ TUDO EM 1 MENSAGEM SÓ (Card + Saudação + Menus separados)
         const texto = `${cardPerfil({ nomeBot, nomeUsuario: pushName, cargo, dono: nomeDono })}
 
 💧 *${saudacao}, ${pushName}!* 
@@ -439,11 +438,36 @@ ${item(`${p}rmfig (reply) / ${p}listafig`)}
       aliases: ["kick", "remover"], adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, groupMetadata, utils, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const alvoRaw = utils.getAlvo(msg)
-        if (!alvoRaw) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐁𝐀𝐍𝐈𝐑", "Marque alguém.", `\`${p}ban @user\``, null, nomeBot) }, { quoted: msg }) }
-        if (!utils.botEhAdmin(groupMetadata, sock)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "Promova o bot", null, nomeBot) }, { quoted: msg }) }
-        const n = utils.soNumero(alvoRaw); const part = groupMetadata.participants.find(pa => [pa.id, pa.lid, pa.phoneNumber].filter(Boolean).map(utils.soNumero).includes(n))
-        if (!part) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎", "Usuário fora do grupo.", `@${n}`, null, nomeBot) }, { quoted: msg }) }
-        try { await sock.groupParticipantsUpdate(jid, [part.id], "remove"); await reagir(sock, msg, "💧"); await sock.sendMessage(jid, { text: msgSucesso("𝐄𝐗𝐏𝐔𝐋𝐒𝐎", "Usuário removido.", `❄️ @${n}`, null, nomeBot), mentions: [part.id] }, { quoted: msg }) } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
+        
+        if (!alvoRaw) { 
+          await reagir(sock, msg, "❄️")
+          return sock.sendMessage(jid, { text: msgAviso("𝐁𝐀𝐍𝐈𝐑", "Marque alguém.", `\`${p}ban @user\``, null, nomeBot) }, { quoted: msg }) 
+        }
+        
+        if (!utils.botEhAdmin(groupMetadata, sock)) { 
+          await reagir(sock, msg, "🧊")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Eu (o bot) preciso ser admin.", "Promova o bot", null, nomeBot) }, { quoted: msg }) 
+        }
+        
+        const n = utils.soNumero(alvoRaw)
+        const part = groupMetadata.participants.find(pa => {
+          const pIds = [pa.id, pa.lid, pa.phoneNumber].filter(Boolean).map(utils.soNumero)
+          return pIds.includes(n)
+        })
+        
+        if (!part) { 
+          await reagir(sock, msg, "🧊")
+          return sock.sendMessage(jid, { text: msgErro("𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎", "Usuário fora do grupo.", `@${n}`, null, nomeBot) }, { quoted: msg }) 
+        }
+        
+        try { 
+          await sock.groupParticipantsUpdate(jid, [part.id], "remove")
+          await reagir(sock, msg, "💧")
+          await sock.sendMessage(jid, { text: msgSucesso("𝐄𝐗𝐏𝐔𝐋𝐒𝐎", "Usuário removido.", `❄️ @${n}`, null, nomeBot), mentions: [part.id] }, { quoted: msg }) 
+        } catch (e) { 
+          await reagir(sock, msg, "🧊")
+          await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) 
+        }
       }
     },
 
