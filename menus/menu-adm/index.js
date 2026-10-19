@@ -1,5 +1,5 @@
 /* ============================================================
-   💧 MENU ADM - RIMURU BOT MD
+   💧❄️🧊 MENU ADM - RIMURU BOT MD
    ============================================================ */
 
 const fs = require("fs")
@@ -16,19 +16,22 @@ function dbLer(a, p = {}) {
 function dbSalvar(a, d) { fs.writeFileSync(path.join(DATA_DIR, a), JSON.stringify(d, null, 2)) }
 function hashFigurinha(buffer) { return crypto.createHash("md5").update(buffer).digest("hex") }
 
+async function reagir(sock, msg, emoji) {
+  try { await sock.sendMessage(msg.key.remoteJid, { react: { text: emoji, key: msg.key } }) } catch (_) {}
+}
+
 function msgSucesso(titulo, aviso, detalhes, rodape, nomeBot) {
-  return `💧 • ${titulo} •\n\n╭─〔 🔷 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ ${aviso}\n╰──────────────\n\n『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴\n\n${detalhes}\n\n${rodape ? rodape + "\n\n" : ""}"${nomeBot}"`
+  return `💧 • ${titulo} •\n\n❄️ ${aviso}\n\n🧊 ${detalhes}\n\n${rodape ? rodape + "\n\n" : ""}"${nomeBot}"`
 }
 function msgAviso(titulo, aviso, detalhes, rodape, nomeBot) {
-  return `💧 • ${titulo} •\n\n╭─〔 🔹 𝐀𝐕𝐈𝐒𝐎 〕\n│ ${aviso}\n╰──────────────\n\n『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴\n\n${detalhes}\n\n${rodape ? rodape + "\n\n" : ""}"${nomeBot}"`
+  return `💧 • ${titulo} •\n\n❄️ ${aviso}\n\n🧊 ${detalhes}\n\n${rodape ? rodape + "\n\n" : ""}"${nomeBot}"`
 }
 function msgErro(titulo, aviso, detalhes, rodape, nomeBot) {
-  return `💧 • ${titulo} •\n\n╭─〔 🚫 𝐄𝐑𝐑𝐎 〕\n│ ${aviso}\n╰──────────────\n\n『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴\n\n${detalhes}\n\n${rodape ? rodape + "\n\n" : ""}"${nomeBot}"`
+  return `💧 • ${titulo} •\n\n❄️ ${aviso}\n\n🧊 ${detalhes}\n\n${rodape ? rodape + "\n\n" : ""}"${nomeBot}"`
 }
 function lineEmoji(emoji, label, valor) { return `${emoji} ${label}:\n╰➜ ${valor}` }
 function nomeBotDb(db) { try { return db.config().nomeBot || "Rimuru Bot" } catch { return "Rimuru Bot" } }
 
-// ============ ENFEITE ============
 function cardPerfil({ nomeBot, nomeUsuario, cargo, dono }) {
   return `┏┉━─━┈━──━┈━──━┈━─━┉┉⟐
 ┃╭┈ׅ᳝𑂳໋֕𔓕᳝┉۪࣮᪲۟۫─ׅ͚᷂࠭━⵿໋݊┅᮫ׅ᳝۫💧࣭࣪࣪┅⵿᳝۟━໋ׅ࣪࣪─໋͚ׅ۪֘┉᳝ׅ᪲𔓕໋۪࣪┈᩿࣪╮
@@ -39,14 +42,8 @@ function cardPerfil({ nomeBot, nomeUsuario, cargo, dono }) {
 ┃╰┈ׅ᳝𑂳໋֕𔓕᳝┉۪࣮᪲۟۫─ׅ͚᷂࠭━⵿໋݊┅᮫ׅ᳝۫💧࣭࣪࣪┅⵿᳝۟━໋ׅ࣪࣪─໋͚ׅ۪֘┉᳝ׅ᪲𔓕໋۪࣪┈᩿࣪╯
 ┗┉━─━┈━──━┈━──━┈━─━┉┉⟐`
 }
-
-function secao(titulo) {
-  return `┏✰  *${titulo}*ׅ\n┗┉━─━┈━──━┈━──━┈━─━┉┉⟐`
-}
-
-function item(cmd) {
-  return `┃࣪│᨞⁞🔹️⃞⃞⟡ ${cmd}`
-}
+function secao(titulo) { return `┏✰ *${titulo}*ׅ\n┗┉━─━┈━──━┈━──━┈━─━┉┉⟐` }
+function item(cmd) { return `🧊 ${cmd}` }
 
 function detectarCargo({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin }) {
   const num = String(sender || "").split("@")[0].split(":")[0].replace(/\D/g, "")
@@ -60,7 +57,7 @@ function detectarCargo({ sender, config, db, groupMetadata, isDono, isSubDono, i
     const vips = (db.vips?.() || {}).vips || {}
     for (const [j, info] of Object.entries(vips)) {
       const jn = String(j).split("@")[0].split(":")[0].replace(/\D/g, "")
-      if (jn === num && (info.expira === "inf" || info.expira > Date.now())) return "🔷 𝐍𝐎𝐁𝐑𝐄 𝐀𝐋𝐈𝐀𝐃𝐎"
+      if (jn === num && (info.expira === "inf" || info.expira > Date.now())) return "❄️ 𝐍𝐎𝐁𝐑𝐄 𝐀𝐋𝐈𝐀𝐃𝐎"
     }
   } catch (_) {}
   if (isAdmin) return "⚔️ 𝐂𝐎𝐌𝐀𝐍𝐃𝐀𝐍𝐓𝐄"
@@ -94,72 +91,28 @@ module.exports = {
         const jid = msg.key.remoteJid
         const p = prefixoAtivo || "!"
         const cfg = db.config() || {}
-        const numUser = String(sender || "").split("@")[0].split(":")[0].replace(/\D/g, "")
         const { pushName, nomeDono, cargo, nomeBot } = getCargoETexto({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin, msg })
-        const hora = new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })
         const h = new Date().getHours()
-        let saudacao = "Boa noite"
-        if (h >= 5 && h < 12) saudacao = "Bom dia"
-        else if (h >= 12 && h < 18) saudacao = "Boa tarde"
-        let premium = "Não"
-        const vips = (db.vips() || {}).vips || {}
-        for (const [jidVip, info] of Object.entries(vips)) {
-          const n = String(jidVip).split("@")[0].split(":")[0].replace(/\D/g, "")
-          if (n === numUser) { if (info.expira === "inf" || info.expira > Date.now()) { premium = "Sim 🔷"; break } }
-        }
+        let saudacao = "Boa noite"; if (h >= 5 && h < 12) saudacao = "Bom dia"; else if (h >= 12 && h < 18) saudacao = "Boa tarde"
         const mentions = sender ? [sender] : []
-
+        await reagir(sock, msg, "💧")
         const texto = `${cardPerfil({ nomeBot, nomeUsuario: pushName, cargo, dono: nomeDono })}
 
-💧 • 𝐒𝐀𝐔𝐃𝐀𝐂̧𝐎̃𝐄𝐒 •
+💧 *${saudacao}, ${pushName}!*
+❄️ Prefixo: \`${p}\`
+🧊 \`${p}menuadmin\` • \`${p}menuvip\` • \`${p}menudono\`
+🧊 \`${p}menurpg\` • \`${p}menufazenda\` • \`${p}menufnaf\` • \`${p}menucidade\`
 
-╭─〔 🔷 𝐁𝐄𝐌-𝐕𝐈𝐍𝐃𝐎 𝐀 𝐓𝐄𝐌𝐏𝐄𝐒𝐓 〕
-│ ${saudacao}, ${pushName}!
-╰──────────────
-
-『 𝐈𝐧𝐟𝐨𝐫𝐦𝐚𝐜̧𝐨̃𝐞𝐬 』 ↴
-
-👤 𝐒𝐥𝐢𝐦𝐞:
-╰➜ @${numUser}
-
-💧 𝐁𝐨𝐭:
-╰➜ ${nomeBot}
-
-👁️ 𝐆𝐫𝐚𝐧𝐝𝐞 𝐒𝐚́𝐛𝐢𝐨:
-╰➜ ${nomeDono}
-
-🔷 𝐍𝐨𝐛𝐫𝐞𝐳𝐚:
-╰➜ ${premium}
-
-🕐 𝐇𝐨𝐫𝐚́𝐫𝐢𝐨:
-╰➜ ${hora}
-
-💧 _"O Grande Sábio está sempre observando."_
+_"O Grande Sábio observa."_
 
 "${nomeBot}"`
-
         if (cfg.fotoMenu) {
           const buf = Buffer.from(cfg.fotoMenu, "base64")
           try {
-            if (cfg.tipoMenu === "video") await sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "rimuru-menu.mp4", gifPlayback: true, caption: texto, mentions }, { quoted: msg })
+            if (cfg.tipoMenu === "video") await sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "rimuru.mp4", gifPlayback: true, caption: texto, mentions }, { quoted: msg })
             else await sock.sendMessage(jid, { image: buf, caption: texto, mentions }, { quoted: msg })
           } catch (e) { await sock.sendMessage(jid, { text: texto, mentions }, { quoted: msg }) }
-        } else {
-          await sock.sendMessage(jid, { text: texto, mentions }, { quoted: msg })
-        }
-
-        try {
-          await sock.sendMessage(jid, {
-            text: "💧 *Escolha uma categoria de Tempest:*", footer: "🔷 " + nomeBot, title: "💧 MENUS DO REINO", buttonText: "💠 ABRIR MENUS",
-            sections: [
-              { title: "⚔️ ADMINISTRAÇÃO", rows: [{ title: "⚙️ Menu Admin", rowId: p + "menuadmin", description: "Banir, mutar, proteções..." }, { title: "👁️ Menu Dono", rowId: p + "menudono", description: "Comandos do Grande Sábio" }] },
-              { title: "🔷 ÁREA NOBRE", rows: [{ title: "💠 Menu VIP", rowId: p + "menuvip", description: "Figurinhas, logos, autofig" }] },
-              { title: "🎮 JOGOS E DIVERSÃO", rows: [{ title: "💧 Menu RPG", rowId: p + "menurpg", description: "Economia, pets, cassino" }, { title: "🌾 Menu Fazenda", rowId: p + "menufazenda", description: "Animais, plantações" }, { title: "🐻 Menu FNAF", rowId: p + "menufnaf", description: "Five Nights at Freddy's" }, { title: "🏙️ Menu Cidade", rowId: p + "menucidade", description: "Casas, banco, crimes" }] }
-            ]
-          })
-        } catch (e) {
-          await sock.sendMessage(jid, { text: "💧 *MENUS DISPONÍVEIS:*\n\n⚙️ ▸ " + p + "menuadmin\n👁️ ▸ " + p + "menudono\n💠 ▸ " + p + "menuvip\n💧 ▸ " + p + "menurpg\n🌾 ▸ " + p + "menufazenda\n🐻 ▸ " + p + "menufnaf\n🏙️ ▸ " + p + "menucidade" }, { quoted: msg })
-        }
+        } else await sock.sendMessage(jid, { text: texto, mentions }, { quoted: msg })
       }
     },
 
@@ -167,14 +120,19 @@ module.exports = {
       aliases: ["pong", "latencia", "pingar"],
       async executar({ sock, msg, sender, utils, db }) {
         const jid = msg.key.remoteJid; const t1 = Date.now(); const num = utils.soNumero(sender); const nomeBot = nomeBotDb(db)
-        const sent = await sock.sendMessage(jid, { text: "💧 • 𝐌𝐄𝐃𝐈𝐍𝐃𝐎 𝐋𝐀𝐓𝐄̂𝐍𝐂𝐈𝐀 •\n\n╭─〔 🔷 𝐀𝐍𝐀𝐋𝐈𝐒𝐀𝐍𝐃𝐎 〕\n│ O Grande Sábio está calculando...\n╰──────────────\n\n👁️ [░░░░░░░░░░] 0%" }, { quoted: msg })
-        const etapas = [{ espera: 500, pct: 20, msg: "Analisando magia...", emoji: "🔹" }, { espera: 500, pct: 40, msg: "Invocando habilidades...", emoji: "🔷" }, { espera: 500, pct: 60, msg: "Sincronizando com Veldora...", emoji: "💧" }, { espera: 500, pct: 80, msg: "Calculando rotas neurais...", emoji: "💠" }, { espera: 500, pct: 100, msg: "Finalizando...", emoji: "💧" }]
-        for (const et of etapas) { await new Promise(r => setTimeout(r, et.espera)); const cheios = Math.floor(et.pct / 10); const barra = "💧".repeat(cheios) + "⬛".repeat(10 - cheios); try { await sock.sendMessage(jid, { text: "💧 • 𝐌𝐄𝐃𝐈𝐍𝐃𝐎 𝐋𝐀𝐓𝐄̂𝐍𝐂𝐈𝐀 •\n\n╭─〔 🔷 𝐀𝐍𝐀𝐋𝐈𝐒𝐀𝐍𝐃𝐎 〕\n│ " + et.emoji + " _" + et.msg + "_\n╰──────────────\n\n👁️ [" + barra + "] " + et.pct + "%", edit: sent.key }) } catch (_) {} }
+        await reagir(sock, msg, "💧")
+        const sent = await sock.sendMessage(jid, { text: "💧 • 𝐌𝐄𝐃𝐈𝐍𝐃𝐎 •\n\n❄️ O Grande Sábio calcula...\n🧊 [░░░░░░░░░░] 0%" }, { quoted: msg })
+        const etapas = [{ espera: 400, pct: 25 }, { espera: 400, pct: 50 }, { espera: 400, pct: 75 }, { espera: 400, pct: 100 }]
+        for (const et of etapas) { await new Promise(r => setTimeout(r, et.espera)); const cheios = Math.floor(et.pct / 10); const barra = "💧".repeat(cheios) + "⬛".repeat(10 - cheios); try { await sock.sendMessage(jid, { text: "💧 • 𝐌𝐄𝐃𝐈𝐍𝐃𝐎 •\n\n❄️ Calculando...\n🧊 [" + barra + "] " + et.pct + "%", edit: sent.key }) } catch (_) {} }
         const t2 = Date.now(); let pingReal = 0; try { await sock.groupMetadata(jid); pingReal = Date.now() - t2 } catch (_) { pingReal = Date.now() - t2 }; const pingTotal = Date.now() - t1
-        let qual = "", msgQual = "", emoji = "", cor = ""
-        if (pingReal < 100) { qual = "PERFEITO"; msgQual = "Conexão telepática ativada."; emoji = "💧"; cor = "🔷" } else if (pingReal < 200) { qual = "Excelente"; msgQual = "O fluxo de mana está ótimo."; emoji = "🔹"; cor = "💠" } else if (pingReal < 350) { qual = "Bom"; msgQual = "Tudo sob controle, slime."; emoji = "💧"; cor = "🔹" } else if (pingReal < 500) { qual = "Aceitável"; msgQual = "A conexão começa a enfraquecer..."; emoji = "🌘"; cor = "🟡" } else if (pingReal < 800) { qual = "Ruim"; msgQual = "Os cálculos estão lentos..."; emoji = "🌑"; cor = "🟠" } else if (pingReal < 1500) { qual = "Péssimo"; msgQual = "Tempest está offline!"; emoji = "💀"; cor = "🔴" } else { qual = "MORTO"; msgQual = "O Grande Sábio falhou."; emoji = "☠️"; cor = "⚫" }
-        const hora = new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" }); const data = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
-        await sock.sendMessage(jid, { text: `💧 • 𝐋𝐀𝐓𝐄̂𝐍𝐂𝐈𝐀 𝐃𝐄 𝐓𝐄𝐌𝐏𝐄𝐒𝐓 •\n\n╭─〔 🔷 𝐑𝐄𝐒𝐔𝐋𝐓𝐀𝐃𝐎 〕\n│ ${msgQual}\n╰──────────────\n\n『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴\n\n👤 𝐒𝐥𝐢𝐦𝐞:\n╰➜ @${num}\n\n${emoji} 𝐏𝐢𝐧𝐠:\n╰➜ ${pingReal}ms\n\n⏱️ 𝐏𝐫𝐨𝐜𝐞𝐬𝐬𝐚𝐦𝐞𝐧𝐭𝐨:\n╰➜ ${pingTotal}ms\n\n${cor} 𝐐𝐮𝐚𝐥𝐢𝐝𝐚𝐝𝐞:\n╰➜ ${qual}\n\n🌐 𝐒𝐭𝐚𝐭𝐮𝐬:\n╰➜ ONLINE ✅\n\n🕐 𝐇𝐨𝐫𝐚́𝐫𝐢𝐨:\n╰➜ ${hora} — ${data}\n\n> 💧 _${msgQual}_\n\n"${nomeBot}"`, mentions: [sender], edit: sent.key })
+        let qual = "PERFEITO", emoji = "💧"
+        if (pingReal > 100) { qual = "Excelente"; emoji = "❄️" }
+        if (pingReal > 200) { qual = "Bom"; emoji = "🧊" }
+        if (pingReal > 350) { qual = "Aceitável"; emoji = "🌘" }
+        if (pingReal > 500) { qual = "Ruim"; emoji = "🌑" }
+        if (pingReal > 800) { qual = "Péssimo"; emoji = "💀" }
+        if (pingReal > 1500) { qual = "MORTO"; emoji = "☠️" }
+        await sock.sendMessage(jid, { text: `💧 • 𝐋𝐀𝐓𝐄̂𝐍𝐂𝐈𝐀 •\n\n❄️ ${qual}\n\n🧊 Ping: ${pingReal}ms\n🧊 Proc: ${pingTotal}ms\n🧊 User: @${num}\n\n${emoji} _ONLINE ✅_\n\n"${nomeBot}"`, mentions: [sender], edit: sent.key })
       }
     },
 
@@ -182,9 +140,10 @@ module.exports = {
       aliases: ["totalcomandos", "quantoscmd", "cmdcount"],
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid; const total = global.totalComandos || 0; const totalAliases = global.totalAliases || 0; const porCategoria = global.comandosPorCategoria || {}; let listaCat = ""
-        for (const [cat, qtd] of Object.entries(porCategoria)) listaCat += "╰➜ " + cat + ": *" + qtd + "*\n"
+        for (const [cat, qtd] of Object.entries(porCategoria)) listaCat += `🧊 ${cat}: *${qtd}*\n`
         const nomeBot = nomeBotDb(db)
-        await sock.sendMessage(jid, { text: `💧 • 𝐓𝐎𝐓𝐀𝐋 𝐃𝐄 𝐂𝐎𝐌𝐀𝐍𝐃𝐎𝐒 •\n\n╭─〔 🔷 𝐄𝐒𝐓𝐀𝐓𝐈́𝐒𝐓𝐈𝐂𝐀𝐒 〕\n│ Todos os comandos registrados.\n╰──────────────\n\n『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴\n\n⚔️ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨𝐬:\n╰➜ ${total}\n\n🔗 𝐀𝐥𝐢𝐚𝐬𝐞𝐬:\n╰➜ ${totalAliases}\n\n📈 𝐓𝐨𝐭𝐚𝐥 𝐠𝐞𝐫𝐚𝐥:\n╰➜ ${total + totalAliases}\n\n📂 𝐏𝐨𝐫 𝐜𝐚𝐭𝐞𝐠𝐨𝐫𝐢𝐚:\n${listaCat || "╰➜ _nenhuma_"}\n\n"${nomeBot}"` }, { quoted: msg })
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: `💧 • 𝐓𝐎𝐓𝐀𝐋 •\n\n❄️ Estatísticas do bot\n\n🧊 Comandos: ${total}\n🧊 Aliases: ${totalAliases}\n🧊 Total: ${total + totalAliases}\n\n🧊 Por categoria:\n${listaCat || "🧊 _nenhuma_"}\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -193,99 +152,62 @@ module.exports = {
       async executar({ sock, msg, prefixoAtivo, db, sender, config, isDono, isSubDono, isAdmin, groupMetadata }) {
         const jid = msg.key.remoteJid; const p = prefixoAtivo || "!"; const cfg = db.config() || {}
         const { pushName, nomeDono, cargo, nomeBot } = getCargoETexto({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin, msg })
-
+        await reagir(sock, msg, "❄️")
         const texto = `${cardPerfil({ nomeBot, nomeUsuario: pushName, cargo, dono: nomeDono })}
 
-${secao("ᴀᴅᴍɪɴɪsᴛʀᴀᴄ̧ᴀ̃ᴏ")}
-${item("!parceria — pedir parceria")}
-${item("!prefixo — ver prefixo")}
+${secao("⚔️ ᴀᴅᴍɪɴ")}
+${item("!adv / !deladv / !listaadv")}
+${item("!promover / !rebaixar / !ban")}
+${item("!mute / !desmute")}
+${item("!p (reply) / !totag <txt>")}
+${item("!abrir / !fechar / !link")}
+${item("!namegp / !descricao")}
+${item("!soadm on/off")}
 
-${secao("ᴘʀᴇғɪxᴏ")}
+${secao("🛡️ ᴘʀᴏᴛᴇᴄ̧ᴏ̃ᴇs")}
+${item("!antilink / !antiaudio / !antivideo")}
+${item("!antifoto / !antifig")}
+${item("!palavrao on/off")}
+${item("!addpalavra / !rmpalavra / !listapalavra")}
+
+${secao("👑 sᴜʙ-ᴀᴅᴍ")}
+${item("!subadm / !delsubadm / !listasubadm")}
+
+${secao("⚙️ ᴘʀᴇғɪxᴏ")}
 ${item("!multiprefixo on/off")}
 ${item("!setprefixo <novo>")}
 
-${secao("ᴀᴅᴠᴇʀᴛᴇ̂ɴᴄɪᴀ")}
-${item("!adv @user motivo")}
-${item("!deladv @user")}
-${item("!listaadv")}
-${item("!veradv @user")}
-
-${secao("ᴍᴇᴍʙʀᴏs")}
-${item("!promover @user")}
-${item("!rebaixar @user")}
-${item("!ban @user")}
-${item("!mute @user")}
-${item("!desmute @user")}
-${item("!p — responder msg")}
-${item("!totag <texto>")}
-
-${secao("ɢʀᴜᴘᴏ")}
-${item("!abrir / !fechar")}
-${item("!link")}
-${item("!soadm on/off")}
-${item("!namegp <nome>")}
-${item("!descricao <texto>")}
-
-${secao("sᴜʙ-ᴀᴅᴍ")}
-${item("!subadm @user")}
-${item("!delsubadm @user")}
-${item("!listasubadm")}
-
-${secao("ᴘʀᴏᴛᴇᴄ̧ᴏ̃ᴇs")}
-${item("!antilink on/off")}
-${item("!antiaudio on/off")}
-${item("!antivideo on/off")}
-${item("!antifoto on/off")}
-${item("!antifig on/off")}
-${item("!palavrao on/off")}
-${item("!addpalavra <p>")}
-${item("!rmpalavra <p>")}
-${item("!listapalavra")}
-
-${secao("x𝟵 / ᴘᴀʀᴄᴇʀɪᴀ")}
+${secao("🕵️ x𝟵 / ᴘᴀʀᴄᴇʀɪᴀ")}
 ${item("!x9 on/off")}
 ${item("!modoparceria on/off")}
-${item("!addparceria @user <qtd>")}
-${item("!rmparceria @user")}
-${item("!parcerias")}
+${item("!addparceria / !rmparceria / !parcerias")}
 
-${secao("ʟɪsᴛᴀ ɴᴇɢʀᴀ")}
-${item("!listanegra <número>")}
-${item("!blacklist")}
-${item("!dellista <número>")}
+${secao("🚫 ʟɪsᴛᴀ ɴᴇɢʀᴀ")}
+${item("!listanegra <núm>")}
+${item("!blacklist / !dellista <núm>")}
 
-${secao("ʙᴇᴍ-ᴠɪɴᴅᴏ")}
+${secao("👋 ʙᴇᴍ-ᴠɪɴᴅᴏ")}
 ${item("!bemvindo on/off")}
-${item("!textobv <texto>")}
-${item("!fundoBV — reply")}
-${item("!legendasaiu <texto>")}
-${item("!fundoSaiu — reply")}
+${item("!textobv <txt> / !fundoBV (reply)")}
+${item("!legendasaiu <txt> / !fundoSaiu (reply)")}
 
-${secao("ᴀɢᴇɴᴅᴀᴍᴇɴᴛᴏ")}
-${item("!abrirgp hh:mm")}
-${item("!fechargp hh:mm")}
-${item("!fotoabrir — reply")}
-${item("!fotofechar — reply")}
-${item("!legendaabrir <texto>")}
-${item("!legendafechar <texto>")}
+${secao("⏰ ᴀɢᴇɴᴅᴀᴍᴇɴᴛᴏ")}
+${item("!abrirgp / !fechargp hh:mm")}
+${item("!fotoabrir / !fotofechar (reply)")}
+${item("!legendaabrir / !legendafechar <txt>")}
 ${item("!limparfotos")}
 
-${secao("ɪɴᴛᴇʟɪɢᴇ̂ɴᴄɪᴀ")}
-${item("!iaon")}
-${item("!iaoff")}
-
-${secao("sᴏʀᴛᴇɪᴏ")}
+${secao("🤖 ɪᴀ / sᴏʀᴛᴇɪᴏ")}
+${item("!iaon / !iaoff")}
 ${item("!sorteio <prêmio> <tempo>")}
 
-${secao("ғɪɢᴜʀɪɴʜᴀs ᴄᴏᴍᴀɴᴅᴏ")}
-${item("!rgfig <comando> — reply")}
-${item("!rmfig — reply")}
-${item("!listafig")}
+${secao("🎴 ғɪɢ ᴄᴏᴍᴀɴᴅᴏ")}
+${item("!rgfig <cmd> (reply)")}
+${item("!rmfig (reply) / !listafig")}
 
-💧 𝐏𝐫𝐞𝐟𝐢𝐱𝐨 𝐚𝐭𝐮𝐚𝐥: \`${p}\`
+💧 Prefixo: \`${p}\`
 
 "${nomeBot}"`
-
         if (cfg.fotoMenu) { const buf = Buffer.from(cfg.fotoMenu, "base64"); if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "rimuru.mp4", gifPlayback: true, caption: texto }, { quoted: msg }); return sock.sendMessage(jid, { image: buf, caption: texto }, { quoted: msg }) }
         await sock.sendMessage(jid, { text: texto }, { quoted: msg })
       }
@@ -296,7 +218,8 @@ ${item("!listafig")}
       async executar({ sock, msg, prefixoAtivo, db }) {
         const jid = msg.key.remoteJid; const cfg = db.config(); const padrao = cfg.prefixoGlobal || "!"; const grupoConf = db.grupos()[jid] || {}; const nomeBot = nomeBotDb(db)
         let multiStatus = grupoConf.multiprefixo ? "ON ✅" : "OFF ❌"; let prefixoGrupo = grupoConf.prefixo || padrao
-        await sock.sendMessage(jid, { text: `💧 • 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 •\n\n╭─〔 🔷 𝐂𝐎𝐍𝐅𝐈𝐆𝐔𝐑𝐀𝐂̧𝐀̃𝐎 〕\n│ Sistema de prefixos do bot.\n╰──────────────\n\n『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴\n\n💧 𝐏𝐚𝐝𝐫𝐚̃𝐨:\n╰➜ ${padrao}\n\n🎯 𝐀𝐭𝐢𝐯𝐨 𝐚𝐠𝐨𝐫𝐚:\n╰➜ ${prefixoAtivo}\n\n⚙️ 𝐌𝐮𝐥𝐭𝐢𝐩𝐫𝐞𝐟𝐢𝐱𝐨:\n╰➜ ${multiStatus}\n\n📌 𝐏𝐫𝐞𝐟𝐢𝐱𝐨 𝐝𝐨 𝐠𝐫𝐮𝐩𝐨:\n╰➜ ${prefixoGrupo}\n\n⚔️ 𝐀𝐜𝐞𝐢𝐭𝐨𝐬:\n╰➜ ! e /\n\n"${nomeBot}"` }, { quoted: msg })
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: `💧 • 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 •\n\n❄️ Configuração\n\n🧊 Padrão: ${padrao}\n🧊 Ativo: ${prefixoAtivo}\n🧊 Multiprefixo: ${multiStatus}\n🧊 Grupo: ${prefixoGrupo}\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -304,9 +227,9 @@ ${item("!listafig")}
       aliases: ["apagar", "delmsg"], adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, groupMetadata, utils, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo
-        if (!ctx || !ctx.stanzaId) return sock.sendMessage(jid, { text: msgAviso("𝐀𝐏𝐀𝐆𝐀𝐑 𝐌𝐄𝐍𝐒𝐀𝐆𝐄𝐌", "Você precisa responder uma mensagem.", "💡 Responda uma msg com `!p`", null, nomeBot) }, { quoted: msg })
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Eu preciso ser admin.", "⚠️ Promova o bot a admin.", null, nomeBot) }, { quoted: msg })
-        try { await sock.sendMessage(jid, { delete: { remoteJid: jid, fromMe: false, id: ctx.stanzaId, participant: ctx.participant || (ctx.mentionedJid && ctx.mentionedJid[0]) } }); await sock.sendMessage(jid, { text: msgSucesso("𝐌𝐄𝐍𝐒𝐀𝐆𝐄𝐌 𝐀𝐏𝐀𝐆𝐀𝐃𝐀", "Apagada com sucesso.", "💧 _\"Ninguém viu...\"_", null, nomeBot) }, { quoted: msg }) } catch (e) { await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
+        if (!ctx || !ctx.stanzaId) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐀𝐏𝐀𝐆𝐀𝐑", "Responda uma mensagem.", "Use `!p` reply", null, nomeBot) }, { quoted: msg }) }
+        if (!utils.botEhAdmin(groupMetadata, sock)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "Promova o bot", null, nomeBot) }, { quoted: msg }) }
+        try { await sock.sendMessage(jid, { delete: { remoteJid: jid, fromMe: false, id: ctx.stanzaId, participant: ctx.participant || (ctx.mentionedJid && ctx.mentionedJid[0]) } }); await reagir(sock, msg, "💧"); await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐏𝐀𝐆𝐀𝐃𝐀", "Mensagem removida.", "❄️ Concluído", null, nomeBot) }, { quoted: msg }) } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
       }
     },
 
@@ -314,8 +237,8 @@ ${item("!listafig")}
       aliases: ["opennow"], adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, groupMetadata, utils, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "⚠️ Promova o bot a admin.", null, nomeBot) }, { quoted: msg })
-        try { await sock.groupSettingUpdate(jid, "not_announcement"); await sock.sendMessage(jid, { text: msgSucesso("𝐆𝐑𝐔𝐏𝐎 𝐀𝐁𝐄𝐑𝐓𝐎", "O grupo foi aberto.", "🔓 _\"A força ilumina todos.\"_", null, nomeBot) }, { quoted: msg }) } catch (e) { await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
+        if (!utils.botEhAdmin(groupMetadata, sock)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "Promova o bot", null, nomeBot) }, { quoted: msg }) }
+        try { await sock.groupSettingUpdate(jid, "not_announcement"); await reagir(sock, msg, "💧"); await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐁𝐄𝐑𝐓𝐎", "Grupo aberto.", "❄️ Todos podem falar", null, nomeBot) }, { quoted: msg }) } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
       }
     },
 
@@ -323,8 +246,8 @@ ${item("!listafig")}
       aliases: ["closenow"], adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, groupMetadata, utils, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "⚠️ Promova o bot a admin.", null, nomeBot) }, { quoted: msg })
-        try { await sock.groupSettingUpdate(jid, "announcement"); await sock.sendMessage(jid, { text: msgSucesso("𝐆𝐑𝐔𝐏𝐎 𝐅𝐄𝐂𝐇𝐀𝐃𝐎", "O grupo foi fechado.", "🔒 _\"Só os fortes falam.\"_", null, nomeBot) }, { quoted: msg }) } catch (e) { await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
+        if (!utils.botEhAdmin(groupMetadata, sock)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "Promova o bot", null, nomeBot) }, { quoted: msg }) }
+        try { await sock.groupSettingUpdate(jid, "announcement"); await reagir(sock, msg, "💧"); await sock.sendMessage(jid, { text: msgSucesso("𝐅𝐄𝐂𝐇𝐀𝐃𝐎", "Grupo fechado.", "❄️ Só admins falam", null, nomeBot) }, { quoted: msg }) } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
       }
     },
 
@@ -332,9 +255,9 @@ ${item("!listafig")}
       aliases: ["setnomegp", "nomegrupo"], adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, groupMetadata, utils, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const nome = args.join(" ").trim()
-        if (!nome) return sock.sendMessage(jid, { text: msgAviso("𝐍𝐎𝐌𝐄 𝐃𝐎 𝐆𝐑𝐔𝐏𝐎", "Informe o nome.", "💡 `!namegp <nome>`", null, nomeBot) }, { quoted: msg })
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "⚠️ Promova o bot a admin.", null, nomeBot) }, { quoted: msg })
-        try { await sock.groupUpdateSubject(jid, nome); await sock.sendMessage(jid, { text: msgSucesso("𝐍𝐎𝐌𝐄 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐃𝐎", "Nome do grupo alterado.", lineEmoji("📝", "𝐍𝐨𝐯𝐨 𝐧𝐨𝐦𝐞", nome), null, nomeBot) }, { quoted: msg }) } catch (e) { await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
+        if (!nome) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐍𝐎𝐌𝐄", "Informe o nome.", "`!namegp <nome>`", null, nomeBot) }, { quoted: msg }) }
+        if (!utils.botEhAdmin(groupMetadata, sock)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "Promova o bot", null, nomeBot) }, { quoted: msg }) }
+        try { await sock.groupUpdateSubject(jid, nome); await reagir(sock, msg, "💧"); await sock.sendMessage(jid, { text: msgSucesso("𝐍𝐎𝐌𝐄", "Nome alterado.", `❄️ ${nome}`, null, nomeBot) }, { quoted: msg }) } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
       }
     },
 
@@ -342,9 +265,9 @@ ${item("!listafig")}
       aliases: ["setdescricao", "descgp"], adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, groupMetadata, utils, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const desc = args.join(" ").trim()
-        if (!desc) return sock.sendMessage(jid, { text: msgAviso("𝐃𝐄𝐒𝐂𝐑𝐈𝐂̧𝐀̃𝐎", "Informe o texto.", "💡 `!descricao <texto>`", null, nomeBot) }, { quoted: msg })
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "⚠️ Promova o bot a admin.", null, nomeBot) }, { quoted: msg })
-        try { await sock.groupUpdateDescription(jid, desc); await sock.sendMessage(jid, { text: msgSucesso("𝐃𝐄𝐒𝐂𝐑𝐈𝐂̧𝐀̃𝐎 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐃𝐀", "Descrição do grupo alterada.", "📝 _Novo texto salvo._", null, nomeBot) }, { quoted: msg }) } catch (e) { await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
+        if (!desc) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐃𝐄𝐒𝐂𝐑𝐈𝐂̧𝐀̃𝐎", "Informe o texto.", "`!descricao <texto>`", null, nomeBot) }, { quoted: msg }) }
+        if (!utils.botEhAdmin(groupMetadata, sock)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "Promova o bot", null, nomeBot) }, { quoted: msg }) }
+        try { await sock.groupUpdateDescription(jid, desc); await reagir(sock, msg, "💧"); await sock.sendMessage(jid, { text: msgSucesso("𝐃𝐄𝐒𝐂𝐑𝐈𝐂̧𝐀̃𝐎", "Descrição alterada.", "❄️ Texto salvo", null, nomeBot) }, { quoted: msg }) } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
       }
     },
 
@@ -352,8 +275,8 @@ ${item("!listafig")}
       aliases: ["linkgp"], adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, groupMetadata, utils, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "⚠️ Promova o bot a admin.", null, nomeBot) }, { quoted: msg })
-        try { const code = await sock.groupInviteCode(jid); await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐈𝐍𝐊 𝐃𝐎 𝐆𝐑𝐔𝐏𝐎", "Link gerado com sucesso.", lineEmoji("🔗", "𝐋𝐢𝐧𝐤", "https://chat.whatsapp.com/" + code), null, nomeBot) }, { quoted: msg }) } catch (e) { await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
+        if (!utils.botEhAdmin(groupMetadata, sock)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "Promova o bot", null, nomeBot) }, { quoted: msg }) }
+        try { const code = await sock.groupInviteCode(jid); await reagir(sock, msg, "💧"); await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐈𝐍𝐊", "Link gerado.", `❄️ https://chat.whatsapp.com/${code}`, null, nomeBot) }, { quoted: msg }) } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
       }
     },
 
@@ -361,9 +284,10 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid; const alvo = utils.getAlvo(msg); const nomeBot = nomeBotDb(db)
-        if (!alvo) return sock.sendMessage(jid, { text: msgAviso("𝐌𝐔𝐓𝐄", "Marque alguém.", "💡 `!mute @user`", null, nomeBot) }, { quoted: msg })
+        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐌𝐔𝐓𝐄", "Marque alguém.", "`!mute @user`", null, nomeBot) }, { quoted: msg }) }
         const mutados = db.mutados(); mutados[jid] = mutados[jid] || {}; mutados[jid][alvo] = Date.now() + 5 * 60 * 1000; db.salvarMutados(mutados)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐔𝐒𝐔𝐀́𝐑𝐈𝐎 𝐒𝐈𝐋𝐄𝐍𝐂𝐈𝐀𝐃𝐎", "O usuário foi mutado por 5 minutos.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + utils.soNumero(alvo)) + "\n" + lineEmoji("⏰", "𝐃𝐮𝐫𝐚𝐜̧𝐚̃𝐨", "5 minutos"), null, nomeBot), mentions: [alvo] }, { quoted: msg })
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐌𝐔𝐓𝐀𝐃𝐎", "Usuário silenciado por 5min.", `❄️ @${utils.soNumero(alvo)}`, null, nomeBot), mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -371,9 +295,10 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid; const alvo = utils.getAlvo(msg); const nomeBot = nomeBotDb(db)
-        if (!alvo) return sock.sendMessage(jid, { text: msgAviso("𝐃𝐄𝐒𝐌𝐔𝐓𝐄", "Marque alguém.", "💡 `!desmute @user`", null, nomeBot) }, { quoted: msg })
+        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐃𝐄𝐒𝐌𝐔𝐓𝐄", "Marque alguém.", "`!desmute @user`", null, nomeBot) }, { quoted: msg }) }
         const mutados = db.mutados(); if (mutados[jid] && mutados[jid][alvo]) { delete mutados[jid][alvo]; db.salvarMutados(mutados) }
-        await sock.sendMessage(jid, { text: msgSucesso("𝐔𝐒𝐔𝐀́𝐑𝐈𝐎 𝐋𝐈𝐁𝐄𝐑𝐀𝐃𝐎", "O usuário pode falar novamente.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + utils.soNumero(alvo)), null, nomeBot), mentions: [alvo] }, { quoted: msg })
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐈𝐁𝐄𝐑𝐀𝐃𝐎", "Usuário pode falar.", `❄️ @${utils.soNumero(alvo)}`, null, nomeBot), mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -381,9 +306,10 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: msgAviso("𝐏𝐀𝐋𝐀𝐕𝐑𝐀̃𝐎", "Use on ou off.", "💡 `!palavrao on/off`", null, nomeBot) }, { quoted: msg })
+        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐏𝐀𝐋𝐀𝐕𝐑𝐀̃𝐎", "Use on/off.", "`!palavrao on/off`", null, nomeBot) }, { quoted: msg }) }
         const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].palavrao = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐀𝐋𝐀𝐕𝐑𝐀̃𝐎 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐃𝐎", "Filtro de palavras configurado.", lineEmoji("⚙️", "𝐒𝐭𝐚𝐭𝐮𝐬", opcao.toUpperCase()), null, nomeBot) }, { quoted: msg })
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐀𝐋𝐀𝐕𝐑𝐀̃𝐎", "Filtro configurado.", `❄️ ${opcao.toUpperCase()}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -391,11 +317,12 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const palavra = args.join(" ").trim().toLowerCase()
-        if (!palavra) return sock.sendMessage(jid, { text: msgAviso("𝐀𝐃𝐈𝐂𝐈𝐎𝐍𝐀𝐑 𝐏𝐀𝐋𝐀𝐕𝐑𝐀", "Informe a palavra.", "💡 `!addpalavra <palavra>`", null, nomeBot) }, { quoted: msg })
+        if (!palavra) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐀𝐃𝐈𝐂𝐈𝐎𝐍𝐀𝐑", "Informe a palavra.", "`!addpalavra <p>`", null, nomeBot) }, { quoted: msg }) }
         const p = db.palavroes(); p[jid] = p[jid] || []
-        if (p[jid].includes(palavra)) return sock.sendMessage(jid, { text: msgAviso("𝐏𝐀𝐋𝐀𝐕𝐑𝐀 𝐉𝐀́ 𝐄𝐗𝐈𝐒𝐓𝐄", "Essa palavra já está na lista.", lineEmoji("📝", "𝐏𝐚𝐥𝐚𝐯𝐫𝐚", palavra), null, nomeBot) }, { quoted: msg })
+        if (p[jid].includes(palavra)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐉𝐀́ 𝐄𝐗𝐈𝐒𝐓𝐄", "Palavra na lista.", `❄️ ${palavra}`, null, nomeBot) }, { quoted: msg }) }
         p[jid].push(palavra); db.salvarPalavroes(p)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐀𝐋𝐀𝐕𝐑𝐀 𝐀𝐃𝐈𝐂𝐈𝐎𝐍𝐀𝐃𝐀", "Palavra adicionada à lista negra.", lineEmoji("📝", "𝐏𝐚𝐥𝐚𝐯𝐫𝐚", palavra), null, nomeBot) }, { quoted: msg })
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐃𝐈𝐂𝐈𝐎𝐍𝐀𝐃𝐀", "Palavra proibida.", `❄️ ${palavra}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -403,11 +330,12 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const palavra = args.join(" ").trim().toLowerCase()
-        if (!palavra) return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐌𝐎𝐕𝐄𝐑 𝐏𝐀𝐋𝐀𝐕𝐑𝐀", "Informe a palavra.", "💡 `!rmpalavra <palavra>`", null, nomeBot) }, { quoted: msg })
+        if (!palavra) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐌𝐎𝐕𝐄𝐑", "Informe a palavra.", "`!rmpalavra <p>`", null, nomeBot) }, { quoted: msg }) }
         const p = db.palavroes(); const arr = p[jid] || []; const idx = arr.indexOf(palavra)
-        if (idx === -1) return sock.sendMessage(jid, { text: msgAviso("𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐀", "Essa palavra não está na lista.", lineEmoji("📝", "𝐏𝐚𝐥𝐚𝐯𝐫𝐚", palavra), null, nomeBot) }, { quoted: msg })
+        if (idx === -1) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐀", "Palavra fora da lista.", `❄️ ${palavra}`, null, nomeBot) }, { quoted: msg }) }
         arr.splice(idx, 1); p[jid] = arr; db.salvarPalavroes(p)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐀𝐋𝐀𝐕𝐑𝐀 𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐀", "Palavra removida com sucesso.", lineEmoji("📝", "𝐏𝐚𝐥𝐚𝐯𝐫𝐚", palavra), null, nomeBot) }, { quoted: msg })
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐀", "Palavra liberada.", `❄️ ${palavra}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -415,9 +343,21 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const lista = db.palavroes()[jid] || []
-        if (!lista.length) return sock.sendMessage(jid, { text: msgAviso("𝐋𝐈𝐒𝐓𝐀 𝐕𝐀𝐙𝐈𝐀", "Nenhuma palavra cadastrada.", "💡 Use `!addpalavra <palavra>`", null, nomeBot) }, { quoted: msg })
-        let t = "💧 • 𝐏𝐀𝐋𝐀𝐕𝐑𝐀𝐒 𝐏𝐑𝐎𝐈𝐁𝐈𝐃𝐀𝐒 •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n"; lista.forEach((p, i) => { t += `╰➜ ${i + 1}. \`${p}\`\n` }); t += `\n📊 𝐓𝐨𝐭𝐚𝐥: ${lista.length}\n\n"${nomeBot}"`
+        if (!lista.length) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐋𝐈𝐒𝐓𝐀 𝐕𝐀𝐙𝐈𝐀", "Nenhuma palavra.", "Use `!addpalavra`", null, nomeBot) }, { quoted: msg }) }
+        let t = "💧 • 𝐏𝐀𝐋𝐀𝐕𝐑𝐀𝐒 •\n\n❄️ Lista:\n\n"; lista.forEach((p, i) => { t += `🧊 ${i + 1}. \`${p}\`\n` }); t += `\n🧊 Total: ${lista.length}\n\n"${nomeBot}"`
+        await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: t }, { quoted: msg })
+      }
+    },
+
+    antilink: {
+      adminOnly: true, grupoOnly: true,
+      async executar({ sock, msg, args, db }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const opcao = (args[0] || "").toLowerCase()
+        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐀𝐍𝐓𝐈𝐋𝐈𝐍𝐊", "Use on/off.", "`!antilink on/off`", null, nomeBot) }, { quoted: msg }) }
+        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].antilink = opcao === "on"; db.salvarGrupos(g)
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐍𝐓𝐈𝐋𝐈𝐍𝐊", "Proteção atualizada.", `❄️ ${opcao.toUpperCase()}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -425,9 +365,10 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: msgAviso("𝐀𝐍𝐓𝐈𝐀́𝐔𝐃𝐈𝐎", "Use on ou off.", "💡 `!antiaudio on/off`", null, nomeBot) }, { quoted: msg })
+        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐀𝐍𝐓𝐈𝐀́𝐔𝐃𝐈𝐎", "Use on/off.", "`!antiaudio on/off`", null, nomeBot) }, { quoted: msg }) }
         const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].antiaudio = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐍𝐓𝐈𝐀́𝐔𝐃𝐈𝐎", "Proteção contra áudios atualizada.", lineEmoji("⚙️", "𝐒𝐭𝐚𝐭𝐮𝐬", opcao.toUpperCase()), null, nomeBot) }, { quoted: msg })
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐍𝐓𝐈𝐀́𝐔𝐃𝐈𝐎", "Proteção atualizada.", `❄️ ${opcao.toUpperCase()}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -435,9 +376,10 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: msgAviso("𝐀𝐍𝐓𝐈𝐕𝐈́𝐃𝐄𝐎", "Use on ou off.", "💡 `!antivideo on/off`", null, nomeBot) }, { quoted: msg })
+        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐀𝐍𝐓𝐈𝐕𝐈́𝐃𝐄𝐎", "Use on/off.", "`!antivideo on/off`", null, nomeBot) }, { quoted: msg }) }
         const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].antivideo = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐍𝐓𝐈𝐕𝐈́𝐃𝐄𝐎", "Proteção contra vídeos atualizada.", lineEmoji("⚙️", "𝐒𝐭𝐚𝐭𝐮𝐬", opcao.toUpperCase()), null, nomeBot) }, { quoted: msg })
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐍𝐓𝐈𝐕𝐈́𝐃𝐄𝐎", "Proteção atualizada.", `❄️ ${opcao.toUpperCase()}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -445,9 +387,10 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: msgAviso("𝐀𝐍𝐓𝐈𝐅𝐎𝐓𝐎", "Use on ou off.", "💡 `!antifoto on/off`", null, nomeBot) }, { quoted: msg })
+        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐀𝐍𝐓𝐈𝐅𝐎𝐓𝐎", "Use on/off.", "`!antifoto on/off`", null, nomeBot) }, { quoted: msg }) }
         const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].antifoto = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐍𝐓𝐈𝐅𝐎𝐓𝐎", "Proteção contra fotos atualizada.", lineEmoji("⚙️", "𝐒𝐭𝐚𝐭𝐮𝐬", opcao.toUpperCase()), null, nomeBot) }, { quoted: msg })
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐍𝐓𝐈𝐅𝐎𝐓𝐎", "Proteção atualizada.", `❄️ ${opcao.toUpperCase()}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -455,9 +398,10 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: msgAviso("𝐀𝐍𝐓𝐈𝐅𝐈𝐆", "Use on ou off.", "💡 `!antifig on/off`", null, nomeBot) }, { quoted: msg })
+        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐀𝐍𝐓𝐈𝐅𝐈𝐆", "Use on/off.", "`!antifig on/off`", null, nomeBot) }, { quoted: msg }) }
         const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].antifig = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐍𝐓𝐈𝐅𝐈𝐆", "Proteção contra figurinhas atualizada.", lineEmoji("⚙️", "𝐒𝐭𝐚𝐭𝐮𝐬", opcao.toUpperCase()), null, nomeBot) }, { quoted: msg })
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐍𝐓𝐈𝐅𝐈𝐆", "Proteção atualizada.", `❄️ ${opcao.toUpperCase()}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -465,11 +409,11 @@ ${item("!listafig")}
       aliases: ["promote", "daradm"], adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, groupMetadata, utils, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvoRaw = utils.getAlvo(msg)
-        if (!alvoRaw) return sock.sendMessage(jid, { text: msgAviso("𝐏𝐑𝐎𝐌𝐎𝐕𝐄𝐑", "Marque alguém.", "💡 `!promover @user`", null, nomeBot) }, { quoted: msg })
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "⚠️ Promova o bot a admin.", null, nomeBot) }, { quoted: msg })
+        if (!alvoRaw) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐏𝐑𝐎𝐌𝐎𝐕𝐄𝐑", "Marque alguém.", "`!promover @user`", null, nomeBot) }, { quoted: msg }) }
+        if (!utils.botEhAdmin(groupMetadata, sock)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "Promova o bot", null, nomeBot) }, { quoted: msg }) }
         const n = utils.soNumero(alvoRaw); const part = groupMetadata.participants.find(p => [p.id, p.lid, p.phoneNumber].filter(Boolean).map(utils.soNumero).includes(n))
-        if (!part) return sock.sendMessage(jid, { text: msgErro("𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎", "Usuário não está no grupo.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + n), null, nomeBot) }, { quoted: msg })
-        try { await sock.groupParticipantsUpdate(jid, [part.id], "promote"); await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐑𝐎𝐌𝐎𝐕𝐈𝐃𝐎", "O usuário virou admin.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + n) + "\n" + lineEmoji("⚔️", "𝐍𝐨𝐯𝐨 𝐜𝐚𝐫𝐠𝐨", "𝐀𝐃𝐌𝐈𝐍"), "⚔️ _\"Bem-vindo à elite.\"_", nomeBot), mentions: [part.id] }, { quoted: msg }) } catch (e) { await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
+        if (!part) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎", "Usuário fora do grupo.", `@${n}`, null, nomeBot) }, { quoted: msg }) }
+        try { await sock.groupParticipantsUpdate(jid, [part.id], "promote"); await reagir(sock, msg, "💧"); await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐑𝐎𝐌𝐎𝐕𝐈𝐃𝐎", "Virou admin.", `❄️ @${n}`, null, nomeBot), mentions: [part.id] }, { quoted: msg }) } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
       }
     },
 
@@ -477,11 +421,11 @@ ${item("!listafig")}
       aliases: ["demote", "tiraradm"], adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, groupMetadata, utils, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvoRaw = utils.getAlvo(msg)
-        if (!alvoRaw) return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐁𝐀𝐈𝐗𝐀𝐑", "Marque alguém.", "💡 `!rebaixar @user`", null, nomeBot) }, { quoted: msg })
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "⚠️ Promova o bot a admin.", null, nomeBot) }, { quoted: msg })
+        if (!alvoRaw) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐁𝐀𝐈𝐗𝐀𝐑", "Marque alguém.", "`!rebaixar @user`", null, nomeBot) }, { quoted: msg }) }
+        if (!utils.botEhAdmin(groupMetadata, sock)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "Promova o bot", null, nomeBot) }, { quoted: msg }) }
         const n = utils.soNumero(alvoRaw); const part = groupMetadata.participants.find(p => [p.id, p.lid, p.phoneNumber].filter(Boolean).map(utils.soNumero).includes(n))
-        if (!part) return sock.sendMessage(jid, { text: msgErro("𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎", "Usuário não está no grupo.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + n), null, nomeBot) }, { quoted: msg })
-        try { await sock.groupParticipantsUpdate(jid, [part.id], "demote"); await sock.sendMessage(jid, { text: msgSucesso("𝐑𝐄𝐁𝐀𝐈𝐗𝐀𝐃𝐎", "O usuário perdeu o cargo de admin.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + n) + "\n" + lineEmoji("⚔️", "𝐂𝐚𝐫𝐠𝐨", "𝐌𝐄𝐌𝐁𝐑𝐎"), "⚔️ _\"A força não brilha pra todos.\"_", nomeBot), mentions: [part.id] }, { quoted: msg }) } catch (e) { await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
+        if (!part) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎", "Usuário fora do grupo.", `@${n}`, null, nomeBot) }, { quoted: msg }) }
+        try { await sock.groupParticipantsUpdate(jid, [part.id], "demote"); await reagir(sock, msg, "💧"); await sock.sendMessage(jid, { text: msgSucesso("𝐑𝐄𝐁𝐀𝐈𝐗𝐀𝐃𝐎", "Perdeu admin.", `❄️ @${n}`, null, nomeBot), mentions: [part.id] }, { quoted: msg }) } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
       }
     },
 
@@ -489,11 +433,11 @@ ${item("!listafig")}
       aliases: ["kick", "remover"], adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, groupMetadata, utils, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvoRaw = utils.getAlvo(msg)
-        if (!alvoRaw) return sock.sendMessage(jid, { text: msgAviso("𝐁𝐀𝐍𝐈𝐑", "Marque alguém.", "💡 `!ban @user`", null, nomeBot) }, { quoted: msg })
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "⚠️ Promova o bot a admin.", null, nomeBot) }, { quoted: msg })
+        if (!alvoRaw) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐁𝐀𝐍𝐈𝐑", "Marque alguém.", "`!ban @user`", null, nomeBot) }, { quoted: msg }) }
+        if (!utils.botEhAdmin(groupMetadata, sock)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "Promova o bot", null, nomeBot) }, { quoted: msg }) }
         const n = utils.soNumero(alvoRaw); const part = groupMetadata.participants.find(p => [p.id, p.lid, p.phoneNumber].filter(Boolean).map(utils.soNumero).includes(n))
-        if (!part) return sock.sendMessage(jid, { text: msgErro("𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎", "Usuário não está no grupo.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + n), null, nomeBot) }, { quoted: msg })
-        try { await sock.groupParticipantsUpdate(jid, [part.id], "remove"); await sock.sendMessage(jid, { text: msgSucesso("𝐄𝐗𝐏𝐔𝐋𝐒𝐎", "O usuário foi removido do grupo.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + n), "⚔️ _\"A força não perdoa.\"_", nomeBot), mentions: [part.id] }, { quoted: msg }) } catch (e) { await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
+        if (!part) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎", "Usuário fora do grupo.", `@${n}`, null, nomeBot) }, { quoted: msg }) }
+        try { await sock.groupParticipantsUpdate(jid, [part.id], "remove"); await reagir(sock, msg, "💧"); await sock.sendMessage(jid, { text: msgSucesso("𝐄𝐗𝐏𝐔𝐋𝐒𝐎", "Usuário removido.", `❄️ @${n}`, null, nomeBot), mentions: [part.id] }, { quoted: msg }) } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: "💧 " + e.message }, { quoted: msg }) }
       }
     },
 
@@ -501,17 +445,18 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db, utils }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: msgAviso("𝐀𝐃𝐕𝐄𝐑𝐓𝐈𝐑", "Marque alguém.", "💡 `!adv @user <motivo>`", null, nomeBot) }, { quoted: msg })
+        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐀𝐃𝐕𝐄𝐑𝐓𝐈𝐑", "Marque alguém.", "`!adv @user <motivo>`", null, nomeBot) }, { quoted: msg }) }
         const motivo = args.filter(a => !a.includes("@")).join(" ") || "Sem motivo"
         const advs = db.advs(); advs[jid] = advs[jid] || {}; advs[jid][alvo] = (advs[jid][alvo] || 0) + 1; const total = advs[jid][alvo]; const n = utils.soNumero(alvo)
         if (total >= 3) {
           delete advs[jid][alvo]; db.salvarAdvs(advs)
-          await sock.sendMessage(jid, { text: msgErro("𝐋𝐈𝐌𝐈𝐓𝐄 𝐀𝐓𝐈𝐍𝐆𝐈𝐃𝐎", "O usuário atingiu 3/3 e foi removido.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + n) + "\n" + lineEmoji("📄", "𝐌𝐨𝐭𝐢𝐯𝐨", motivo), "⚔️ _\"Sentença do Grande Sábio.\"_", nomeBot), mentions: [alvo] }, { quoted: msg })
+          await reagir(sock, msg, "💧")
+          await sock.sendMessage(jid, { text: msgErro("𝐋𝐈𝐌𝐈𝐓𝐄", "3/3 atingido. Removido.", `❄️ @${n} • ${motivo}`, null, nomeBot), mentions: [alvo] }, { quoted: msg })
           try { await sock.groupParticipantsUpdate(jid, [alvo], "remove") } catch (_) {}
           return
         }
-        db.salvarAdvs(advs)
-        await sock.sendMessage(jid, { text: msgAviso("𝐀𝐃𝐕𝐄𝐑𝐓𝐄̂𝐍𝐂𝐈𝐀 𝐃𝐀𝐃𝐀", "Usuário advertido.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + n) + "\n" + lineEmoji("⚠️", "𝐀𝐝𝐯𝐞𝐫𝐭𝐞̂𝐧𝐜𝐢𝐚𝐬", total + "/3") + "\n" + lineEmoji("📄", "𝐌𝐨𝐭𝐢𝐯𝐨", motivo), null, nomeBot), mentions: [alvo] }, { quoted: msg })
+        db.salvarAdvs(advs); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgAviso("𝐀𝐃𝐕𝐄𝐑𝐓𝐈𝐃𝐎", "Advertência aplicada.", `❄️ @${n} • ${total}/3`, null, nomeBot), mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -519,11 +464,12 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐌𝐎𝐕𝐄𝐑 𝐀𝐃𝐕", "Marque alguém.", "💡 `!deladv @user`", null, nomeBot) }, { quoted: msg })
+        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐌𝐎𝐕𝐄𝐑 𝐀𝐃𝐕", "Marque alguém.", "`!deladv @user`", null, nomeBot) }, { quoted: msg }) }
         const advs = db.advs(); const atual = (advs[jid] && advs[jid][alvo]) || 0
-        if (atual <= 0) return sock.sendMessage(jid, { text: msgSucesso("𝐅𝐈𝐂𝐇𝐀 𝐋𝐈𝐌𝐏𝐀", "O usuário não tem advertências.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + utils.soNumero(alvo)), null, nomeBot), mentions: [alvo] }, { quoted: msg })
+        if (atual <= 0) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgSucesso("𝐅𝐈𝐂𝐇𝐀 𝐋𝐈𝐌𝐏𝐀", "Sem advertências.", `❄️ @${utils.soNumero(alvo)}`, null, nomeBot), mentions: [alvo] }, { quoted: msg }) }
         advs[jid][alvo] = atual - 1; if (advs[jid][alvo] === 0) delete advs[jid][alvo]; db.salvarAdvs(advs)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐃𝐕 𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐀", "Uma advertência foi removida.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + utils.soNumero(alvo)) + "\n" + lineEmoji("⚠️", "𝐀𝐝𝐯𝐞𝐫𝐭𝐞̂𝐧𝐜𝐢𝐚𝐬", ((advs[jid] && advs[jid][alvo]) || 0) + "/3"), null, nomeBot), mentions: [alvo] }, { quoted: msg })
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐃𝐕 𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐀", "Advertência removida.", `❄️ @${utils.soNumero(alvo)} • ${(advs[jid] && advs[jid][alvo]) || 0}/3`, null, nomeBot), mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -531,9 +477,10 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const entradas = Object.entries(db.advs()[jid] || {})
-        if (!entradas.length) return sock.sendMessage(jid, { text: msgAviso("𝐋𝐈𝐒𝐓𝐀 𝐕𝐀𝐙𝐈𝐀", "Nenhuma advertência registrada.", "💡 Use `!adv @user`", null, nomeBot) }, { quoted: msg })
-        entradas.sort((a, b) => b[1] - a[1]); let t = "💧 • 𝐅𝐈𝐂𝐇𝐀𝐒 𝐒𝐔𝐉𝐀𝐒 •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n"
-        entradas.forEach(([j, q], i) => { t += `╰➜ ${i + 1}. @${utils.soNumero(j)} — *${q}/3*\n` }); t += `\n📊 𝐓𝐨𝐭𝐚𝐥: ${entradas.length}\n\n"${nomeBot}"`
+        if (!entradas.length) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐋𝐈𝐒𝐓𝐀 𝐕𝐀𝐙𝐈𝐀", "Sem advertências.", "Use `!adv`", null, nomeBot) }, { quoted: msg }) }
+        entradas.sort((a, b) => b[1] - a[1]); let t = "💧 • 𝐀𝐃𝐕𝐄𝐑𝐓𝐄̂𝐍𝐂𝐈𝐀𝐒 •\n\n❄️ Lista:\n\n"
+        entradas.forEach(([j, q], i) => { t += `🧊 ${i + 1}. @${utils.soNumero(j)} — ${q}/3\n` }); t += `\n🧊 Total: ${entradas.length}\n\n"${nomeBot}"`
+        await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: t, mentions: entradas.map(e => e[0]) }, { quoted: msg })
       }
     },
@@ -543,8 +490,8 @@ ${item("!listafig")}
       async executar({ sock, msg, args, groupMetadata }) {
         const jid = msg.key.remoteJid; let texto = args.join(" ").trim()
         if (!texto) { const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}; const q = ctx.quotedMessage; if (q) texto = q.conversation || (q.extendedTextMessage && q.extendedTextMessage.text) || (q.imageMessage && q.imageMessage.caption) || "" }
-        if (!texto) return sock.sendMessage(jid, { text: "💧 `!totag <texto>`" }, { quoted: msg })
-        const mentions = groupMetadata.participants.map(p => p.id); await sock.sendMessage(jid, { text: texto, mentions }, { quoted: msg })
+        if (!texto) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: "💧 `!totag <texto>`" }, { quoted: msg }) }
+        const mentions = groupMetadata.participants.map(p => p.id); await reagir(sock, msg, "💧"); await sock.sendMessage(jid, { text: texto, mentions }, { quoted: msg })
       }
     },
 
@@ -552,11 +499,11 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: msgAviso("𝐒𝐔𝐁-𝐀𝐃𝐌", "Marque alguém.", "💡 `!subadm @user`", null, nomeBot) }, { quoted: msg })
+        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐒𝐔𝐁-𝐀𝐃𝐌", "Marque alguém.", "`!subadm @user`", null, nomeBot) }, { quoted: msg }) }
         const subs = db.subadmins(); subs[jid] = subs[jid] || []
-        if (subs[jid].some(s => utils.soNumero(s) === utils.soNumero(alvo))) return sock.sendMessage(jid, { text: msgAviso("𝐉𝐀́ 𝐄́ 𝐒𝐔𝐁-𝐀𝐃𝐌", "O usuário já é Sub-Adm.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + utils.soNumero(alvo)), null, nomeBot) }, { quoted: msg })
-        subs[jid].push(alvo); db.salvarSubadmins(subs)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐒𝐔𝐁-𝐀𝐃𝐌 𝐀𝐃𝐈𝐂𝐈𝐎𝐍𝐀𝐃𝐎", "O usuário virou Sub-Adm.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + utils.soNumero(alvo)) + "\n" + lineEmoji("⚔️", "𝐂𝐚𝐫𝐠𝐨", "𝐒𝐔𝐁-𝐀𝐃𝐌"), null, nomeBot), mentions: [alvo] }, { quoted: msg })
+        if (subs[jid].some(s => utils.soNumero(s) === utils.soNumero(alvo))) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐉𝐀́ 𝐄́", "Já é Sub-Adm.", `❄️ @${utils.soNumero(alvo)}`, null, nomeBot) }, { quoted: msg }) }
+        subs[jid].push(alvo); db.salvarSubadmins(subs); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐒𝐔𝐁-𝐀𝐃𝐌", "Virou Sub-Adm.", `❄️ @${utils.soNumero(alvo)}`, null, nomeBot), mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -564,9 +511,9 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐌𝐎𝐕𝐄𝐑 𝐒𝐔𝐁-𝐀𝐃𝐌", "Marque alguém.", "💡 `!delsubadm @user`", null, nomeBot) }, { quoted: msg })
-        const subs = db.subadmins(); subs[jid] = (subs[jid] || []).filter(s => utils.soNumero(s) !== utils.soNumero(alvo)); db.salvarSubadmins(subs)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐒𝐔𝐁-𝐀𝐃𝐌 𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐎", "O usuário não é mais Sub-Adm.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + utils.soNumero(alvo)), null, nomeBot), mentions: [alvo] }, { quoted: msg })
+        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐌𝐎𝐕𝐄𝐑", "Marque alguém.", "`!delsubadm @user`", null, nomeBot) }, { quoted: msg }) }
+        const subs = db.subadmins(); subs[jid] = (subs[jid] || []).filter(s => utils.soNumero(s) !== utils.soNumero(alvo)); db.salvarSubadmins(subs); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐎", "Não é mais Sub-Adm.", `❄️ @${utils.soNumero(alvo)}`, null, nomeBot), mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -574,8 +521,9 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const subs = db.subadmins()[jid] || []
-        if (!subs.length) return sock.sendMessage(jid, { text: msgAviso("𝐋𝐈𝐒𝐓𝐀 𝐕𝐀𝐙𝐈𝐀", "Nenhum Sub-Adm cadastrado.", "💡 Use `!subadm @user`", null, nomeBot) }, { quoted: msg })
-        let t = "💧 • 𝐒𝐔𝐁-𝐀𝐃𝐌𝐈𝐍𝐒 •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n"; subs.forEach((s, i) => { t += `╰➜ ${i + 1}. @${utils.soNumero(s)}\n` }); t += `\n📊 𝐓𝐨𝐭𝐚𝐥: ${subs.length}\n\n"${nomeBot}"`
+        if (!subs.length) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐋𝐈𝐒𝐓𝐀 𝐕𝐀𝐙𝐈𝐀", "Sem Sub-Admins.", "Use `!subadm`", null, nomeBot) }, { quoted: msg }) }
+        let t = "💧 • 𝐒𝐔𝐁-𝐀𝐃𝐌𝐈𝐍𝐒 •\n\n❄️ Lista:\n\n"; subs.forEach((s, i) => { t += `🧊 ${i + 1}. @${utils.soNumero(s)}\n` }); t += `\n🧊 Total: ${subs.length}\n\n"${nomeBot}"`
+        await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: t, mentions: subs }, { quoted: msg })
       }
     },
@@ -584,9 +532,9 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: msgAviso("𝐒𝐎 𝐀𝐃𝐌", "Use on ou off.", "💡 `!soadm on/off`", null, nomeBot) }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].soadm = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐒𝐎 𝐀𝐃𝐌", "Configuração atualizada.", lineEmoji("⚙️", "𝐒𝐭𝐚𝐭𝐮𝐬", opcao.toUpperCase()), null, nomeBot) }, { quoted: msg })
+        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐒𝐎 𝐀𝐃𝐌", "Use on/off.", "`!soadm on/off`", null, nomeBot) }, { quoted: msg }) }
+        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].soadm = opcao === "on"; db.salvarGrupos(g); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐒𝐎 𝐀𝐃𝐌", "Configurado.", `❄️ ${opcao.toUpperCase()}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -594,9 +542,9 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: msgAviso("𝐌𝐔𝐋𝐓𝐈𝐏𝐑𝐄𝐅𝐈𝐗𝐎", "Use on ou off.", "💡 `!multiprefixo on/off`", null, nomeBot) }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].multiprefixo = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐌𝐔𝐋𝐓𝐈𝐏𝐑𝐄𝐅𝐈𝐗𝐎", "Configuração atualizada.", lineEmoji("⚙️", "𝐒𝐭𝐚𝐭𝐮𝐬", opcao.toUpperCase()), null, nomeBot) }, { quoted: msg })
+        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐌𝐔𝐋𝐓𝐈𝐏𝐑𝐄𝐅𝐈𝐗𝐎", "Use on/off.", "`!multiprefixo on/off`", null, nomeBot) }, { quoted: msg }) }
+        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].multiprefixo = opcao === "on"; db.salvarGrupos(g); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐌𝐔𝐋𝐓𝐈𝐏𝐑𝐄𝐅𝐈𝐗𝐎", "Configurado.", `❄️ ${opcao.toUpperCase()}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -604,12 +552,12 @@ ${item("!listafig")}
       aliases: ["setprefix", "trocarp"], adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const g = db.grupos(); const conf = g[jid] || {}
-        if (!conf.multiprefixo) return sock.sendMessage(jid, { text: msgAviso("𝐌𝐔𝐋𝐓𝐈𝐏𝐑𝐄𝐅𝐈𝐗𝐎 𝐎𝐅𝐅", "Ative o multiprefixo primeiro.", "💡 `!multiprefixo on`", null, nomeBot) }, { quoted: msg })
+        if (!conf.multiprefixo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐌𝐔𝐋𝐓𝐈𝐏𝐑𝐄𝐅𝐈𝐗𝐎 𝐎𝐅𝐅", "Ative primeiro.", "`!multiprefixo on`", null, nomeBot) }, { quoted: msg }) }
         const novo = args[0]
-        if (!novo) return sock.sendMessage(jid, { text: msgAviso("𝐒𝐄𝐓𝐏𝐑𝐄𝐅𝐈𝐗𝐎", "Informe o novo prefixo.", "💡 `!setprefixo <novo>`", null, nomeBot) }, { quoted: msg })
-        if (novo.length > 3) return sock.sendMessage(jid, { text: msgErro("𝐌𝐔𝐈𝐓𝐎 𝐋𝐎𝐍𝐆𝐎", "O prefixo deve ter no máximo 3 caracteres.", lineEmoji("📝", "𝐕𝐚𝐥𝐨𝐫", novo), null, nomeBot) }, { quoted: msg })
-        g[jid].prefixo = novo; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐑𝐄𝐅𝐈𝐗𝐎 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐃𝐎", "Prefixo do grupo alterado.", lineEmoji("📝", "𝐍𝐨𝐯𝐨", "`" + novo + "`"), null, nomeBot) }, { quoted: msg })
+        if (!novo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐒𝐄𝐓𝐏𝐑𝐄𝐅𝐈𝐗𝐎", "Informe o prefixo.", "`!setprefixo <s>`", null, nomeBot) }, { quoted: msg }) }
+        if (novo.length > 3) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐋𝐎𝐍𝐆𝐎", "Máximo 3 caracteres.", `❄️ ${novo}`, null, nomeBot) }, { quoted: msg }) }
+        g[jid].prefixo = novo; db.salvarGrupos(g); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐑𝐄𝐅𝐈𝐗𝐎", "Alterado.", `❄️ \`${novo}\``, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -617,9 +565,9 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: msgAviso("𝐗𝟗", "Use on ou off.", "💡 `!x9 on/off`", null, nomeBot) }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].x9 = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐗𝟗 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐃𝐎", "Espionagem configurada.", lineEmoji("⚙️", "𝐒𝐭𝐚𝐭𝐮𝐬", opcao.toUpperCase()), null, nomeBot) }, { quoted: msg })
+        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐗𝟗", "Use on/off.", "`!x9 on/off`", null, nomeBot) }, { quoted: msg }) }
+        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].x9 = opcao === "on"; db.salvarGrupos(g); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐗𝟗", "Espionagem configurada.", `❄️ ${opcao.toUpperCase()}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -627,12 +575,12 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db, groupMetadata, utils }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const numero = (args[0] || "").replace(/\D/g, "")
-        if (!numero || numero.length < 8) return sock.sendMessage(jid, { text: msgAviso("𝐋𝐈𝐒𝐓𝐀 𝐍𝐄𝐆𝐑𝐀", "Informe o número.", "💡 `!listanegra <número>`", null, nomeBot) }, { quoted: msg })
+        if (!numero || numero.length < 8) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐋𝐈𝐒𝐓𝐀 𝐍𝐄𝐆𝐑𝐀", "Informe o número.", "`!listanegra <núm>`", null, nomeBot) }, { quoted: msg }) }
         const lista = db.listanegra(); lista[jid] = lista[jid] || []
-        if (lista[jid].includes(numero)) return sock.sendMessage(jid, { text: msgAviso("𝐉𝐀́ 𝐍𝐀 𝐋𝐈𝐒𝐓𝐀", "Esse número já está na lista negra.", lineEmoji("📱", "𝐍𝐮́𝐦𝐞𝐫𝐨", "+" + numero), null, nomeBot) }, { quoted: msg })
-        lista[jid].push(numero); db.salvarListanegra(lista)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐍𝐔́𝐌𝐄𝐑𝐎 𝐀𝐃𝐈𝐂𝐈𝐎𝐍𝐀𝐃𝐎", "Número marcado na lista negra.", lineEmoji("📱", "𝐍𝐮́𝐦𝐞𝐫𝐨", "+" + numero), null, nomeBot) }, { quoted: msg })
-        try { const part = groupMetadata && groupMetadata.participants.find(p => [p.id, p.lid, p.phoneNumber].filter(Boolean).map(utils.soNumero).includes(numero)); if (part) { await sock.groupParticipantsUpdate(jid, [part.id], "remove"); await sock.sendMessage(jid, { text: msgSucesso("𝐄𝐗𝐏𝐔𝐋𝐒𝐎 𝐀𝐔𝐓𝐎𝐌𝐀́𝐓𝐈𝐂𝐎", "O usuário foi removido.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + numero), null, nomeBot), mentions: [part.id] }) } } catch (_) {}
+        if (lista[jid].includes(numero)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐉𝐀́ 𝐍𝐀 𝐋𝐈𝐒𝐓𝐀", "Número já marcado.", `❄️ +${numero}`, null, nomeBot) }, { quoted: msg }) }
+        lista[jid].push(numero); db.salvarListanegra(lista); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐍𝐔́𝐌𝐄𝐑𝐎", "Marcado na lista negra.", `❄️ +${numero}`, null, nomeBot) }, { quoted: msg })
+        try { const part = groupMetadata && groupMetadata.participants.find(p => [p.id, p.lid, p.phoneNumber].filter(Boolean).map(utils.soNumero).includes(numero)); if (part) { await sock.groupParticipantsUpdate(jid, [part.id], "remove"); await sock.sendMessage(jid, { text: msgSucesso("𝐄𝐗𝐏𝐔𝐋𝐒𝐎", "Removido automaticamente.", `❄️ @${numero}`, null, nomeBot), mentions: [part.id] }) } } catch (_) {}
       }
     },
 
@@ -640,8 +588,9 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const lista = (db.listanegra()[jid] || [])
-        if (!lista.length) return sock.sendMessage(jid, { text: msgAviso("𝐋𝐈𝐒𝐓𝐀 𝐕𝐀𝐙𝐈𝐀", "Nenhum número na lista negra.", "💡 Use `!listanegra <número>`", null, nomeBot) }, { quoted: msg })
-        let t = "💧 • 𝐓𝐑𝐀𝐈𝐃𝐎𝐑𝐄𝐒 •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n"; lista.forEach((n, i) => { t += `╰➜ ${i + 1}. +${n}\n` }); t += `\n📊 𝐓𝐨𝐭𝐚𝐥: ${lista.length}\n\n"${nomeBot}"`
+        if (!lista.length) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐋𝐈𝐒𝐓𝐀 𝐕𝐀𝐙𝐈𝐀", "Sem números.", "Use `!listanegra`", null, nomeBot) }, { quoted: msg }) }
+        let t = "💧 • 𝐁𝐋𝐀𝐂𝐊𝐋𝐈𝐒𝐓 •\n\n❄️ Lista:\n\n"; lista.forEach((n, i) => { t += `🧊 ${i + 1}. +${n}\n` }); t += `\n🧊 Total: ${lista.length}\n\n"${nomeBot}"`
+        await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: t }, { quoted: msg })
       }
     },
@@ -650,11 +599,11 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const numero = (args[0] || "").replace(/\D/g, "")
-        if (!numero) return sock.sendMessage(jid, { text: msgAviso("𝐃𝐄𝐋𝐋𝐈𝐒𝐓𝐀", "Informe o número.", "💡 `!dellista <número>`", null, nomeBot) }, { quoted: msg })
+        if (!numero) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐃𝐄𝐋𝐋𝐈𝐒𝐓𝐀", "Informe o número.", "`!dellista <núm>`", null, nomeBot) }, { quoted: msg }) }
         const lista = db.listanegra(); const arr = lista[jid] || []; const idx = arr.indexOf(numero)
-        if (idx === -1) return sock.sendMessage(jid, { text: msgAviso("𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎", "Número não está na lista.", lineEmoji("📱", "𝐍𝐮́𝐦𝐞𝐫𝐨", "+" + numero), null, nomeBot) }, { quoted: msg })
-        arr.splice(idx, 1); lista[jid] = arr; db.salvarListanegra(lista)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐍𝐔́𝐌𝐄𝐑𝐎 𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐎", "Número perdoado.", lineEmoji("📱", "𝐍𝐮́𝐦𝐞𝐫𝐨", "+" + numero), null, nomeBot) }, { quoted: msg })
+        if (idx === -1) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎", "Número fora da lista.", `❄️ +${numero}`, null, nomeBot) }, { quoted: msg }) }
+        arr.splice(idx, 1); lista[jid] = arr; db.salvarListanegra(lista); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐍𝐔́𝐌𝐄𝐑𝐎", "Removido da lista.", `❄️ +${numero}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -662,9 +611,9 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) return sock.sendMessage(jid, { text: msgAviso("𝐁𝐄𝐌-𝐕𝐈𝐍𝐃𝐎", "Use on ou off.", "💡 `!bemvindo on/off`", null, nomeBot) }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].bemvindo = opcao === "on"; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐁𝐄𝐌-𝐕𝐈𝐍𝐃𝐎", "Mensagem de boas-vindas atualizada.", lineEmoji("⚙️", "𝐒𝐭𝐚𝐭𝐮𝐬", opcao.toUpperCase()), null, nomeBot) }, { quoted: msg })
+        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐁𝐄𝐌-𝐕𝐈𝐍𝐃𝐎", "Use on/off.", "`!bemvindo on/off`", null, nomeBot) }, { quoted: msg }) }
+        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].bemvindo = opcao === "on"; db.salvarGrupos(g); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐁𝐄𝐌-𝐕𝐈𝐍𝐃𝐎", "Configurado.", `❄️ ${opcao.toUpperCase()}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -672,9 +621,9 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const t = args.join(" ").trim()
-        if (!t) return sock.sendMessage(jid, { text: msgAviso("𝐓𝐄𝐗𝐓𝐎 𝐁𝐕", "Informe o texto.", "💡 `!textobv <texto>` (%nmr%)", null, nomeBot) }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].textobv = t; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐓𝐄𝐗𝐓𝐎 𝐒𝐀𝐋𝐕𝐎", "Texto de boas-vindas salvo.", lineEmoji("📝", "𝐓𝐞𝐱𝐭𝐨", t), null, nomeBot) }, { quoted: msg })
+        if (!t) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐓𝐄𝐗𝐓𝐎", "Informe o texto.", "`!textobv <txt>` (%nmr%)", null, nomeBot) }, { quoted: msg }) }
+        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].textobv = t; db.salvarGrupos(g); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐓𝐄𝐗𝐓𝐎", "Salvo.", `❄️ ${t}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -683,11 +632,11 @@ ${item("!listafig")}
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}; const quoted = ctx.quotedMessage
         const tem = (msg.message && msg.message.imageMessage) || (quoted && quoted.imageMessage)
-        if (!tem) return sock.sendMessage(jid, { text: msgAviso("𝐅𝐔𝐍𝐃𝐎 𝐁𝐕", "Envie ou responda uma imagem.", "💡 `!fundobv` (reply imagem)", null, nomeBot) }, { quoted: msg })
+        if (!tem) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐅𝐔𝐍𝐃𝐎", "Responda uma imagem.", "`!fundobv` (reply)", null, nomeBot) }, { quoted: msg }) }
         const alvoMsg = (msg.message && msg.message.imageMessage) ? msg : Object.assign({}, msg, { message: { imageMessage: quoted.imageMessage } })
         const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].fundobv = buffer.toString("base64"); db.salvarGrupos(g)
-        await sock.sendMessage(jid, { image: buffer, caption: msgSucesso("𝐅𝐔𝐍𝐃𝐎 𝐁𝐕 𝐒𝐀𝐋𝐕𝐎", "Imagem de boas-vindas salva.", "🖼️ _Aplicada ao grupo._", null, nomeBot) }, { quoted: msg })
+        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].fundobv = buffer.toString("base64"); db.salvarGrupos(g); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { image: buffer, caption: msgSucesso("𝐅𝐔𝐍𝐃𝐎", "Imagem salva.", "❄️ Aplicada ao grupo", null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -695,9 +644,9 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const t = args.join(" ").trim()
-        if (!t) return sock.sendMessage(jid, { text: msgAviso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀 𝐒𝐀𝐈𝐔", "Informe o texto.", "💡 `!legendasaiu <texto>` (%nmr%)", null, nomeBot) }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].legendasaiu = t; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀 𝐒𝐀𝐋𝐕𝐀", "Legenda de partida salva.", lineEmoji("📝", "𝐓𝐞𝐱𝐭𝐨", t), null, nomeBot) }, { quoted: msg })
+        if (!t) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀", "Informe o texto.", "`!legendasaiu <txt>` (%nmr%)", null, nomeBot) }, { quoted: msg }) }
+        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].legendasaiu = t; db.salvarGrupos(g); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀", "Salva.", `❄️ ${t}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -706,11 +655,11 @@ ${item("!listafig")}
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}; const quoted = ctx.quotedMessage
         const tem = (msg.message && msg.message.imageMessage) || (quoted && quoted.imageMessage)
-        if (!tem) return sock.sendMessage(jid, { text: msgAviso("𝐅𝐔𝐍𝐃𝐎 𝐒𝐀𝐈𝐔", "Envie ou responda uma imagem.", "💡 `!fundosaiu` (reply imagem)", null, nomeBot) }, { quoted: msg })
+        if (!tem) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐅𝐔𝐍𝐃𝐎", "Responda uma imagem.", "`!fundosaiu` (reply)", null, nomeBot) }, { quoted: msg }) }
         const alvoMsg = (msg.message && msg.message.imageMessage) ? msg : Object.assign({}, msg, { message: { imageMessage: quoted.imageMessage } })
         const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].fundosaiu = buffer.toString("base64"); db.salvarGrupos(g)
-        await sock.sendMessage(jid, { image: buffer, caption: msgSucesso("𝐅𝐔𝐍𝐃𝐎 𝐒𝐀𝐈𝐔 𝐒𝐀𝐋𝐕𝐎", "Imagem de partida salva.", "🖼️ _Aplicada ao grupo._", null, nomeBot) }, { quoted: msg })
+        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].fundosaiu = buffer.toString("base64"); db.salvarGrupos(g); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { image: buffer, caption: msgSucesso("𝐅𝐔𝐍𝐃𝐎", "Imagem salva.", "❄️ Aplicada ao grupo", null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -718,12 +667,12 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db, utils, groupMetadata }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "⚠️ Promova o bot a admin.", null, nomeBot) }, { quoted: msg })
+        if (!utils.botEhAdmin(groupMetadata, sock)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "Promova o bot", null, nomeBot) }, { quoted: msg }) }
         const hora = args[0]
-        if (!hora || !/^\d{1,2}:\d{2}$/.test(hora)) return sock.sendMessage(jid, { text: msgAviso("𝐀𝐁𝐑𝐈𝐑𝐆𝐏", "Informe o horário.", "💡 `!abrirgp hh:mm`", null, nomeBot) }, { quoted: msg })
+        if (!hora || !/^\d{1,2}:\d{2}$/.test(hora)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐀𝐁𝐑𝐈𝐑𝐆𝐏", "Informe o horário.", "`!abrirgp hh:mm`", null, nomeBot) }, { quoted: msg }) }
         const [h, m] = hora.split(":").map(Number); const fmt = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0")
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].abrirHora = fmt; g[jid].ultimoAbrir = null; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐁𝐄𝐑𝐓𝐔𝐑𝐀 𝐀𝐆𝐄𝐍𝐃𝐀𝐃𝐀", "O grupo será aberto no horário.", lineEmoji("⏰", "𝐇𝐨𝐫𝐚́𝐫𝐢𝐨", fmt), null, nomeBot) }, { quoted: msg })
+        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].abrirHora = fmt; g[jid].ultimoAbrir = null; db.salvarGrupos(g); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐁𝐄𝐑𝐓𝐔𝐑𝐀", "Agendada.", `❄️ ${fmt}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -731,12 +680,12 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db, utils, groupMetadata }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
-        if (!utils.botEhAdmin(groupMetadata, sock)) return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "⚠️ Promova o bot a admin.", null, nomeBot) }, { quoted: msg })
+        if (!utils.botEhAdmin(groupMetadata, sock)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐌𝐈𝐒𝐒𝐀̃𝐎", "Preciso ser admin.", "Promova o bot", null, nomeBot) }, { quoted: msg }) }
         const hora = args[0]
-        if (!hora || !/^\d{1,2}:\d{2}$/.test(hora)) return sock.sendMessage(jid, { text: msgAviso("𝐅𝐄𝐂𝐇𝐀𝐑𝐆𝐏", "Informe o horário.", "💡 `!fechargp hh:mm`", null, nomeBot) }, { quoted: msg })
+        if (!hora || !/^\d{1,2}:\d{2}$/.test(hora)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐅𝐄𝐂𝐇𝐀𝐑𝐆𝐏", "Informe o horário.", "`!fechargp hh:mm`", null, nomeBot) }, { quoted: msg }) }
         const [h, m] = hora.split(":").map(Number); const fmt = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0")
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].fecharHora = fmt; g[jid].ultimoFechar = null; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐅𝐄𝐂𝐇𝐀𝐌𝐄𝐍𝐓𝐎 𝐀𝐆𝐄𝐍𝐃𝐀𝐃𝐎", "O grupo será fechado no horário.", lineEmoji("⏰", "𝐇𝐨𝐫𝐚́𝐫𝐢𝐨", fmt), null, nomeBot) }, { quoted: msg })
+        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].fecharHora = fmt; g[jid].ultimoFechar = null; db.salvarGrupos(g); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐅𝐄𝐂𝐇𝐀𝐌𝐄𝐍𝐓𝐎", "Agendado.", `❄️ ${fmt}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -746,9 +695,9 @@ ${item("!listafig")}
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}; const quoted = ctx.quotedMessage
         const tem = (msg.message && msg.message.imageMessage) || (quoted && quoted.imageMessage); const legenda = (args.join(" ").trim()) || (quoted && quoted.imageMessage && quoted.imageMessage.caption) || null
         const g = db.grupos(); g[jid] = g[jid] || {}
-        if (tem) { const alvoMsg = (msg.message && msg.message.imageMessage) ? msg : Object.assign({}, msg, { message: { imageMessage: quoted.imageMessage } }); const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage }); g[jid].fotoAbrir = buffer.toString("base64"); if (legenda) g[jid].legendaAbrir = legenda; db.salvarGrupos(g); return sock.sendMessage(jid, { image: buffer, caption: msgSucesso("𝐅𝐎𝐓𝐎 𝐀𝐁𝐑𝐈𝐑 𝐒𝐀𝐋𝐕𝐀", "Imagem de abertura salva.", (legenda ? lineEmoji("📝", "𝐋𝐞𝐠𝐞𝐧𝐝𝐚", legenda) : "🖼️ _Aplicada ao grupo._"), null, nomeBot) }, { quoted: msg }) }
-        if (legenda) { g[jid].legendaAbrir = legenda; db.salvarGrupos(g); return sock.sendMessage(jid, { text: msgSucesso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀 𝐒𝐀𝐋𝐕𝐀", "Legenda salva.", lineEmoji("📝", "𝐓𝐞𝐱𝐭𝐨", legenda), null, nomeBot) }, { quoted: msg }) }
-        return sock.sendMessage(jid, { text: msgAviso("𝐅𝐎𝐓𝐎 𝐀𝐁𝐑𝐈𝐑", "Envie ou responda uma imagem.", "💡 `!fotoabrir` (reply imagem)", null, nomeBot) }, { quoted: msg })
+        if (tem) { const alvoMsg = (msg.message && msg.message.imageMessage) ? msg : Object.assign({}, msg, { message: { imageMessage: quoted.imageMessage } }); const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage }); g[jid].fotoAbrir = buffer.toString("base64"); if (legenda) g[jid].legendaAbrir = legenda; db.salvarGrupos(g); await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { image: buffer, caption: msgSucesso("𝐅𝐎𝐓𝐎", "Abertura salva.", "❄️ Aplicada ao grupo", null, nomeBot) }, { quoted: msg }) }
+        if (legenda) { g[jid].legendaAbrir = legenda; db.salvarGrupos(g); await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgSucesso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀", "Salva.", `❄️ ${legenda}`, null, nomeBot) }, { quoted: msg }) }
+        await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐅𝐎𝐓𝐎", "Responda uma imagem.", "`!fotoabrir` (reply)", null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -758,9 +707,9 @@ ${item("!listafig")}
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}; const quoted = ctx.quotedMessage
         const tem = (msg.message && msg.message.imageMessage) || (quoted && quoted.imageMessage); const legenda = (args.join(" ").trim()) || (quoted && quoted.imageMessage && quoted.imageMessage.caption) || null
         const g = db.grupos(); g[jid] = g[jid] || {}
-        if (tem) { const alvoMsg = (msg.message && msg.message.imageMessage) ? msg : Object.assign({}, msg, { message: { imageMessage: quoted.imageMessage } }); const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage }); g[jid].fotoFechar = buffer.toString("base64"); if (legenda) g[jid].legendaFechar = legenda; db.salvarGrupos(g); return sock.sendMessage(jid, { image: buffer, caption: msgSucesso("𝐅𝐎𝐓𝐎 𝐅𝐄𝐂𝐇𝐀𝐑 𝐒𝐀𝐋𝐕𝐀", "Imagem de fechamento salva.", (legenda ? lineEmoji("📝", "𝐋𝐞𝐠𝐞𝐧𝐝𝐚", legenda) : "🖼️ _Aplicada ao grupo._"), null, nomeBot) }, { quoted: msg }) }
-        if (legenda) { g[jid].legendaFechar = legenda; db.salvarGrupos(g); return sock.sendMessage(jid, { text: msgSucesso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀 𝐒𝐀𝐋𝐕𝐀", "Legenda salva.", lineEmoji("📝", "𝐓𝐞𝐱𝐭𝐨", legenda), null, nomeBot) }, { quoted: msg }) }
-        return sock.sendMessage(jid, { text: msgAviso("𝐅𝐎𝐓𝐎 𝐅𝐄𝐂𝐇𝐀𝐑", "Envie ou responda uma imagem.", "💡 `!fotofechar` (reply imagem)", null, nomeBot) }, { quoted: msg })
+        if (tem) { const alvoMsg = (msg.message && msg.message.imageMessage) ? msg : Object.assign({}, msg, { message: { imageMessage: quoted.imageMessage } }); const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage }); g[jid].fotoFechar = buffer.toString("base64"); if (legenda) g[jid].legendaFechar = legenda; db.salvarGrupos(g); await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { image: buffer, caption: msgSucesso("𝐅𝐎𝐓𝐎", "Fechamento salva.", "❄️ Aplicada ao grupo", null, nomeBot) }, { quoted: msg }) }
+        if (legenda) { g[jid].legendaFechar = legenda; db.salvarGrupos(g); await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgSucesso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀", "Salva.", `❄️ ${legenda}`, null, nomeBot) }, { quoted: msg }) }
+        await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐅𝐎𝐓𝐎", "Responda uma imagem.", "`!fotofechar` (reply)", null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -769,9 +718,9 @@ ${item("!listafig")}
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); let t = args.join(" ").trim()
         if (!t) { const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}; const q = ctx.quotedMessage; if (q) t = q.conversation || (q.extendedTextMessage && q.extendedTextMessage.text) || (q.imageMessage && q.imageMessage.caption) || "" }
-        if (!t) return sock.sendMessage(jid, { text: msgAviso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀 𝐀𝐁𝐑𝐈𝐑", "Informe o texto.", "💡 `!legendaabrir <texto>`\n╰➜ ou responda uma msg", null, nomeBot) }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].legendaAbrir = t; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀 𝐀𝐁𝐑𝐈𝐑 𝐒𝐀𝐋𝐕𝐀", "Será enviada junto com a foto ao abrir o grupo.", lineEmoji("📝", "𝐓𝐞𝐱𝐭𝐨", t), null, nomeBot) }, { quoted: msg })
+        if (!t) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀", "Informe o texto.", "`!legendaabrir <txt>`", null, nomeBot) }, { quoted: msg }) }
+        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].legendaAbrir = t; db.salvarGrupos(g); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀", "Salva.", `❄️ ${t}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -780,9 +729,9 @@ ${item("!listafig")}
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); let t = args.join(" ").trim()
         if (!t) { const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {}; const q = ctx.quotedMessage; if (q) t = q.conversation || (q.extendedTextMessage && q.extendedTextMessage.text) || (q.imageMessage && q.imageMessage.caption) || "" }
-        if (!t) return sock.sendMessage(jid, { text: msgAviso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀 𝐅𝐄𝐂𝐇𝐀𝐑", "Informe o texto.", "💡 `!legendafechar <texto>`\n╰➜ ou responda uma msg", null, nomeBot) }, { quoted: msg })
-        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].legendaFechar = t; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀 𝐅𝐄𝐂𝐇𝐀𝐑 𝐒𝐀𝐋𝐕𝐀", "Será enviada junto com a foto ao fechar o grupo.", lineEmoji("📝", "𝐓𝐞𝐱𝐭𝐨", t), null, nomeBot) }, { quoted: msg })
+        if (!t) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀", "Informe o texto.", "`!legendafechar <txt>`", null, nomeBot) }, { quoted: msg }) }
+        const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].legendaFechar = t; db.salvarGrupos(g); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐄𝐆𝐄𝐍𝐃𝐀", "Salva.", `❄️ ${t}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -790,25 +739,24 @@ ${item("!listafig")}
       aliases: ["rmsfotos", "resetfotos", "limparfoto"], adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const g = db.grupos(); g[jid] = g[jid] || {}
-        const tinha = { fotoAbrir: !!g[jid].fotoAbrir, fotoFechar: !!g[jid].fotoFechar, legendaAbrir: !!g[jid].legendaAbrir, legendaFechar: !!g[jid].legendaFechar }
-        delete g[jid].fotoAbrir; delete g[jid].fotoFechar; delete g[jid].legendaAbrir; delete g[jid].legendaFechar; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐈𝐌𝐏𝐄𝐙𝐀 𝐅𝐄𝐈𝐓𝐀", "Fotos e legendas de abrir/fechar foram removidas.", lineEmoji("🖼️", "𝐅𝐨𝐭𝐨 𝐚𝐛𝐫𝐢𝐫", tinha.fotoAbrir ? "removida" : "não tinha") + "\n" + lineEmoji("🖼️", "𝐅𝐨𝐭𝐨 𝐟𝐞𝐜𝐡𝐚𝐫", tinha.fotoFechar ? "removida" : "não tinha") + "\n" + lineEmoji("📝", "𝐋𝐞𝐠𝐞𝐧𝐝𝐚 𝐚𝐛𝐫𝐢𝐫", tinha.legendaAbrir ? "removida" : "não tinha") + "\n" + lineEmoji("📝", "𝐋𝐞𝐠𝐞𝐧𝐝𝐚 𝐟𝐞𝐜𝐡𝐚𝐫", tinha.legendaFechar ? "removida" : "não tinha"), null, nomeBot) }, { quoted: msg })
+        delete g[jid].fotoAbrir; delete g[jid].fotoFechar; delete g[jid].legendaAbrir; delete g[jid].legendaFechar; db.salvarGrupos(g); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐈𝐌𝐏𝐄𝐙𝐀", "Fotos e legendas removidas.", "❄️ Tudo limpo", null, nomeBot) }, { quoted: msg })
       }
     },
 
     iaon: {
       aliases: ["ativaria", "ligaria"], adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].iaAtiva = true; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: `💧 • 𝐈𝐀 𝐀𝐓𝐈𝐕𝐀𝐃𝐀 •\n\n╭─〔 🔷 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ Agora eu respondo quando me marcarem.\n╰──────────────\n\n💡 Marque o bot ou responda uma msg dele.\n\n"${nomeBot}"` }, { quoted: msg })
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].iaAtiva = true; db.salvarGrupos(g); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐈𝐀", "Ativada.", "❄️ Marque o bot pra conversar", null, nomeBot) }, { quoted: msg })
       }
     },
 
     iaoff: {
       aliases: ["desligaria", "desativaria"], adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].iaAtiva = false; db.salvarGrupos(g)
-        await sock.sendMessage(jid, { text: `💧 • 𝐈𝐀 𝐃𝐄𝐒𝐀𝐓𝐈𝐕𝐀𝐃𝐀 •\n\n╭─〔 🔹 𝐀𝐕𝐈𝐒𝐎 〕\n│ Não respondo mais automaticamente.\n╰──────────────\n\n"${nomeBot}"` }, { quoted: msg })
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const g = db.grupos(); g[jid] = g[jid] || {}; g[jid].iaAtiva = false; db.salvarGrupos(g); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐈𝐀", "Desativada.", "❄️ Não respondo mais", null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -816,14 +764,15 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, utils, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
-        if (args.length < 2) return sock.sendMessage(jid, { text: msgAviso("𝐒𝐎𝐑𝐓𝐄𝐈𝐎", "Informe prêmio e tempo.", "💡 `!sorteio <prêmio> <tempo>`", null, nomeBot) }, { quoted: msg })
+        if (args.length < 2) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐒𝐎𝐑𝐓𝐄𝐈𝐎", "Informe prêmio e tempo.", "`!sorteio <prêmio> <tempo>`", null, nomeBot) }, { quoted: msg }) }
         const dRaw = args[args.length - 1].toLowerCase(); const premio = args.slice(0, -1).join(" "); const m = dRaw.match(/^(\d+)(s|m|h)$/)
-        if (!m) return sock.sendMessage(jid, { text: msgAviso("𝐅𝐎𝐑𝐌𝐀𝐓𝐎 𝐄𝐑𝐑𝐀𝐃𝐎", "Use 30s / 5m / 1h.", "💡 `!sorteio prêmio 5m`", null, nomeBot) }, { quoted: msg })
+        if (!m) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐅𝐎𝐑𝐌𝐀𝐓𝐎", "Use 30s / 5m / 1h.", "`!sorteio prêmio 5m`", null, nomeBot) }, { quoted: msg }) }
         const v = parseInt(m[1]), u = m[2]; let ms = 0, txt = ""
         if (u === "s") { ms = v * 1000; txt = v + "s" } if (u === "m") { ms = v * 60000; txt = v + "min" } if (u === "h") { ms = v * 3600000; txt = v + "h" }
-        await sock.sendMessage(jid, { text: msgSucesso("𝐒𝐎𝐑𝐓𝐄𝐈𝐎 𝐈𝐍𝐈𝐂𝐈𝐀𝐃𝐎", "Boa sorte a todos!", lineEmoji("🎁", "𝐏𝐫𝐞̂𝐦𝐢𝐨", premio) + "\n" + lineEmoji("⏰", "𝐓𝐞𝐦𝐩𝐨", txt), null, nomeBot) }, { quoted: msg })
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐒𝐎𝐑𝐓𝐄𝐈𝐎", "Iniciado.", `❄️ Prêmio: ${premio} • Tempo: ${txt}`, null, nomeBot) }, { quoted: msg })
         setTimeout(async () => {
-          try { const meta = await sock.groupMetadata(jid); const mbs = meta.participants.map(p => p.id); if (!mbs.length) return; const g = mbs[Math.floor(Math.random() * mbs.length)]; await sock.sendMessage(jid, { text: msgSucesso("𝐕𝐄𝐍𝐂𝐄𝐃𝐎𝐑", "A força escolheu o sortudo!", lineEmoji("🎁", "𝐏𝐫𝐞̂𝐦𝐢𝐨", premio) + "\n" + lineEmoji("🥇", "𝐕𝐞𝐧𝐜𝐞𝐝𝐨𝐫", "@" + utils.soNumero(g)), null, nomeBot), mentions: [g] }) } catch (_) {}
+          try { const meta = await sock.groupMetadata(jid); const mbs = meta.participants.map(p => p.id); if (!mbs.length) return; const g = mbs[Math.floor(Math.random() * mbs.length)]; await sock.sendMessage(jid, { text: msgSucesso("𝐕𝐄𝐍𝐂𝐄𝐃𝐎𝐑", "Sorteado!", `❄️ @${utils.soNumero(g)} • Prêmio: ${premio}`, null, nomeBot), mentions: [g] }) } catch (_) {}
         }, ms)
       }
     },
@@ -833,8 +782,8 @@ ${item("!listafig")}
       async executar({ sock, msg, args, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const parcerias = db.parcerias(); parcerias[jid] = parcerias[jid] || { ativo: false, parceiros: {} }
         const sub = (args[0] || "").toLowerCase(); if (sub === "on") parcerias[jid].ativo = true; else if (sub === "off") parcerias[jid].ativo = false; else parcerias[jid].ativo = !parcerias[jid].ativo
-        db.salvarParcerias(parcerias)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐌𝐎𝐃𝐎 𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀", "Configuração atualizada.", lineEmoji("🤝", "𝐒𝐭𝐚𝐭𝐮𝐬", parcerias[jid].ativo ? "ON ✅" : "OFF ❌"), null, nomeBot) }, { quoted: msg })
+        db.salvarParcerias(parcerias); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀", "Configurado.", `❄️ ${parcerias[jid].ativo ? "ON ✅" : "OFF ❌"}`, null, nomeBot) }, { quoted: msg })
       }
     },
 
@@ -843,10 +792,11 @@ ${item("!listafig")}
       async executar({ sock, msg, db, groupMetadata, utils }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const numUser = utils.soNumero(msg.key.participant || msg.key.remoteJid)
         if (!groupMetadata) return; const admins = groupMetadata.participants.filter(p => p.admin === "admin" || p.admin === "superadmin").map(p => p.id)
-        if (admins.length === 0) return sock.sendMessage(jid, { text: msgAviso("𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀", "Não encontrei nenhum admin no grupo.", "⚠️ Avise o dono do grupo.", null, nomeBot) }, { quoted: msg })
-        let txt = `💧 • 𝐏𝐄𝐃𝐈𝐃𝐎 𝐃𝐄 𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 •\n\n╭─〔 🤝 𝐒𝐎𝐋𝐈𝐂𝐈𝐓𝐀𝐂̧𝐀̃𝐎 〕\n│ @${numUser} está pedindo aliança.\n╰──────────────\n\n『 𝐀𝐃𝐌𝐈𝐍𝐒 𝐌𝐀𝐑𝐂𝐀𝐃𝐎𝐒 』 ↴\n\n`
-        admins.forEach((a, i) => { txt += `╰➜ ${i + 1}. @${utils.soNumero(a)}\n` })
-        txt += `\n💡 *Administradores*, para liberar, usem:\n╰➜ \`!addparceria @${numUser} <qtd>\`\n\n"${nomeBot}"`
+        if (admins.length === 0) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀", "Sem admin no grupo.", "Avise o dono", null, nomeBot) }, { quoted: msg }) }
+        await reagir(sock, msg, "💧")
+        let txt = `💧 • 𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 •\n\n❄️ @${numUser} pede aliança.\n\n🧊 Admins:\n`
+        admins.forEach((a, i) => { txt += `🧊 ${i + 1}. @${utils.soNumero(a)}\n` })
+        txt += `\n🧊 Use: \`!addparceria @${numUser} <qtd>\`\n\n"${nomeBot}"`
         await sock.sendMessage(jid, { text: txt, mentions: [msg.key.participant || msg.key.remoteJid, ...admins] }, { quoted: msg })
       }
     },
@@ -855,12 +805,12 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db, utils }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: msgAviso("𝐀𝐃𝐃𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀", "Marque um usuário.", "💡 `!addparceria @user <qtd>`", null, nomeBot) }, { quoted: msg })
+        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐀𝐃𝐃𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀", "Marque um usuário.", "`!addparceria @user <qtd>`", null, nomeBot) }, { quoted: msg }) }
         const qtd = parseInt(args.find(a => /^\d+$/.test(a)) || "0", 10)
-        if (!qtd || qtd <= 0) return sock.sendMessage(jid, { text: msgAviso("𝐐𝐔𝐀𝐍𝐓𝐈𝐃𝐀𝐃𝐄", "Informe a quantidade de links por dia.", "💡 `!addparceria @user <qtd>`\n📌 Exemplo: `!addparceria @user 2`", null, nomeBot) }, { quoted: msg })
+        if (!qtd || qtd <= 0) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐐𝐔𝐀𝐍𝐓𝐈𝐃𝐀𝐃𝐄", "Informe a qtd de links/dia.", "`!addparceria @user <qtd>`", null, nomeBot) }, { quoted: msg }) }
         const parcerias = db.parcerias(); parcerias[jid] = parcerias[jid] || { ativo: false, parceiros: {} }; parcerias[jid].parceiros = parcerias[jid].parceiros || {}
-        parcerias[jid].parceiros[alvo] = { total: qtd, usados: 0, desde: Date.now() }; db.salvarParcerias(parcerias)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 𝐀𝐃𝐈𝐂𝐈𝐎𝐍𝐀𝐃𝐀", "O usuário agora pode enviar links diários.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + utils.soNumero(alvo)) + "\n" + lineEmoji("📊", "𝐋𝐢𝐦𝐢𝐭𝐞", qtd + " link(s) por dia") + "\n" + lineEmoji("⏰", "𝐑𝐞𝐬𝐞𝐭", "Todos os dias às 00:00"), null, nomeBot), mentions: [alvo] }, { quoted: msg })
+        parcerias[jid].parceiros[alvo] = { total: qtd, usados: 0, desde: Date.now() }; db.salvarParcerias(parcerias); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀", "Adicionada.", `❄️ @${utils.soNumero(alvo)} • ${qtd} link(s)/dia`, null, nomeBot), mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -868,11 +818,11 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const alvo = utils.getAlvo(msg)
-        if (!alvo) return sock.sendMessage(jid, { text: msgAviso("𝐑𝐌𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀", "Marque um usuário.", "💡 `!rmparceria @user`", null, nomeBot) }, { quoted: msg })
+        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐑𝐌𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀", "Marque um usuário.", "`!rmparceria @user`", null, nomeBot) }, { quoted: msg }) }
         const parcerias = db.parcerias()
-        if (!parcerias[jid] || !parcerias[jid].parceiros || !parcerias[jid].parceiros[alvo]) return sock.sendMessage(jid, { text: msgAviso("𝐒𝐄𝐌 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀", "Esse usuário não tem parceria.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + utils.soNumero(alvo)), null, nomeBot) }, { quoted: msg })
-        delete parcerias[jid].parceiros[alvo]; db.salvarParcerias(parcerias)
-        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐀", "Parceria desfeita.", lineEmoji("👤", "𝐔𝐬𝐮𝐚́𝐫𝐢𝐨", "@" + utils.soNumero(alvo)), null, nomeBot), mentions: [alvo] }, { quoted: msg })
+        if (!parcerias[jid] || !parcerias[jid].parceiros || !parcerias[jid].parceiros[alvo]) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐒𝐄𝐌 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀", "Esse usuário sem parceria.", `❄️ @${utils.soNumero(alvo)}`, null, nomeBot) }, { quoted: msg }) }
+        delete parcerias[jid].parceiros[alvo]; db.salvarParcerias(parcerias); await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀", "Removida.", `❄️ @${utils.soNumero(alvo)}`, null, nomeBot), mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -880,10 +830,10 @@ ${item("!listafig")}
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const dados = (db.parcerias())[jid] || {}
-        if (!dados.parceiros || !Object.keys(dados.parceiros).length) return sock.sendMessage(jid, { text: msgAviso("𝐒𝐄𝐌 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀𝐒", "Nenhuma parceria registrada.", "💡 Use `!addparceria @user <qtd>`", null, nomeBot) }, { quoted: msg })
-        const ativo = dados.ativo ? "🟢 ON" : "🔴 OFF"; let txt = `💧 • 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀𝐒 (${ativo}) •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n`; const mentions = []; let i = 1
-        for (const [jidP, info] of Object.entries(dados.parceiros)) { txt += `╰➜ ${i}. @${utils.soNumero(jidP)}\n   📊 ${info.usados}/${info.total}\n\n`; mentions.push(jidP); i++ }
-        txt += `"${nomeBot}"`; await sock.sendMessage(jid, { text: txt, mentions: mentions }, { quoted: msg })
+        if (!dados.parceiros || !Object.keys(dados.parceiros).length) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐒𝐄𝐌 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀𝐒", "Nenhuma parceria.", "Use `!addparceria`", null, nomeBot) }, { quoted: msg }) }
+        const ativo = dados.ativo ? "ON ✅" : "OFF ❌"; let txt = `💧 • 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀𝐒 (${ativo}) •\n\n❄️ Lista:\n\n`; const mentions = []; let i = 1
+        for (const [jidP, info] of Object.entries(dados.parceiros)) { txt += `🧊 ${i}. @${utils.soNumero(jidP)} — ${info.usados}/${info.total}\n`; mentions.push(jidP); i++ }
+        txt += `\n"${nomeBot}"`; await reagir(sock, msg, "💧"); await sock.sendMessage(jid, { text: txt, mentions: mentions }, { quoted: msg })
       }
     },
 
@@ -891,20 +841,21 @@ ${item("!listafig")}
       aliases: ["registrarfig", "addfigcmd", "savefig"], adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db, utils, sender }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const comando = (args[0] || "").toLowerCase().replace(/^[!/.\-#,]+/, "").trim()
-        if (!comando) return sock.sendMessage(jid, { text: msgAviso("𝐑𝐆𝐅𝐈𝐆", "Informe o comando.", "💡 `!rgfig <comando>`", null, nomeBot) }, { quoted: msg })
+        if (!comando) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐑𝐆𝐅𝐈𝐆", "Informe o comando.", "`!rgfig <cmd>`", null, nomeBot) }, { quoted: msg }) }
         const ctx = (msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo) || {}; const q = ctx.quotedMessage; const fig = q && q.stickerMessage
-        if (!fig) return sock.sendMessage(jid, { text: msgAviso("𝐑𝐆𝐅𝐈𝐆", "Responda uma figurinha.", "💡 Toque e segure a fig", null, nomeBot) }, { quoted: msg })
-        await sock.sendMessage(jid, { text: "💧 Analisando figurinha..." }, { quoted: msg })
+        if (!fig) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐑𝐆𝐅𝐈𝐆", "Responda uma figurinha.", "`!rgfig <cmd>` (reply)", null, nomeBot) }, { quoted: msg }) }
+        await reagir(sock, msg, "🧊")
         try {
           const alvo = { key: msg.key, message: { stickerMessage: fig }, messageTimestamp: msg.messageTimestamp }
           const buffer = await utils.downloadMediaMessage(alvo, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
           if (!buffer || !buffer.length) throw new Error("Figurinha vazia")
           const hash = hashFigurinha(buffer); const num = utils.soNumero(sender); const dbFig = dbLer("figcmd.json", {}); dbFig[jid] = dbFig[jid] || {}
           const jaExiste = dbFig[jid][hash]
-          if (jaExiste) return sock.sendMessage(jid, { text: msgAviso("𝐉𝐀́ 𝐑𝐄𝐆𝐈𝐒𝐓𝐑𝐀𝐃𝐀", "Essa figurinha já está salva.", lineEmoji("🎴", "𝐂𝐨𝐦𝐚𝐧𝐝𝐨", "!" + jaExiste.comando), null, nomeBot), mentions: [`${jaExiste.criadoPor}@s.whatsapp.net`] }, { quoted: msg })
+          if (jaExiste) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐉𝐀́ 𝐒𝐀𝐋𝐕𝐀", "Essa figurinha já registrada.", `❄️ !${jaExiste.comando}`, null, nomeBot), mentions: [`${jaExiste.criadoPor}@s.whatsapp.net`] }, { quoted: msg }) }
           dbFig[jid][hash] = { comando: comando, criadoPor: num, criadoEm: Date.now() }; dbSalvar("figcmd.json", dbFig)
-          await sock.sendMessage(jid, { text: msgSucesso("𝐅𝐈𝐆𝐔𝐑𝐈𝐍𝐇𝐀 𝐑𝐄𝐆𝐈𝐒𝐓𝐑𝐀𝐃𝐀", "A figurinha agora executa o comando.", lineEmoji("🎴", "𝐂𝐨𝐦𝐚𝐧𝐝𝐨", "!" + comando) + "\n" + lineEmoji("👤", "𝐑𝐞𝐠𝐢𝐬𝐭𝐫𝐚𝐝𝐚 𝐩𝐨𝐫", "@" + num), null, nomeBot), mentions: [sender] }, { quoted: msg })
-        } catch (e) { await sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Falha ao registrar figurinha.", "⚠️ `" + e.message + "`", null, nomeBot) }, { quoted: msg }) }
+          await reagir(sock, msg, "💧")
+          await sock.sendMessage(jid, { text: msgSucesso("𝐅𝐈𝐆 𝐒𝐀𝐋𝐕𝐀", "Figurinha executará o comando.", `❄️ !${comando}`, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Falha ao registrar.", "`" + e.message + "`", null, nomeBot) }, { quoted: msg }) }
       }
     },
 
@@ -913,17 +864,18 @@ ${item("!listafig")}
       async executar({ sock, msg, db, utils, sender }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         const ctx = (msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo) || {}; const q = ctx.quotedMessage; const fig = q && q.stickerMessage
-        if (!fig) return sock.sendMessage(jid, { text: msgAviso("𝐑𝐌𝐅𝐈𝐆", "Responda uma figurinha registrada.", "💡 Responda a fig com `!rmfig`", null, nomeBot) }, { quoted: msg })
-        await sock.sendMessage(jid, { text: "💧 Analisando figurinha..." }, { quoted: msg })
+        if (!fig) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐑𝐌𝐅𝐈𝐆", "Responda uma figurinha.", "`!rmfig` (reply)", null, nomeBot) }, { quoted: msg }) }
+        await reagir(sock, msg, "🧊")
         try {
           const alvo = { key: msg.key, message: { stickerMessage: fig }, messageTimestamp: msg.messageTimestamp }
           const buffer = await utils.downloadMediaMessage(alvo, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
           if (!buffer || !buffer.length) throw new Error("Figurinha vazia")
           const hash = hashFigurinha(buffer); const num = utils.soNumero(sender); const dbFig = dbLer("figcmd.json", {}); const grupo = dbFig[jid] || {}
-          if (!grupo[hash]) return sock.sendMessage(jid, { text: msgAviso("𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐀", "Essa figurinha não está registrada.", "💡 Use `!rgfig <comando>` pra registrar.", null, nomeBot) }, { quoted: msg })
+          if (!grupo[hash]) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐀", "Figurinha não registrada.", "`!rgfig <cmd>`", null, nomeBot) }, { quoted: msg }) }
           const dados = grupo[hash]; delete grupo[hash]; dbFig[jid] = grupo; dbSalvar("figcmd.json", dbFig)
-          await sock.sendMessage(jid, { text: msgSucesso("𝐅𝐈𝐆𝐔𝐑𝐈𝐍𝐇𝐀 𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐀", "O gatilho foi desativado.", lineEmoji("🎴", "𝐂𝐨𝐦𝐚𝐧𝐝𝐨", "!" + dados.comando) + "\n" + lineEmoji("👤", "𝐑𝐞𝐦𝐨𝐯𝐢𝐝𝐚 𝐩𝐨𝐫", "@" + num), null, nomeBot), mentions: [sender] }, { quoted: msg })
-        } catch (e) { await sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Falha ao remover figurinha.", "⚠️ `" + e.message + "`", null, nomeBot) }, { quoted: msg }) }
+          await reagir(sock, msg, "💧")
+          await sock.sendMessage(jid, { text: msgSucesso("𝐅𝐈𝐆 𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐀", "Gatilho desativado.", `❄️ !${dados.comando}`, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Falha ao remover.", "`" + e.message + "`", null, nomeBot) }, { quoted: msg }) }
       }
     },
 
@@ -931,10 +883,11 @@ ${item("!listafig")}
       aliases: ["figsregistradas", "figcmdlist", "minhasfig"], grupoOnly: true,
       async executar({ sock, msg, utils, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const dbFig = dbLer("figcmd.json", {}); const grupo = dbFig[jid] || {}; const entradas = Object.entries(grupo)
-        if (!entradas.length) return sock.sendMessage(jid, { text: msgAviso("𝐋𝐈𝐒𝐓𝐀𝐅𝐈𝐆", "Nenhuma figurinha registrada aqui.", "💡 Use `!rgfig <comando>` pra registrar.", null, nomeBot) }, { quoted: msg })
-        let txt = "💧 • 𝐅𝐈𝐆𝐔𝐑𝐈𝐍𝐇𝐀𝐒 𝐑𝐄𝐆𝐈𝐒𝐓𝐑𝐀𝐃𝐀𝐒 •\n\n『 𝐋𝐢𝐬𝐭𝐚 』 ↴\n\n"; const mentions = []
-        entradas.forEach(([hash, info], i) => { txt += `╰➜ ${i + 1}. !${info.comando}\n   👤 @${info.criadoPor}\n\n`; mentions.push(`${info.criadoPor}@s.whatsapp.net`) })
-        txt += `📊 𝐓𝐨𝐭𝐚𝐥: ${entradas.length}\n\n"${nomeBot}"`
+        if (!entradas.length) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: msgAviso("𝐋𝐈𝐒𝐓𝐀𝐅𝐈𝐆", "Nenhuma figurinha registrada.", "`!rgfig <cmd>`", null, nomeBot) }, { quoted: msg }) }
+        let txt = "💧 • 𝐅𝐈𝐆𝐒 •\n\n❄️ Lista:\n\n"; const mentions = []
+        entradas.forEach(([hash, info], i) => { txt += `🧊 ${i + 1}. !${info.comando} — @${info.criadoPor}\n`; mentions.push(`${info.criadoPor}@s.whatsapp.net`) })
+        txt += `\n🧊 Total: ${entradas.length}\n\n"${nomeBot}"`
+        await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: txt, mentions }, { quoted: msg })
       }
     }
