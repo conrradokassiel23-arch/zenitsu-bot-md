@@ -1,5 +1,5 @@
 /* ============================================================
-   💧❄️🧊 MENU ADM - RIMURU BOT MD (COMPLETO)
+   💧❄️🧊 MENU ADM - RIMURU BOT MD (COMPLETO E REVISADO)
    ============================================================ */
 
 const fs = require("fs")
@@ -186,6 +186,7 @@ ${secao("🕵️ x𝟵 / ᴘᴀʀᴄᴇʀɪᴀ")}
 ${item(`${p}x9 on/off`)}
 ${item(`${p}modoparceria on/off`)}
 ${item(`${p}addparceria / ${p}rmparceria / ${p}parcerias`)}
+${item(`${p}cadastrarparceria / ${p}vercadastrados`)}
 
 ${secao("🚫 ʟɪsᴛᴀ ɴᴇɢʀᴀ")}
 ${item(`${p}listanegra <núm>`)}
@@ -916,4 +917,6 @@ ${item(`${p}rmfig (reply) / ${p}listafig`)}
         await reagir(sock, msg, "💧");
         await sock.sendMessage(jid, { text: txt, mentions }, { quoted: msg });
       }
-    },
+    }
+  }
+}
