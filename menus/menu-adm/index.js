@@ -1,5 +1,5 @@
 /* ============================================================
-   💧❄️🧊 MENU ADM - RIMURU BOT MD (PREFIXO DINÂMICO)
+   💧❄️🧊 MENU ADM - RIMURU BOT MD (PREFIXO DINÂMICO - 1 MSG)
    ============================================================ */
 
 const fs = require("fs")
@@ -85,57 +85,40 @@ module.exports = {
         if (h >= 5 && h < 12) saudacao = "Bom dia"
         else if (h >= 12 && h < 18) saudacao = "Boa tarde"
         const mentions = sender ? [sender] : []
+        
         await reagir(sock, msg, "💧")
 
-        const texto1 = `${cardPerfil({ nomeBot, nomeUsuario: pushName, cargo, dono: nomeDono })}
+        // ✅ TUDO EM 1 MENSAGEM SÓ (Card + Saudação + Menus separados)
+        const texto = `${cardPerfil({ nomeBot, nomeUsuario: pushName, cargo, dono: nomeDono })}
 
-💧 *${saudacao}, ${pushName}!*
+💧 *${saudacao}, ${pushName}!* 
 ❄️ Prefixo: \`${p}\`
 
-_"O Grande Sábio observa."_
+${secao("⚔️ ᴀᴅᴍɪɴɪsᴛʀᴀᴄ̧ᴀ̃ᴏ")}
+${item(`\`${p}menuadmin\` — banir, mutar, proteções`)}
+${item(`\`${p}menudono\` — comandos do Grande Sábio`)}
 
+${secao("❄️ ᴀ́ʀᴇᴀ ɴᴏʙʀᴇ")}
+${item(`\`${p}menuvip\` — figurinhas, downloads, IA`)}
+
+${secao("🎮 ᴊᴏɢᴏs ᴇ ᴅɪᴠᴇʀsᴀ̃ᴏ")}
+${item(`\`${p}menurpg\` — economia, pets, cassino`)}
+${item(`\`${p}menufazenda\` — animais, plantações`)}
+${item(`\`${p}menufnaf\` — Five Nights at Freddy's`)}
+${item(`\`${p}menucidade\` — casas, banco, crimes`)}
+
+_"O Grande Sábio observa."_
 "${nomeBot}"`
 
         if (cfg.fotoMenu) {
           const buf = Buffer.from(cfg.fotoMenu, "base64")
           try {
-            if (cfg.tipoMenu === "video") await sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "rimuru.mp4", gifPlayback: true, caption: texto1, mentions }, { quoted: msg })
-            else await sock.sendMessage(jid, { image: buf, caption: texto1, mentions }, { quoted: msg })
-          } catch (e) { await sock.sendMessage(jid, { text: texto1, mentions }, { quoted: msg }) }
+            if (cfg.tipoMenu === "video") await sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "rimuru.mp4", gifPlayback: true, caption: texto, mentions }, { quoted: msg })
+            else await sock.sendMessage(jid, { image: buf, caption: texto, mentions }, { quoted: msg })
+          } catch (e) { await sock.sendMessage(jid, { text: texto, mentions }, { quoted: msg }) }
         } else {
-          await sock.sendMessage(jid, { text: texto1, mentions }, { quoted: msg })
+          await sock.sendMessage(jid, { text: texto, mentions }, { quoted: msg })
         }
-
-        await new Promise(r => setTimeout(r, 600))
-
-        const texto2 = `💧 • 𝐌𝐄𝐍𝐔𝐒 𝐃𝐎 𝐑𝐄𝐈𝐍𝐎 •
-
-❄️ *⚔️ ADMINISTRAÇÃO*
-╭──────────────
-🧊 \`${p}menuadmin\` — banir, mutar, proteções
-🧊 \`${p}menudono\` — comandos do Grande Sábio
-╰──────────────
-
-❄️ *💧 ÁREA NOBRE*
-╭──────────────
-🧊 \`${p}menuvip\` — figurinhas, downloads, IA
-╰──────────────
-
-❄️ *🎮 JOGOS E DIVERSÃO*
-╭──────────────
-🧊 \`${p}menurpg\` — economia, pets, cassino
-🧊 \`${p}menufazenda\` — animais, plantações
-🧊 \`${p}menufnaf\` — Five Nights at Freddy's
-🧊 \`${p}menucidade\` — casas, banco, crimes
-╰──────────────
-
-💧 Prefixo atual: \`${p}\`
-
-_"O Grande Sábio conhece cada segredo."_
-
-"${nomeBot}"`
-
-        await sock.sendMessage(jid, { text: texto2 }, { quoted: msg })
       }
     },
 
