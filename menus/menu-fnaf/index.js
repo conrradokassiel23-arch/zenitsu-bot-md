@@ -1,5 +1,5 @@
 /* ============================================================
-   💧❄️🧊 MENU FNAF - RIMURU BOT MD
+   💧❄️🧊 MENU FNAF - RIMURU BOT MD (PREFIXO DINÂMICO)
    ============================================================ */
 
 const fs = require("fs")
@@ -79,7 +79,7 @@ function renderStatus(jogo) {
     if (jogo.luzes[1] && a.posicao === "porta2") { txt += `\n🧊 🚨 ${a.emoji} ${a.nome} na PORTA DIR!`; temAmeaca = true }
   })
   if (!temAmeaca) txt += "\n🧊 _Sem ameaças visíveis..._"
-  txt += `\n\n🎮 Comandos:\n🧊 \`!fecharporta 1/2\`\n🧊 \`!portaluz 1/2\`\n🧊 \`!cameras\`\n🧊 \`!statusfnaf\`\n🧊 \`!sairfnaf\`\n\n"${jogo.nomeBot}"`
+  txt += `\n\n🎮 Comandos:\n🧊 \`${jogo.prefixo}fecharporta 1/2\`\n🧊 \`${jogo.prefixo}portaluz 1/2\`\n🧊 \`${jogo.prefixo}cameras\`\n🧊 \`${jogo.prefixo}statusfnaf\`\n🧊 \`${jogo.prefixo}sairfnaf\`\n\n"${jogo.nomeBot}"`
   return txt
 }
 
@@ -102,7 +102,7 @@ async function loopFnaf(sock, jogo, msgEdit) {
     if (jogo.noite >= 5) {
       await sock.sendMessage(jogo.jid, { text: `💧 • 𝐕𝐈𝐓𝐎́𝐑𝐈𝐀 •\n\n❄️ Sobreviveu TODAS as 5 noites\n🧊 Título: Lorde Demônio\n🧊 +5000 gold\n\n_"Rimuru te reconhece."_\n\n"${jogo.nomeBot}"` })
     } else {
-      await sock.sendMessage(jogo.jid, { text: `💧 • 𝐍𝐎𝐈𝐓𝐄 ${jogo.noite} 𝐂𝐎𝐌𝐏𝐋𝐄𝐓𝐀 •\n\n❄️ Sobreviveu\n🧊 Próxima: Noite ${jogo.noite + 1}/5\n\n💡 \`!fnaf começar\`\n\n"${jogo.nomeBot}"` })
+      await sock.sendMessage(jogo.jid, { text: `💧 • 𝐍𝐎𝐈𝐓𝐄 ${jogo.noite} 𝐂𝐎𝐌𝐏𝐋𝐄𝐓𝐀 •\n\n❄️ Sobreviveu\n🧊 Próxima: Noite ${jogo.noite + 1}/5\n\n💡 \`${jogo.prefixo}fnaf começar\`\n\n"${jogo.nomeBot}"` })
     }
     return
   }
@@ -111,15 +111,15 @@ async function loopFnaf(sock, jogo, msgEdit) {
   if (jogo.portas[0]) energiaExtra += 0.3; if (jogo.portas[1]) energiaExtra += 0.3
   if (jogo.luzes[0]) energiaExtra += 0.2; if (jogo.luzes[1]) energiaExtra += 0.2
   jogo.energia -= (energiaCaindo + energiaExtra)
-  if (jogo.energia <= 0) { jogo.finalizado = true; jogosAtivos.delete(jogo.jid); await sock.sendMessage(jogo.jid, { text: `💧 • 𝐄𝐍𝐄𝐑𝐆𝐈𝐀 𝐄𝐒𝐆𝐎𝐓𝐀𝐃𝐀 •\n\n❄️ A escuridão consumiu tudo\n🧊 Foi pego pelos animatrônicos\n\n💡 \`!fnaf começar\`\n\n"${jogo.nomeBot}"` }); return }
+  if (jogo.energia <= 0) { jogo.finalizado = true; jogosAtivos.delete(jogo.jid); await sock.sendMessage(jogo.jid, { text: `💧 • 𝐄𝐍𝐄𝐑𝐆𝐈𝐀 𝐄𝐒𝐆𝐎𝐓𝐀𝐃𝐀 •\n\n❄️ A escuridão consumiu tudo\n🧊 Foi pego pelos animatrônicos\n\n💡 \`${jogo.prefixo}fnaf começar\`\n\n"${jogo.nomeBot}"` }); return }
   for (const a of jogo.animatronicos) {
     if (a.posicao === "porta1" || a.posicao === "porta2") {
       const portaIdx = a.posicao === "porta1" ? 0 : 1
       const portaFechada = jogo.portas[portaIdx]
       if (portaFechada) {
         if (Math.random() > jogo.chanceFicar) { a.posicao = "corredor"; a.tempoPorta = 0 }
-        else { a.tempoPorta = (a.tempoPorta || 0) + 1; if (a.tempoPorta >= 3) { jogo.finalizado = true; jogosAtivos.delete(jogo.jid); await sock.sendMessage(jogo.jid, { text: `💧 • 𝐆𝐀𝐌𝐄 𝐎𝐕𝐄𝐑 •\n\n❄️ ${a.emoji} ${a.nome} te pegou!\n🧊 Morreu na Noite ${jogo.noite}/5\n\n💡 \`!fnaf começar\`\n\n"${jogo.nomeBot}"` }); return } }
-      } else { jogo.finalizado = true; jogosAtivos.delete(jogo.jid); await sock.sendMessage(jogo.jid, { text: `💧 • 𝐆𝐀𝐌𝐄 𝐎𝐕𝐄𝐑 •\n\n❄️ ${a.emoji} ${a.nome} entrou pela porta aberta!\n🧊 Morreu na Noite ${jogo.noite}/5\n\n💡 \`!fnaf começar\`\n\n"${jogo.nomeBot}"` }); return }
+        else { a.tempoPorta = (a.tempoPorta || 0) + 1; if (a.tempoPorta >= 3) { jogo.finalizado = true; jogosAtivos.delete(jogo.jid); await sock.sendMessage(jogo.jid, { text: `💧 • 𝐆𝐀𝐌𝐄 𝐎𝐕𝐄𝐑 •\n\n❄️ ${a.emoji} ${a.nome} te pegou!\n🧊 Morreu na Noite ${jogo.noite}/5\n\n💡 \`${jogo.prefixo}fnaf começar\`\n\n"${jogo.nomeBot}"` }); return } }
+      } else { jogo.finalizado = true; jogosAtivos.delete(jogo.jid); await sock.sendMessage(jogo.jid, { text: `💧 • 𝐆𝐀𝐌𝐄 𝐎𝐕𝐄𝐑 •\n\n❄️ ${a.emoji} ${a.nome} entrou pela porta aberta!\n🧊 Morreu na Noite ${jogo.noite}/5\n\n💡 \`${jogo.prefixo}fnaf começar\`\n\n"${jogo.nomeBot}"` }); return }
     } else {
       if (Math.random() < 0.5) { const idx = POSICOES.indexOf(a.posicao); if (idx < POSICOES.length - 1) { a.posicao = POSICOES[idx + 1]; if (a.posicao === "cozinha" && Math.random() < 0.5) { a.posicao = Math.random() < 0.5 ? "porta1" : "porta2" } } }
     }
@@ -139,22 +139,22 @@ module.exports = {
     menufnaf: {
       aliases: ["fnafmenu", "menuf", "ajudafnaf"],
       async executar({ sock, msg, prefixoAtivo, db, sender, config, isDono, isSubDono, isAdmin, groupMetadata }) {
-        const jid = msg.key.remoteJid; const p = prefixoAtivo; const cfg = db.config()
+        const jid = msg.key.remoteJid; const p = prefixoAtivo || "+"; const cfg = db.config()
         const { pushName, nomeDono, cargo, nomeBot } = getCargoETexto({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin, msg })
         await reagir(sock, msg, "💧")
         const texto = `${cardPerfil({ nomeBot, nomeUsuario: pushName, cargo, dono: nomeDono })}
 
 ${secao("🎮 ʟᴏʙʙʏ")}
-${item("!lobbyfnaf — cria lobby")}
-${item("!entrarfnaf — entra")}
-${item("!sairlobby — sai")}
-${item("!iniciarfnaf — inicia")}
+${item(`${p}lobbyfnaf — cria lobby`)}
+${item(`${p}entrarfnaf — entra`)}
+${item(`${p}sairlobby — sai`)}
+${item(`${p}iniciarfnaf — inicia`)}
 
 ${secao("🎯 ᴇᴍ ᴊᴏɢᴏ")}
-${item("!fecharporta 1/2")}
-${item("!portaluz 1/2")}
-${item("!cameras / !statusfnaf")}
-${item("!sairfnaf")}
+${item(`${p}fecharporta 1/2`)}
+${item(`${p}portaluz 1/2`)}
+${item(`${p}cameras / ${p}statusfnaf`)}
+${item(`${p}sairfnaf`)}
 
 ${secao("🐻 ᴀɴɪᴍᴀᴛʀᴏ̂ɴɪᴄᴏs")}
 ${item("🐻 Freddy / 🐰 Bonnie")}
@@ -172,32 +172,32 @@ _"Sobreviva se puder."_
 
     lobbyfnaf: {
       aliases: ["criarlobby", "novolobby"],
-      async executar({ sock, msg, sender, utils, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, sender, utils, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         if (!jid.endsWith("@g.us")) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐋𝐎𝐁𝐁𝐘 •\n\n❄️ Só em grupos.\n\n"${nomeBot}"` }, { quoted: msg }) }
         if (jogosAtivos.has(jid)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐋𝐎𝐁𝐁𝐘 •\n\n❄️ Jogo em andamento.\n\n"${nomeBot}"` }, { quoted: msg }) }
-        if (lobbys.has(jid)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐋𝐎𝐁𝐁𝐘 •\n\n❄️ Já tem lobby aberto.\n🧊 \`!entrarfnaf\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (lobbys.has(jid)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐋𝐎𝐁𝐁𝐘 •\n\n❄️ Já tem lobby aberto.\n🧊 \`${p}entrarfnaf\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         const num = utils.soNumero(sender)
         lobbys.set(jid, { criador: num, criadorJid: sender, jogadores: [sender], aberto: true, criadoEm: Date.now() })
         await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐋𝐎𝐁𝐁𝐘 •\n\n❄️ Aberto pra jogadores\n🧊 Host: @${num}\n🧊 Jogadores: 1/5\n🧊 1. @${num}\n\n💡 \`!entrarfnaf\` / \`!iniciarfnaf\`\n\n⚔️ Máx: 5\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `💧 • 𝐋𝐎𝐁𝐁𝐘 •\n\n❄️ Aberto pra jogadores\n🧊 Host: @${num}\n🧊 Jogadores: 1/5\n🧊 1. @${num}\n\n💡 \`${p}entrarfnaf\` / \`${p}iniciarfnaf\`\n\n⚔️ Máx: 5\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
       }
     },
 
     entrarlobby: {
       aliases: ["entrarfnaf", "entrarlobbyfnaf", "participo"],
-      async executar({ sock, msg, sender, utils, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, sender, utils, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         if (!jid.endsWith("@g.us")) { await reagir(sock, msg, "🧊"); return }
         const lobby = lobbys.get(jid)
-        if (!lobby || !lobby.aberto) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐋𝐎𝐁𝐁𝐘 •\n\n❄️ Sem lobby aberto.\n🧊 \`!lobbyfnaf\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!lobby || !lobby.aberto) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐋𝐎𝐁𝐁𝐘 •\n\n❄️ Sem lobby aberto.\n🧊 \`${p}lobbyfnaf\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         const num = utils.soNumero(sender)
         if (lobby.jogadores.some(j => utils.soNumero(j) === num)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐋𝐎𝐁𝐁𝐘 •\n\n❄️ Você já tá no lobby.\n\n"${nomeBot}"` }, { quoted: msg }) }
         if (lobby.jogadores.length >= 5) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐋𝐎𝐁𝐁𝐘 •\n\n❄️ Lobby cheio.\n🧊 Máx 5\n\n"${nomeBot}"` }, { quoted: msg }) }
         lobby.jogadores.push(sender); let lista = ""
         lobby.jogadores.forEach((j, i) => { lista += `🧊 ${i + 1}. @${utils.soNumero(j)}\n` })
         await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐍𝐎𝐕𝐎 𝐉𝐎𝐆𝐀𝐃𝐎𝐑 •\n\n❄️ @${num} entrou\n🧊 ${lobby.jogadores.length}/5\n\n${lista}\n💡 \`!iniciarfnaf\`\n\n"${nomeBot}"`, mentions: lobby.jogadores }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `💧 • 𝐍𝐎𝐕𝐎 𝐉𝐎𝐆𝐀𝐃𝐎𝐑 •\n\n❄️ @${num} entrou\n🧊 ${lobby.jogadores.length}/5\n\n${lista}\n💡 \`${p}iniciarfnaf\`\n\n"${nomeBot}"`, mentions: lobby.jogadores }, { quoted: msg })
       }
     },
 
@@ -217,12 +217,12 @@ _"Sobreviva se puder."_
 
     iniciarfnaf: {
       aliases: ["comecarfnaf", "startfnaf", "fnafcomecar"],
-      async executar({ sock, msg, sender, utils, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, sender, utils, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         if (!jid.endsWith("@g.us")) { await reagir(sock, msg, "🧊"); return }
         if (jogosAtivos.has(jid)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐅𝐍𝐀𝐅 •\n\n❄️ Jogo em andamento.\n\n"${nomeBot}"` }, { quoted: msg }) }
         const lobby = lobbys.get(jid)
-        if (!lobby) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐅𝐍𝐀𝐅 •\n\n❄️ Sem lobby.\n🧊 Use \`!lobbyfnaf\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!lobby) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐅𝐍𝐀𝐅 •\n\n❄️ Sem lobby.\n🧊 Use \`${p}lobbyfnaf\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         const num = utils.soNumero(sender)
         if (utils.soNumero(lobby.criadorJid) !== num) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐅𝐍𝐀𝐅 •\n\n❄️ Só o host inicia.\n🧊 Host: @${lobby.criador}\n\n"${nomeBot}"`, mentions: [lobby.criadorJid] }, { quoted: msg }) }
         if (lobby.jogadores.length < 1) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐅𝐍𝐀𝐅 •\n\n❄️ Precisa 1+ jogador.\n\n"${nomeBot}"` }, { quoted: msg }) }
@@ -232,11 +232,11 @@ _"Sobreviva se puder."_
         if (noiteAtual > 5) noiteAtual = 1
         const cfg = NOITES[noiteAtual - 1]
         const anims = [...ANIMATRONICOS].sort(() => Math.random() - 0.5).slice(0, cfg.animatronicos)
-        const jogo = { jid, jogadores: lobby.jogadores, host: lobby.criador, hostJid: lobby.criadorJid, noite: noiteAtual, energia: 100, portas: [false, false], luzes: [false, false], animatronicos: anims.map(a => ({ ...a, posicao: "salao", tempoPorta: 0 })), fimEm: Date.now() + 4 * 60 * 1000, velocidadeAnim: cfg.velocidade, velocidadeEnergia: cfg.velocidadeEnergia, chanceFicar: cfg.chanceFicar, finalizado: false, nomeBot }
+        const jogo = { jid, jogadores: lobby.jogadores, host: lobby.criador, hostJid: lobby.criadorJid, noite: noiteAtual, energia: 100, portas: [false, false], luzes: [false, false], animatronicos: anims.map(a => ({ ...a, posicao: "salao", tempoPorta: 0 })), fimEm: Date.now() + 4 * 60 * 1000, velocidadeAnim: cfg.velocidade, velocidadeEnergia: cfg.velocidadeEnergia, chanceFicar: cfg.chanceFicar, finalizado: false, nomeBot, prefixo: p }
         jogosAtivos.set(jid, jogo)
         let lista = ""; lobby.jogadores.forEach((j, i) => { lista += `🧊 ${i + 1}. @${utils.soNumero(j)}\n` })
         await reagir(sock, msg, "💧")
-        const msgInicial = `💧 • 𝐅𝐍𝐀𝐅 𝐓𝐄𝐌𝐏𝐄𝐒𝐓 •\n\n❄️ NOITE ${noiteAtual}/5\n🧊 A noite começa...\n\n👥 Jogadores:\n${lista}\n⏰ Duração: 4min\n🧊 Energia: 100%\n🐻 Animatrônicos: ${cfg.animatronicos}\n🧊 Chance de não se abalar: ${Math.floor(cfg.chanceFicar * 100)}%\n\n⚔️ Use:\n🧊 \`!fecharporta 1/2\`\n🧊 \`!portaluz 1/2\`\n🧊 \`!cameras\`\n\n💧 _"Boa sorte, mortais."_\n\n"${nomeBot}"`
+        const msgInicial = `💧 • 𝐅𝐍𝐀𝐅 𝐓𝐄𝐌𝐏𝐄𝐒𝐓 •\n\n❄️ NOITE ${noiteAtual}/5\n🧊 A noite começa...\n\n👥 Jogadores:\n${lista}\n⏰ Duração: 4min\n🧊 Energia: 100%\n🐻 Animatrônicos: ${cfg.animatronicos}\n🧊 Chance de não se abalar: ${Math.floor(cfg.chanceFicar * 100)}%\n\n⚔️ Use:\n🧊 \`${p}fecharporta 1/2\`\n🧊 \`${p}portaluz 1/2\`\n🧊 \`${p}cameras\`\n\n💧 _"Boa sorte, mortais."_\n\n"${nomeBot}"`
         const msgEdit = await sock.sendMessage(jid, { text: msgInicial, mentions: lobby.jogadores }, { quoted: msg })
         setTimeout(() => loopFnaf(sock, jogo, msgEdit), 5000)
       }
@@ -244,13 +244,13 @@ _"Sobreviva se puder."_
 
     fecharporta: {
       aliases: ["portafechar"],
-      async executar({ sock, msg, args, utils, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, args, utils, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const jogo = jogosAtivos.get(jid); if (!jogo || jogo.finalizado) return
         const num = utils.soNumero(msg.key.participant || msg.key.remoteJid)
         if (!jogo.jogadores.some(j => utils.soNumero(j) === num)) return
         const idx = parseInt(args[0]) - 1
-        if (idx !== 0 && idx !== 1) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐅𝐍𝐀𝐅 •\n\n❄️ Use 1 ou 2.\n🧊 \`!fecharporta 1\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (idx !== 0 && idx !== 1) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐅𝐍𝐀𝐅 •\n\n❄️ Use 1 ou 2.\n🧊 \`${p}fecharporta 1\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         jogo.portas[idx] = !jogo.portas[idx]
         const estado = jogo.portas[idx] ? "🔒 FECHADA" : "🔓 ABERTA"
         await reagir(sock, msg, "💧")
@@ -260,13 +260,13 @@ _"Sobreviva se puder."_
 
     portaluz: {
       aliases: ["luzporta", "ligarluz"],
-      async executar({ sock, msg, args, utils, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, args, utils, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const jogo = jogosAtivos.get(jid); if (!jogo || jogo.finalizado) return
         const num = utils.soNumero(msg.key.participant || msg.key.remoteJid)
         if (!jogo.jogadores.some(j => utils.soNumero(j) === num)) return
         const idx = parseInt(args[0]) - 1
-        if (idx !== 0 && idx !== 1) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐅𝐍𝐀𝐅 •\n\n❄️ Use 1 ou 2.\n🧊 \`!portaluz 1\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (idx !== 0 && idx !== 1) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐅𝐍𝐀𝐅 •\n\n❄️ Use 1 ou 2.\n🧊 \`${p}portaluz 1\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         jogo.luzes[idx] = !jogo.luzes[idx]
         let msgExtra = ""
         if (jogo.luzes[idx]) { const animsNaPorta = jogo.animatronicos.filter(a => a.posicao === (idx === 0 ? "porta1" : "porta2")); if (animsNaPorta.length) msgExtra = "\n\n🚨 VIU:\n" + animsNaPorta.map(a => `🧊 ${a.emoji} ${a.nome}`).join("\n"); else msgExtra = "\n\n✅ _Nada por aqui..._" }
@@ -290,10 +290,10 @@ _"Sobreviva se puder."_
 
     statusfnaf: {
       aliases: ["fnafstatus", "meufnaf", "statusjogo"],
-      async executar({ sock, msg, utils, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, utils, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const jogo = jogosAtivos.get(jid)
-        if (!jogo || jogo.finalizado) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐅𝐍𝐀𝐅 •\n\n❄️ Sem jogo em andamento.\n🧊 Use \`!lobbyfnaf\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!jogo || jogo.finalizado) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐅𝐍𝐀𝐅 •\n\n❄️ Sem jogo em andamento.\n🧊 Use \`${p}lobbyfnaf\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         const num = utils.soNumero(msg.key.participant || msg.key.remoteJid)
         if (!jogo.jogadores.some(j => utils.soNumero(j) === num)) return
         await reagir(sock, msg, "💧")
@@ -303,14 +303,14 @@ _"Sobreviva se puder."_
 
     sairfnaf: {
       aliases: ["abandonarfnaf", "cancelarfnaf", "fugirfnaf"],
-      async executar({ sock, msg, utils, db }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+      async executar({ sock, msg, utils, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const jogo = jogosAtivos.get(jid); if (!jogo || jogo.finalizado) return
         const num = utils.soNumero(msg.key.participant || msg.key.remoteJid)
         if (!jogo.jogadores.some(j => utils.soNumero(j) === num)) return
         jogo.finalizado = true; jogosAtivos.delete(jid)
         await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐉𝐎𝐆𝐎 𝐄𝐍𝐂𝐄𝐑𝐑𝐀𝐃𝐎 •\n\n❄️ Você fugiu da lua\n🧊 _"Covarde."_\n\n💡 \`!lobbyfnaf\` pra criar outro\n\n"${nomeBot}"` }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `💧 • 𝐉𝐎𝐆𝐎 𝐄𝐍𝐂𝐄𝐑𝐑𝐀𝐃𝐎 •\n\n❄️ Você fugiu da lua\n🧊 _"Covarde."_\n\n💡 \`${p}lobbyfnaf\` pra criar outro\n\n"${nomeBot}"` }, { quoted: msg })
       }
     }
 
