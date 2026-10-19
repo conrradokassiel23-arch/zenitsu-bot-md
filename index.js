@@ -628,48 +628,26 @@ async function iniciar() {
             if (senderCands.some(cand => cand === soNumero(jidP))) { encontrado = info; break }
           }
 
-          if (modoParceria && encontrado) {
-            if (encontrado.usados < encontrado.total) {
-              encontrado.usados++
-              db.salvarParcerias(parcerias)
-              const restantes = encontrado.total - encontrado.usados
-              const extra = restantes === 0 ? "⚠️ *Esse foi o seu último link de hoje!*" : `✨ Ainda tem *${restantes}* link(s) restante(s).`
-              try { 
-                await sock.sendMessage(remetente, { 
-                  text: `💧 • 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀 𝐀𝐏𝐑𝐎𝐕𝐀𝐃𝐀 •\n\n╭─〔 ❄️ 𝐀𝐂𝐄𝐒𝐒𝐎 𝐋𝐈𝐁𝐄𝐑𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, o link foi autorizado!\n╰──────────────\n\n📊 𝐔𝐬𝐨:\n╰➜ ${encontrado.usados}/${encontrado.total} links enviados.\n\n${extra}\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
-                  mentions: [sender] 
-                }) 
-              } catch (_) {}
-              return
-            } else {
-              try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
-              try { 
-                await sock.sendMessage(remetente, { 
-                  text: `💧 • 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀 𝐄𝐒𝐆𝐎𝐓𝐀𝐃𝐀 •\n\n╭─〔 🚫 𝐌𝐀𝐍𝐀 𝐈𝐍𝐒𝐔𝐅𝐈𝐂𝐈𝐄𝐍𝐓𝐄 〕\n│ @${soNumero(sender)}, você já usou todos os seus links hoje.\n╰──────────────\n\n⏰ Restauração: Meia-noite (00:00).\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
-                  mentions: [sender] 
-                }) 
-              } catch (_) {}
-              return
-            }
+          if (modoParceria && encontrado && encontrado.usados < encontrado.total) {
+            encontrado.usados++
+            db.salvarParcerias(parcerias)
+            const restantes = encontrado.total - encontrado.usados
+            const extra = restantes === 0 ? "⚠️ *Esse foi o seu último link de hoje!*" : `✨ Ainda tem *${restantes}* link(s) restante(s).`
+            try { 
+              await sock.sendMessage(remetente, { 
+                text: `💧 • 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀 𝐀𝐏𝐑𝐎𝐕𝐀𝐃𝐀 •\n\n╭─〔 ❄️ 𝐀𝐂𝐄𝐒𝐒𝐎 𝐋𝐈𝐁𝐄𝐑𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, o link foi autorizado!\n╰──────────────\n\n📊 𝐔𝐬𝐨:\n╰➜ ${encontrado.usados}/${encontrado.total} links enviados.\n\n${extra}\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
+                mentions: [sender] 
+              }) 
+            } catch (_) {}
+            return
           }
 
           try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
           
           try { 
-            let avisoAdms = ""
-            let mentionsAdms = [sender]
-            
-            if (meta) {
-              const adms = meta.participants.filter(pa => pa.admin === "admin" || pa.admin === "superadmin").map(pa => pa.id)
-              mentionsAdms = [sender, ...adms]
-              avisoAdms = `\n\n『 𝐀𝐃𝐌𝐈𝐍𝐈𝐒𝐓𝐑𝐀𝐃𝐎𝐑𝐄𝐒 』 ↴\n`
-              adms.forEach(a => { avisoAdms += `╰➜ @${soNumero(a)}\n` })
-              avisoAdms += `\n💡 Admins, para liberar:\n╰➜ \`+addparceria @${soNumero(sender)} 1\``
-            }
-
             await sock.sendMessage(remetente, { 
-              text: `💧 • 𝐋𝐈𝐍𝐊 𝐃𝐄𝐕𝐎𝐑𝐀𝐃𝐎 •\n\n╭─〔 🚫 𝐀𝐕𝐈𝐒𝐎 〕\n│ @${soNumero(sender)}, link apagado por falta de aliança.\n╰──────────────\n\n📜 𝐒𝐨𝐥𝐮𝐜̧𝐚̃𝐨:\n╰➜ Peça parceria usando:\n   \`+parceria\`\n${avisoAdms}\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
-              mentions: mentionsAdms 
+              text: `💧 • 𝐀𝐕𝐈𝐒𝐎 𝐃𝐄 𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 •\n\n╭─〔 🚫 𝐋𝐈𝐍𝐊 𝐀𝐏𝐀𝐆𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, link apagado por falta de aliança.\n╰──────────────\n\n『 𝐏𝐀𝐒𝐒𝐎 𝐀 𝐏𝐀𝐒𝐒𝐎 』 ↴\n\n1️⃣ Chame um dos Admins no **Privado (PV)**.\n2️⃣ Peça para ele colocar o link do nosso grupo no grupo dele.\n3️⃣ Após isso, use o comando abaixo:\n\n📜 𝐒𝐨𝐥𝐮𝐜̧𝐚̃𝐨:\n╰➜ \`+cadastrarparceria <link_do_seu_grupo>\`\n\n_(Isso te dará +5 links por dia)_\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
+              mentions: [sender] 
             }) 
           } catch (e) { console.log("Erro aviso link grupo:", e.message) }
           return
