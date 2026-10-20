@@ -1,5 +1,5 @@
 /* ============================================================
-   💧❄️🧊 MENU ADM - RIMURU BOT MD (COMPLETO E REVISADO)
+   💧❄️🧊 MENU ADM - RIMURU BOT MD (AVISO DE PARCERIA NO GRUPO)
    ============================================================ */
 
 const fs = require("fs")
@@ -893,21 +893,22 @@ ${item(`${p}rmfig (reply) / ${p}listafig`)}
         await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: `💧 • 𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 𝐂𝐀𝐃𝐀𝐒𝐓𝐑𝐀𝐃𝐀 •\n\n╭─〔 ❄️ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ @${numUser}, seu link foi registrado!\n╰──────────────\n\n🧊 𝐁𝐨̂𝐧𝐮𝐬: +5 limites de links/dia\n🧊 𝐋𝐢𝐧𝐤: ${link}\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
 
-        // 🔥 AVISA OS ADMINS NO PV
+        // 🔥 AVISA OS ADMINS NO GRUPO
         if (groupMetadata) {
           const admins = groupMetadata.participants.filter(pa => pa.admin === "admin" || pa.admin === "superadmin").map(pa => pa.id);
-          const nomeGrupo = groupMetadata.subject || "Grupo";
           
-          for (const adminJid of admins) {
-            if (utils.soNumero(adminJid) === utils.soNumero(sock.user.id)) continue;
+          if (admins.length > 0) {
+            let textoAviso = `🚨 *NOVA PARCERIA CADASTRADA* 🚨\n\n👤 *Usuário:* @${numUser}\n🔗 *Link:* ${link}\n\n⚠️ *AÇÃO NECESSÁRIA (ADMINS):*\n`
+            admins.forEach(a => { textoAviso += `╰➜ @${utils.soNumero(a)}\n` })
+            textoAviso += `\nChamem o usuário no privado para combinar a divulgação e oficializar a parceria!\n\n"${nomeBot}"`
             
             try {
-              await sock.sendMessage(adminJid, { 
-                text: `🚨 *NOVA PARCERIA CADASTRADA* 🚨\n\n👤 *Usuário:* @${numUser}\n👥 *Grupo:* ${nomeGrupo}\n🔗 *Link:* ${link}\n\n⚠️ *AÇÃO NECESSÁRIA:*\nChame o usuário no privado para combinar a divulgação e oficializar a parceria!\n\n"${nomeBot}"`,
-                mentions: [sender]
+              await sock.sendMessage(jid, { 
+                text: textoAviso,
+                mentions: [sender, ...admins]
               });
             } catch (err) {
-              console.log("❌ Erro ao avisar admin no PV:", err.message)
+              console.log("❌ Erro ao avisar admin no grupo:", err.message)
             }
           }
         }
