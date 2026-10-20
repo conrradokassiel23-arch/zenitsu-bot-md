@@ -1,5 +1,5 @@
 /* ============================================================
-   🔥 RIMURU BOT MD - INDEX COMPLETO E DEFINITIVO (LINK PENDENTE)
+   🔥 RIMURU BOT MD - INDEX COMPLETO E DEFINITIVO
    ============================================================ */
 
 const {
@@ -292,7 +292,7 @@ function envolverSendMessage(sock) {
 }
 
 // ============================================================
-// 🔥 COMANDOS SEM PREFIXO
+// 🔥 COMANDOS SEM PREFIXO E FIGURINHAS
 // ============================================================
 async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo, isDono, isSubDono) {
   if (!isGrupo) return false
@@ -355,9 +355,6 @@ async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo,
   return false
 }
 
-// ============================================================
-// 🎴 DETECTOR DE FIGURINHAS COMANDO
-// ============================================================
 async function processarFigCmd(sock, msg, remetente, sender, isGrupo, isDono, isSubDono) {
   if (!isGrupo) return false
   if (msg.key.fromMe) return false
