@@ -849,7 +849,7 @@ ${item(`${p}rmfig (reply) / ${p}listafig`)}
 
     cadastrarparceria: {
       aliases: ["addgp", "cadastrargp"],
-      async executar({ sock, msg, args, db, utils, sender, prefixoAtivo }) {
+      async executar({ sock, msg, args, db, utils, sender, prefixoAtivo, groupMetadata }) {
         const jid = msg.key.remoteJid; 
         const nomeBot = nomeBotDb(db); 
         const p = prefixoAtivo || "+"; 
@@ -883,6 +883,25 @@ ${item(`${p}rmfig (reply) / ${p}listafig`)}
 
         await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: `💧 • 𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 𝐂𝐀𝐃𝐀𝐒𝐓𝐑𝐀𝐃𝐀 •\n\n╭─〔 ❄️ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ @${numUser}, seu link foi registrado!\n╰──────────────\n\n🧊 𝐁𝐨̂𝐧𝐮𝐬: +5 limites de links/dia\n🧊 𝐋𝐢𝐧𝐤: ${link}\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+
+        // 🔥 AQUI ESTÁ A CORREÇÃO: Envia mensagem no PV de todos os admins do grupo
+        if (groupMetadata) {
+          const admins = groupMetadata.participants.filter(pa => pa.admin === "admin" || pa.admin === "superadmin").map(pa => pa.id);
+          const nomeGrupo = groupMetadata.subject || "Grupo";
+          
+          for (const adminJid of admins) {
+            if (utils.soNumero(adminJid) === utils.soNumero(sock.user.id)) continue;
+            
+            try {
+              await sock.sendMessage(adminJid, { 
+                text: `🚨 *NOVA PARCERIA CADASTRADA* 🚨\n\n👤 *Usuário:* @${numUser}\n👥 *Grupo:* ${nomeGrupo}\n🔗 *Link:* ${link}\n\n⚠️ *AÇÃO NECESSÁRIA:*\nChame o usuário no privado para combinar a divulgação e oficializar a parceria!\n\n"${nomeBot}"`,
+                mentions: [sender]
+              });
+            } catch (err) {
+              console.log("❌ Erro ao avisar admin no PV:", err.message)
+            }
+          }
+        }
       }
     },
 
