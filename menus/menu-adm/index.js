@@ -854,16 +854,22 @@ ${item(`${p}rmfig (reply) / ${p}listafig`)}
         const nomeBot = nomeBotDb(db); 
         const p = prefixoAtivo || "+"; 
         const numUser = utils.soNumero(sender);
-        const link = args[0];
+        
+        const parcerias = db.parcerias();
+        const pGrupo = parcerias[jid] || { ativo: true, parceiros: {}, pendentes: {} };
+        pGrupo.parceiros = pGrupo.parceiros || {};
+        pGrupo.pendentes = pGrupo.pendentes || {};
+
+        // Pega o link que o bot salvou quando apagou, ou o link digitado no comando
+        let link = args[0];
+        if (!link && pGrupo.pendentes[numUser]) {
+          link = pGrupo.pendentes[numUser].link;
+        }
 
         if (!link || !link.includes("chat.whatsapp.com/")) {
           await reagir(sock, msg, "❄️");
-          return sock.sendMessage(jid, { text: `💧 • 𝐂𝐀𝐃𝐀𝐒𝐓𝐑𝐀𝐑 •\n\n❄️ Informe um link de grupo válido.\n🧊 Ex: \`${p}cadastrarparceria https://chat.whatsapp.com/...\`\n\n"${nomeBot}"` }, { quoted: msg })
+          return sock.sendMessage(jid, { text: `💧 • 𝐂𝐀𝐃𝐀𝐒𝐓𝐑𝐀𝐑 •\n\n❄️ Você não tem nenhum link pendente.\n🧊 Envie o link no grupo para o bot guardar, ou use: \`${p}cadastrarparceria <link>\`\n\n"${nomeBot}"` }, { quoted: msg })
         }
-
-        const parcerias = db.parcerias();
-        const pGrupo = parcerias[jid] || { ativo: true, parceiros: {} };
-        pGrupo.parceiros = pGrupo.parceiros || {};
 
         const jaTem = Object.values(pGrupo.parceiros).some(info => info.link === link);
         if (jaTem) {
@@ -879,12 +885,15 @@ ${item(`${p}rmfig (reply) / ${p}listafig`)}
           pGrupo.parceiros[userJid] = { total: 5, usados: 0, link: link, desde: Date.now() };
         }
 
+        // Remove dos pendentes
+        if (pGrupo.pendentes[numUser]) delete pGrupo.pendentes[numUser];
+
         db.salvarParcerias(parcerias);
 
         await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: `💧 • 𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 𝐂𝐀𝐃𝐀𝐒𝐓𝐑𝐀𝐃𝐀 •\n\n╭─〔 ❄️ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ @${numUser}, seu link foi registrado!\n╰──────────────\n\n🧊 𝐁𝐨̂𝐧𝐮𝐬: +5 limites de links/dia\n🧊 𝐋𝐢𝐧𝐤: ${link}\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
 
-        // 🔥 AQUI ESTÁ A CORREÇÃO: Envia mensagem no PV de todos os admins do grupo
+        // 🔥 AVISA OS ADMINS NO PV
         if (groupMetadata) {
           const admins = groupMetadata.participants.filter(pa => pa.admin === "admin" || pa.admin === "superadmin").map(pa => pa.id);
           const nomeGrupo = groupMetadata.subject || "Grupo";
