@@ -1,5 +1,5 @@
 /* ============================================================
-   🔥 RIMURU BOT MD - INDEX COMPLETO E DEFINITIVO
+   🔥 RIMURU BOT MD - INDEX COMPLETO E DEFINITIVO (LINK PENDENTE)
    ============================================================ */
 
 const {
@@ -16,7 +16,6 @@ const readline = require('readline');
 const crypto = require('crypto');
 const config = require('./config');
 
-// PREVENÇÃO CONTRA QUEDAS DO BOT
 process.on('uncaughtException', (err) => console.error('⚠️ [SISTEMA] Uncaught Exception:', err?.message || err));
 process.on('unhandledRejection', (reason) => console.error('⚠️ [SISTEMA] Unhandled Rejection:', reason?.message || reason));
 
@@ -27,7 +26,7 @@ const rl = readline.createInterface({ input: process.stdin, output: process.stdo
 const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 
 // ============================================================
-// 📁 BOOTSTRAP
+// 📁 BOOTSTRAP E DB
 // ============================================================
 function bootstrap() {
   const pastas = [
@@ -45,9 +44,6 @@ function bootstrap() {
 }
 bootstrap()
 
-// ============================================================
-// 💾 DB
-// ============================================================
 function dbLer(arquivo, padrao = {}) {
   const p = path.join(DATA_DIR, arquivo)
   if (!fs.existsSync(p)) { fs.writeFileSync(p, JSON.stringify(padrao, null, 2)); return padrao }
@@ -143,7 +139,7 @@ function botEhAdmin(meta, sock) {
 function dataBrasil() { return new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).split("/").reverse().join("-") }
 
 // ============================================================
-// 🎨 AUTOFIX + AUTOTTK + IA
+// 🎨 IA & AUTOMAÇÕES
 // ============================================================
 async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
   if (isGrupo) {
@@ -296,7 +292,7 @@ function envolverSendMessage(sock) {
 }
 
 // ============================================================
-// 🔥 COMANDOS SEM PREFIXO (Rimuru fecha/abre)
+// 🔥 COMANDOS SEM PREFIXO
 // ============================================================
 async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo, isDono, isSubDono) {
   if (!isGrupo) return false
@@ -652,11 +648,26 @@ async function iniciarBot() {
           }
         }
 
-        if (conf.antilink && !podeBurlar) {
-          const textoMsg = getTexto(msg)
-          const linkGrupo = /(chat\.whatsapp\.com|wa\.me\/)/i.test(textoMsg)
-          const linkGeral = /(https?:\/\/|www\.|\.com|\.net|\.br|\.io|\.org|\.xyz|\.tv|\.me|\.gg)/i.test(textoMsg)
+        // =======================================================
+        // 🔥 LÓGICA DO ANTILINK E CAPTURADOR DE PARCERIA
+        // =======================================================
+        const textoMsg = getTexto(msg)
+        const linkGrupo = /(chat\.whatsapp\.com|wa\.me\/)/i.test(textoMsg)
+        
+        // Se tiver link de grupo, guarda em "pendentes" INDEPENDENTE do antilink estar ligado
+        if (linkGrupo && !podeBurlar) {
+          const parceriasBanco = db.parcerias()
+          parceriasBanco[remetente] = parceriasBanco[remetente] || { ativo: false, parceiros: {}, pendentes: {} }
+          parceriasBanco[remetente].pendentes = parceriasBanco[remetente].pendentes || {}
+          const matchLink = textoMsg.match(/(chat\.whatsapp\.com|wa\.me\/)[^\s]+/i)
+          if (matchLink) {
+            parceriasBanco[remetente].pendentes[soNumero(sender)] = { link: matchLink[0], data: Date.now() }
+            db.salvarParcerias(parceriasBanco)
+          }
+        }
 
+        // Se o antilink estiver ligado, apaga o link
+        if (conf.antilink && !podeBurlar) {
           if (linkGrupo) {
             const parcerias = db.parcerias()
             const p = parcerias[remetente] || {}
@@ -683,16 +694,17 @@ async function iniciarBot() {
             }
 
             try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
-            
+          
             try { 
               await sock.sendMessage(remetente, { 
-                text: `💧 • 𝐀𝐕𝐈𝐒𝐎 𝐃𝐄 𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 •\n\n╭─〔 🚫 𝐋𝐈𝐍𝐊 𝐀𝐏𝐀𝐆𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, link apagado por falta de aliança.\n╰──────────────\n\n『 𝐏𝐀𝐒𝐒𝐎 𝐀 𝐏𝐀𝐒𝐒𝐎 』 ↴\n\n1️⃣ Chame um dos Admins no **Privado (PV)**.\n2️⃣ Peça para ele colocar o link do nosso grupo no grupo dele.\n3️⃣ Após isso, use o comando abaixo:\n\n📜 𝐒𝐨𝐥𝐮𝐜̧𝐚̃𝐨:\n╰➜ \`+cadastrarparceria <link_do_seu_grupo>\`\n\n_(Isso te dará +5 links por dia)_\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
+                text: `💧 • 𝐀𝐕𝐈𝐒𝐎 𝐃𝐄 𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 •\n\n╭─〔 🚫 𝐋𝐈𝐍𝐊 𝐀𝐏𝐀𝐆𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, link apagado por falta de aliança.\n╰──────────────\n\n『 𝐏𝐀𝐒𝐒𝐎 𝐀 𝐏𝐀𝐒𝐒𝐎 』 ↴\n\n1️⃣ O bot guardou o seu link temporariamente.\n2️⃣ Para oficializar, digite:\n\n📜 𝐒𝐨𝐥𝐮𝐜̧𝐚̃𝐨:\n╰➜ \`+cadastrarparceria\`\n\n_(Isso te dará +5 links por dia)_\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
                 mentions: [sender] 
               }) 
             } catch (e) { console.log("Erro aviso link grupo:", e.message) }
             return
           }
 
+          const linkGeral = /(https?:\/\/|www\.|\.com|\.net|\.br|\.io|\.org|\.xyz|\.tv|\.me|\.gg)/i.test(textoMsg)
           if (linkGeral) {
             try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
             const n = adicionarAviso(remetente, sender, "link")
@@ -786,76 +798,14 @@ async function iniciarBot() {
         const p = prefixoGlobal
         const numUser = soNumero(sender)
         const nomeBot = db.config().nomeBot || "Rimuru Bot"
-        const cfgCmd = db.config()
         const mencoes = sender ? [sender] : []
-
         const textoBase = `💜 • 𝐂𝐎𝐍𝐅𝐈𝐆𝐔𝐑𝐀𝐂̧𝐀̃𝐎 •\n\n╭─〔 🦄 𝐒𝐈𝐒𝐓𝐄𝐌𝐀 〕\n│ Olá @${numUser}, este é o meu prefixo.\n╰──────────────\n\n🫟 𝐏𝐫𝐞𝐟𝐢𝐱𝐨 𝐀𝐭𝐮𝐚𝐥:\n╰➜ 『 ${p} 』\n\n💡 Para usar meus comandos, digite:\n╰➜ ${p}menu\n\n💜 _"Use com sabedoria."_\n\n"${nomeBot}"`
-
-        const opcoesEnvio = { caption: textoBase, mentions: mencoes, footer: "⚔️ " + nomeBot, buttons: [{ buttonId: prefixoGlobal + "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }], headerType: 1, ignorarCanal: true }
-
-        try {
-          if (cfgCmd.fotoCmd) {
-            const buf = Buffer.from(cfgCmd.fotoCmd, "base64")
-            if (cfgCmd.tipoFotoCmd === "video") { await sock.sendMessage(remetente, { video: buf, mimetype: "video/mp4", fileName: "rimuru.mp4", gifPlayback: true, ...opcoesEnvio }, { quoted: msg }) }
-            else { await sock.sendMessage(remetente, { image: buf, ...opcoesEnvio }, { quoted: msg }) }
-          } else { await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, buttons: opcoesEnvio.buttons, ignorarCanal: true }, { quoted: msg }) }
-        } catch (e) {
-          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
-        }
+        await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
         return
       }
 
       const cmd = getComando(cmdName.toLowerCase())
-      if (!cmd) {
-        const p = prefixoUsado || prefixoGlobal
-        const cmdLimpo = (cmdName || "").trim().toLowerCase()
-        
-        const VARIACOES_CMD_ERRADO = [
-          { topo: "💧 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •", aviso: "O comando informado não foi reconhecido.", frase: "💡 Verifique a escrita e tente novamente!" },
-          { topo: "💧 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐕𝐀́𝐋𝐈𝐃𝐎 •", aviso: "Isso não existe no meu repertório.", frase: "💡 Confira antes de tentar novamente." }
-        ]
-
-        const v = VARIACOES_CMD_ERRADO[Math.floor(Math.random() * VARIACOES_CMD_ERRADO.length)]
-        const numUser = soNumero(sender)
-        const hora = new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })
-        const data = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
-        const nomeBot = db.config().nomeBot || "Rimuru Bot"
-        const cmdExibido = cmdLimpo ? (p + cmdLimpo) : p
-
-        const textoBase = `${v.topo}\n\n╭─〔 🔷 𝐀𝐕𝐈𝐒𝐎 〕\n│ ${v.aviso}\n╰──────────────\n\n『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴\n\n👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:\n╰➜ @${numUser}\n\n🫟 𝐏𝐫𝐞𝐟𝐢𝐱𝐨:\n╰➜ ${p}\n\n❔ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐮𝐬𝐚𝐝𝐨:\n╰➜ ${cmdExibido}\n\n🕐 𝐇𝐨𝐫𝐚́𝐫𝐢𝐨:\n╰➜ ${hora} — ${data}\n\n${v.frase}\n\n"${nomeBot}"`
-
-        const cfgCmd = db.config()
-        const mencoes = sender ? [sender] : []
-        const opcoesErro = { caption: textoBase, mentions: mencoes, footer: "⚔️ " + nomeBot, buttons: [{ buttonId: prefixoGlobal + "menu", buttonText: { displayText: "❄️ Menu-principal" }, type: 1 }], headerType: 1, ignorarCanal: true }
-
-        try {
-          if (cfgCmd.fotoCmd) {
-            const buf = Buffer.from(cfgCmd.fotoCmd, "base64")
-            if (cfgCmd.tipoFotoCmd === "video") { await sock.sendMessage(remetente, { video: buf, mimetype: "video/mp4", fileName: "rimuru.mp4", gifPlayback: true, ...opcoesErro }, { quoted: msg }) }
-            else { await sock.sendMessage(remetente, { image: buf, ...opcoesErro }, { quoted: msg }) }
-          } else { await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, buttons: opcoesErro.buttons, ignorarCanal: true }, { quoted: msg }) }
-        } catch (e) {
-          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
-        }
-        return
-      }
-
-      try {
-        const cidData = dbLer("cidade.json", { usuarios: {} })
-        const numSender = soNumero(sender)
-        const userCidade = cidData.usuarios && cidData.usuarios[numSender]
-        if (userCidade && userCidade.preso && userCidade.preso > Date.now()) {
-          const tempoRestante = formatarTempo(userCidade.preso - Date.now())
-          if (cmdName.toLowerCase() !== "prefixo") {
-            await sock.sendMessage(remetente, { text: "❄️🚔 VOCÊ ESTÁ PRESO!\n\n⏰ Tempo: " + tempoRestante }, { quoted: msg })
-            return
-          }
-        }
-        if (userCidade && userCidade.preso && userCidade.preso <= Date.now()) {
-          cidData.usuarios[numSender].preso = null
-          dbSalvar("cidade.json", cidData)
-        }
-      } catch (_) {}
+      if (!cmd) return;
 
       let groupMetadata = null
       let isAdmin = false
@@ -868,24 +818,13 @@ async function iniciarBot() {
             return pIds.some(id => senderNums2.includes(id))
           })
           isAdmin = p && (p.admin === "admin" || p.admin === "superadmin")
-        } catch (e) { console.log("Erro metadata:", e.message) }
+        } catch (e) { }
       }
 
       const ehSub = isGrupo && ehSubAdmin(remetente, sender)
       const permitidoSub = ["mute", "desmute", "ban", "kick", "link", "linkgp", "fechar", "closenow", "abrir", "opennow"]
       const ehComandoSub = permitidoSub.includes(cmd.nome) || (cmd.aliases || []).some(a => permitidoSub.includes(a))
       const podeAdmin = isAdmin || isDono || isSubDono || (ehSub && ehComandoSub)
-
-      if (cfgGlobal.slow && !isDono && !isSubDono) {
-        await new Promise(r => setTimeout(r, 2500))
-      }
-
-      if (cmd.categoria === "menu-rpg" && isGrupo) {
-        const excecoes = ["rpg", "menurpg", "prefixo"]
-        if (!excecoes.includes(cmd.nome) && confGrupo.rpgAtivo !== true) {
-          return sock.sendMessage(remetente, { text: `💧 RPG OFF! Ative com ${prefixoGlobal}rpg on` }, { quoted: msg })
-        }
-      }
 
       if (cmd.donoOnly && !isDono && !isSubDono) { return sock.sendMessage(remetente, { text: "❄️ Esse comando e so do mestre!" }, { quoted: msg }) }
       if (cmd.adminOnly && !podeAdmin) { return sock.sendMessage(remetente, { text: "❄️ Esse comando e de admin!" }, { quoted: msg }) }
@@ -894,13 +833,11 @@ async function iniciarBot() {
       try {
         await cmd.executar({
           sock, msg, args, sender, isGrupo, isAdmin, isDono, isSubDono, ehSub, podeAdmin, groupMetadata, config,
-          prefixoAtivo: prefixoUsado || prefixoGlobal,
-          db,
+          prefixoAtivo: prefixoUsado || prefixoGlobal, db,
           utils: { getAlvo, soNumero, getTexto, downloadMediaMessage, recarregarCanal, naListaNegra, aluguelAtivo, grupoTemAluguel, formatarTempo, adicionarAviso, limparAvisos, DATA_DIR, botEhAdmin, dbLer, dbSalvar, getTextoBotao, ehSubAdmin }
         })
       } catch (e) {
-        console.log("ERRO em " + cmd.nome + ":")
-        console.log(e)
+        console.log("ERRO em " + cmd.nome + ":", e)
         try { await sock.sendMessage(remetente, { text: "❄️ ERRO no comando " + cmd.nome + "\n\n" + e.message }, { quoted: msg }) } catch (_) {}
       }
 
