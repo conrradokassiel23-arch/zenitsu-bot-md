@@ -1,5 +1,5 @@
 /* ============================================================
-   💧❄️🧊 MENU ADM - RIMURU BOT MD (AVISO DE PARCERIA NO GRUPO)
+   💧❄️🧊 MENU ADM - RIMURU BOT MD (COMPLETO E DEFINITIVO)
    ============================================================ */
 
 const fs = require("fs")
@@ -14,7 +14,6 @@ function dbLer(a, p = {}) {
   try { return JSON.parse(fs.readFileSync(f, "utf8")) } catch { return p }
 }
 function dbSalvar(a, d) { fs.writeFileSync(path.join(DATA_DIR, a), JSON.stringify(d, null, 2)) }
-function hashFigurinha(buffer) { return crypto.createHash("md5").update(buffer).digest("hex") }
 
 async function reagir(sock, msg, emoji) {
   try { await sock.sendMessage(msg.key.remoteJid, { react: { text: emoji, key: msg.key } }) } catch (_) {}
@@ -29,7 +28,6 @@ function msgAviso(titulo, aviso, detalhes, rodape, nomeBot) {
 function msgErro(titulo, aviso, detalhes, rodape, nomeBot) {
   return `💧 • ${titulo} •\n\n❄️ ${aviso}\n\n🧊 ${detalhes}\n\n${rodape ? rodape + "\n\n" : ""}"${nomeBot}"`
 }
-function lineEmoji(emoji, label, valor) { return `${emoji} ${label}:\n╰➜ ${valor}` }
 function nomeBotDb(db) { try { return db.config().nomeBot || "Rimuru Bot" } catch { return "Rimuru Bot" } }
 
 function cardPerfil({ nomeBot, nomeUsuario, cargo, dono }) {
@@ -186,6 +184,7 @@ ${secao("🕵️ x𝟵 / ᴘᴀʀᴄᴇʀɪᴀ")}
 ${item(`${p}x9 on/off`)}
 ${item(`${p}modoparceria on/off`)}
 ${item(`${p}addparceria / ${p}rmparceria / ${p}parcerias`)}
+${item(`${p}parceria (pedir)`)}
 ${item(`${p}cadastrarparceria / ${p}vercadastrados`)}
 
 ${secao("🚫 ʟɪsᴛᴀ ɴᴇɢʀᴀ")}
@@ -860,7 +859,6 @@ ${item(`${p}rmfig (reply) / ${p}listafig`)}
         pGrupo.parceiros = pGrupo.parceiros || {};
         pGrupo.pendentes = pGrupo.pendentes || {};
 
-        // Pega o link que o bot salvou quando apagou, ou o link digitado no comando
         let link = args[0];
         if (!link && pGrupo.pendentes[numUser]) {
           link = pGrupo.pendentes[numUser].link;
@@ -885,7 +883,6 @@ ${item(`${p}rmfig (reply) / ${p}listafig`)}
           pGrupo.parceiros[userJid] = { total: 5, usados: 0, link: link, desde: Date.now() };
         }
 
-        // Remove dos pendentes
         if (pGrupo.pendentes[numUser]) delete pGrupo.pendentes[numUser];
 
         db.salvarParcerias(parcerias);
@@ -893,7 +890,6 @@ ${item(`${p}rmfig (reply) / ${p}listafig`)}
         await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: `💧 • 𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 𝐂𝐀𝐃𝐀𝐒𝐓𝐑𝐀𝐃𝐀 •\n\n╭─〔 ❄️ 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 〕\n│ @${numUser}, seu link foi registrado!\n╰──────────────\n\n🧊 𝐁𝐨̂𝐧𝐮𝐬: +5 limites de links/dia\n🧊 𝐋𝐢𝐧𝐤: ${link}\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
 
-        // 🔥 AVISA OS ADMINS NO GRUPO
         if (groupMetadata) {
           const admins = groupMetadata.participants.filter(pa => pa.admin === "admin" || pa.admin === "superadmin").map(pa => pa.id);
           
@@ -945,6 +941,197 @@ ${item(`${p}rmfig (reply) / ${p}listafig`)}
         
         await reagir(sock, msg, "💧");
         await sock.sendMessage(jid, { text: txt, mentions }, { quoted: msg });
+      }
+    },
+
+    addparceria: {
+      aliases: ["addparcerias", "novaparceria"],
+      adminOnly: true, grupoOnly: true,
+      async executar({ sock, msg, args, db, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid;
+        const nomeBot = nomeBotDb(db);
+        const p = prefixoAtivo || "+";
+        const alvo = utils.getAlvo(msg);
+        const qtdStr = args.find(a => /^\d+$/.test(a));
+        const qtd = qtdStr ? parseInt(qtdStr) : 5;
+
+        if (!alvo) {
+          await reagir(sock, msg, "❄️");
+          return sock.sendMessage(jid, { text: msgAviso("𝐀𝐃𝐈𝐂𝐈𝐎𝐍𝐀𝐑", "Marque o usuário.", `\`${p}addparceria @user <qtd>\``, null, nomeBot) }, { quoted: msg });
+        }
+
+        const parcerias = db.parcerias();
+        parcerias[jid] = parcerias[jid] || { ativo: true, parceiros: {} };
+        parcerias[jid].parceiros = parcerias[jid].parceiros || {};
+        parcerias[jid].parceiros[alvo] = { total: qtd, usados: 0, desde: Date.now() };
+        db.salvarParcerias(parcerias);
+        
+        await reagir(sock, msg, "💧");
+        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀", "Parceria adicionada.", `❄️ @${utils.soNumero(alvo)} • ${qtd} links`, null, nomeBot), mentions: [alvo] }, { quoted: msg });
+      }
+    },
+
+    rmparceria: {
+      aliases: ["removerparceria", "delparceria"],
+      adminOnly: true, grupoOnly: true,
+      async executar({ sock, msg, args, db, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid;
+        const nomeBot = nomeBotDb(db);
+        const p = prefixoAtivo || "+";
+        const alvo = utils.getAlvo(msg);
+
+        if (!alvo) {
+          await reagir(sock, msg, "❄️");
+          return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐌𝐎𝐕𝐄𝐑", "Marque o usuário.", `\`${p}rmparceria @user\``, null, nomeBot) }, { quoted: msg });
+        }
+
+        const parcerias = db.parcerias();
+        if (parcerias[jid] && parcerias[jid].parceiros && parcerias[jid].parceiros[alvo]) {
+          delete parcerias[jid].parceiros[alvo];
+          db.salvarParcerias(parcerias);
+          await reagir(sock, msg, "💧");
+          await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀", "Parceria removida.", `❄️ @${utils.soNumero(alvo)}`, null, nomeBot), mentions: [alvo] }, { quoted: msg });
+        } else {
+          await reagir(sock, msg, "🧊");
+          await sock.sendMessage(jid, { text: msgAviso("𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐀", "Usuário sem parceria.", `❄️ @${utils.soNumero(alvo)}`, null, nomeBot), mentions: [alvo] }, { quoted: msg });
+        }
+      }
+    },
+
+    parcerias: {
+      aliases: ["listaparceiros"],
+      adminOnly: true, grupoOnly: true,
+      async executar({ sock, msg, db, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid;
+        const nomeBot = nomeBotDb(db);
+        const p = prefixoAtivo || "+";
+        const parcerias = db.parcerias();
+        const lista = Object.entries(parcerias[jid]?.parceiros || {});
+
+        if (!lista.length) {
+          await reagir(sock, msg, "❄️");
+          return sock.sendMessage(jid, { text: msgAviso("𝐋𝐈𝐒𝐓𝐀 𝐕𝐀𝐙𝐈𝐀", "Nenhuma parceria.", `Use \`${p}addparceria\``, null, nomeBot) }, { quoted: msg });
+        }
+
+        let txt = "💧 • 𝐏𝐀𝐑𝐂𝐄𝐈𝐑𝐎𝐒 •\n\n";
+        const mentions = [];
+        lista.forEach(([jidP, info], i) => {
+          txt += `🧊 ${i + 1}. @${utils.soNumero(jidP)}\n`;
+          txt += `╰➜ ${info.usados}/${info.total} links\n\n`;
+          mentions.push(jidP);
+        });
+        txt += `"${nomeBot}"`;
+
+        await reagir(sock, msg, "💧");
+        await sock.sendMessage(jid, { text: txt, mentions }, { quoted: msg });
+      }
+    },
+
+    rgfig: {
+      aliases: ["registrarfig", "addfigcmd"],
+      adminOnly: true, grupoOnly: true,
+      async executar({ sock, msg, args, db, utils, prefixoAtivo, groupMetadata }) {
+        const jid = msg.key.remoteJid;
+        const nomeBot = nomeBotDb(db);
+        const p = prefixoAtivo || "+";
+        const comando = (args[0] || "").toLowerCase();
+
+        if (!comando) {
+          await reagir(sock, msg, "❄️");
+          return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐆𝐈𝐒𝐓𝐑𝐀𝐑", "Informe o comando.", `\`${p}rgfig <comando>\` (reply)`, null, nomeBot) }, { quoted: msg });
+        }
+
+        const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {};
+        const quoted = ctx.quotedMessage;
+        const temFig = (msg.message && msg.message.stickerMessage) || (quoted && quoted.stickerMessage);
+
+        if (!temFig) {
+          await reagir(sock, msg, "🧊");
+          return sock.sendMessage(jid, { text: msgAviso("𝐅𝐈𝐆𝐔𝐑𝐈𝐍𝐇𝐀", "Responda uma figurinha.", `\`${p}rgfig <comando>\``, null, nomeBot) }, { quoted: msg });
+        }
+
+        try {
+          const alvoMsg = (msg.message && msg.message.stickerMessage) ? msg : { ...msg, message: { stickerMessage: quoted.stickerMessage } };
+          const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage });
+          const hash = crypto.createHash("md5").update(buffer).digest("hex");
+          
+          const dbFig = dbLer("figcmd.json", {});
+          dbFig[jid] = dbFig[jid] || {};
+          dbFig[jid][hash] = { comando: comando, criadoPor: utils.soNumero(msg.key.participant), data: Date.now() };
+          dbSalvar("figcmd.json", dbFig);
+
+          await reagir(sock, msg, "💧");
+          await sock.sendMessage(jid, { text: msgSucesso("𝐅𝐈𝐆𝐔𝐑𝐈𝐍𝐇𝐀", "Comando vinculado.", `❄️ Figurinha ativará: \`${p}${comando}\``, null, nomeBot) }, { quoted: msg });
+        } catch (e) {
+          await reagir(sock, msg, "🧊");
+          await sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Falha ao salvar figurinha.", e.message, null, nomeBot) }, { quoted: msg });
+        }
+      }
+    },
+
+    rmfig: {
+      aliases: ["removerfigcmd", "delfigcmd"],
+      adminOnly: true, grupoOnly: true,
+      async executar({ sock, msg, db, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid;
+        const nomeBot = nomeBotDb(db);
+        const p = prefixoAtivo || "+";
+        
+        const ctx = msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo || {};
+        const quoted = ctx.quotedMessage;
+        const temFig = (msg.message && msg.message.stickerMessage) || (quoted && quoted.stickerMessage);
+
+        if (!temFig) {
+          await reagir(sock, msg, "🧊");
+          return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐌𝐎𝐕𝐄𝐑", "Responda a figurinha.", `\`${p}rmfig\` (reply)`, null, nomeBot) }, { quoted: msg });
+        }
+
+        try {
+          const alvoMsg = (msg.message && msg.message.stickerMessage) ? msg : { ...msg, message: { stickerMessage: quoted.stickerMessage } };
+          const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage });
+          const hash = crypto.createHash("md5").update(buffer).digest("hex");
+
+          const dbFig = dbLer("figcmd.json", {});
+          if (dbFig[jid] && dbFig[jid][hash]) {
+            delete dbFig[jid][hash];
+            dbSalvar("figcmd.json", dbFig);
+            await reagir(sock, msg, "💧");
+            await sock.sendMessage(jid, { text: msgSucesso("𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐀", "Comando desvinculado.", "❄️ Figurinha não ativa mais comando", null, nomeBot) }, { quoted: msg });
+          } else {
+            await reagir(sock, msg, "🧊");
+            await sock.sendMessage(jid, { text: msgAviso("𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐀", "Figurinha sem comando.", "❄️ Nada a remover", null, nomeBot) }, { quoted: msg });
+          }
+        } catch (e) {
+          await reagir(sock, msg, "🧊");
+          await sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Falha ao remover.", e.message, null, nomeBot) }, { quoted: msg });
+        }
+      }
+    },
+
+    listafig: {
+      aliases: ["figs", "listafiguras", "figcomandos"],
+      adminOnly: true, grupoOnly: true,
+      async executar({ sock, msg, db, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid;
+        const nomeBot = nomeBotDb(db);
+        const p = prefixoAtivo || "+";
+        const dbFig = dbLer("figcmd.json", {});
+        const grupo = dbFig[jid] || {};
+        const total = Object.keys(grupo).length;
+
+        if (!total) {
+          await reagir(sock, msg, "❄️");
+          return sock.sendMessage(jid, { text: msgAviso("𝐋𝐈𝐒𝐓𝐀 𝐕𝐀𝐙𝐈𝐀", "Nenhuma figurinha.", `Use \`${p}rgfig <cmd>\``, null, nomeBot) }, { quoted: msg });
+        }
+
+        let txt = `💧 • 𝐅𝐈𝐆𝐔𝐑𝐈𝐍𝐇𝐀𝐒 𝐂𝐎𝐌𝐀𝐍𝐃𝐎𝐒 •\n\n❄️ Total: ${total}\n\n`;
+        for (const [hash, info] of Object.entries(grupo)) {
+          txt += `🧊 \`${p}${info.comando}\`\n`;
+        }
+        txt += `\n"${nomeBot}"`;
+
+        await reagir(sock, msg, "💧");
+        await sock.sendMessage(jid, { text: txt }, { quoted: msg });
       }
     }
   }
