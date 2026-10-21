@@ -1,5 +1,5 @@
 /* ============================================================
-   🔥 RIMURU BOT MD - INDEX COMPLETO (CORREÇÃO DE PALAVRÕES)
+   🔥 RIMURU BOT MD - INDEX COMPLETO (AGENDAMENTO SEM DUPLICAR)
    ============================================================ */
 
 const {
@@ -430,8 +430,10 @@ async function processarFigCmd(sock, msg, remetente, sender, isGrupo, isDono, is
 }
 
 // ============================================================
-// ⏰ AGENDAMENTOS DE ABRIR E FECHAR
+// ⏰ AGENDAMENTOS DE ABRIR E FECHAR (SEM DUPLICAR)
 // ============================================================
+const ultimoAgendamento = {}; // 🔥 Trava em memória para evitar duplicação
+
 function iniciarAgendamentos() {
   setInterval(async () => {
     if (!global.sockGlobal) return;
@@ -446,6 +448,10 @@ function iniciarAgendamentos() {
 
         // 🔥 ABRIR GRUPO NA HORA CERTA
         if (conf.abrirHora === agora && conf.ultimoAbrir !== dataHoje) {
+          const chaveAbrir = `${jid}_abrir_${dataHoje}_${agora}`;
+          if (ultimoAgendamento[chaveAbrir]) continue;
+          ultimoAgendamento[chaveAbrir] = true;
+
           try {
             await global.sockGlobal.groupSettingUpdate(jid, "not_announcement");
             const legenda = (conf.legendaAbrir && conf.legendaAbrir.trim()) || "Território aberto!";
@@ -459,6 +465,10 @@ function iniciarAgendamentos() {
 
         // 🔥 FECHAR GRUPO NA HORA CERTA
         if (conf.fecharHora === agora && conf.ultimoFechar !== dataHoje) {
+          const chaveFechar = `${jid}_fechar_${dataHoje}_${agora}`;
+          if (ultimoAgendamento[chaveFechar]) continue;
+          ultimoAgendamento[chaveFechar] = true;
+
           try {
             await global.sockGlobal.groupSettingUpdate(jid, "announcement");
             const legenda = (conf.legendaFechar && conf.legendaFechar.trim()) || "Território fechado!";
@@ -470,9 +480,16 @@ function iniciarAgendamentos() {
           } catch (e) { console.log(`❌ Erro ao fechar grupo ${jid}:`, e.message); }
         }
       }
+
       if (alterou) db.salvarGrupos(grupos);
+
+      // Limpa a memória de agendamentos antigos
+      for (const chave of Object.keys(ultimoAgendamento)) {
+        if (!chave.includes(dataHoje)) delete ultimoAgendamento[chave];
+      }
+
     } catch (e) { console.log("❌ Erro no agendamento:", e.message); }
-  }, 30000); // Verifica a cada 30 segundos para não perder o minuto
+  }, 30000);
 }
 
 // ============================================================
@@ -687,7 +704,7 @@ async function iniciarBot() {
         }
         if (jidMutado && !podeBurlar) { try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {} return }
 
-        // 🔥 NOVA LÓGICA DE PALAVRÕES (REGEX CORRIGIDA)
+        // 🔥 DETECÇÃO DE PALAVRÕES CORRIGIDA
         if (conf.palavrao && !podeBurlar) {
           const lista = db.palavroes()[remetente] || []
           const normalizar = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim()
@@ -696,7 +713,6 @@ async function iniciarBot() {
           const temPalavrao = lista.some(p => {
             const pl = normalizar(p)
             if (!pl) return false
-            // Verifica a palavra exata ou com espaços/pontuação em volta
             const regex = new RegExp(`(^|\\s)${pl}($|\\s)`, "i")
             return regex.test(textoNorm)
           })
@@ -737,9 +753,7 @@ async function iniciarBot() {
           }
         }
 
-        // =======================================================
-        // 🔥 LÓGICA DE LINK DE GRUPO (INDEPENDENTE DO ANTILINK)
-        // =======================================================
+        // 🔥 LÓGICA DE LINK DE GRUPO
         const textoMsg = getTexto(msg)
         const linkGrupo = /(chat\.whatsapp\.com|wa\.me\/)/i.test(textoMsg)
         
@@ -749,14 +763,12 @@ async function iniciarBot() {
             const parceiros = p.parceiros || {}
             const modoParceria = p.ativo === true
 
-            // Se o modo parceria estiver ON, o bot gerencia o link
             if (modoParceria) {
                 let encontrado = null
                 for (const [jidP, info] of Object.entries(parceiros)) {
                     if (senderCands.some(cand => cand === soNumero(jidP))) { encontrado = info; break }
                 }
 
-                // Se a pessoa TEM parceria e ainda tem cota
                 if (encontrado && encontrado.usados < encontrado.total) {
                     encontrado.usados++
                     db.salvarParcerias(parcerias)
@@ -771,7 +783,6 @@ async function iniciarBot() {
                     return
                 }
 
-                // Se a pessoa NÃO tem parceria (ou acabou a cota)
                 try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
                 const admins = meta ? meta.participants.filter(pa => pa.admin === "admin" || pa.admin === "superadmin").map(pa => pa.id) : [];
                 let listaAdmins = "";
@@ -785,12 +796,9 @@ async function iniciarBot() {
                 } catch (e) { console.log("Erro aviso link grupo:", e.message) }
                 return
             }
-            // Se modo parceria estiver OFF, o bot ignora o link do grupo
         }
 
-        // =======================================================
-        // 🔥 LÓGICA DE ANTILINK NORMAL (https, .com, etc)
-        // =======================================================
+        // 🔥 LÓGICA DE ANTILINK NORMAL
         const linkGeral = /(https?:\/\/|www\.|\.com|\.net|\.br|\.io|\.org|\.xyz|\.tv|\.me|\.gg)/i.test(textoMsg)
 
         if (conf.antilink && !podeBurlar) {
