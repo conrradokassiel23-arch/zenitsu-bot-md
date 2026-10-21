@@ -1,5 +1,5 @@
 /* ============================================================
-   🔥 RIMURU BOT MD - INDEX COMPLETO E DEFINITIVO
+   🔥 RIMURU BOT MD - INDEX COMPLETO (CORREÇÃO DE PALAVRÕES)
    ============================================================ */
 
 const {
@@ -14,6 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 const crypto = require('crypto');
+const NodeCache = require('node-cache'); 
 const config = require('./config');
 
 process.on('uncaughtException', (err) => console.error('⚠️ [SISTEMA] Uncaught Exception:', err?.message || err));
@@ -24,6 +25,8 @@ const MENUS_DIR = path.join(__dirname, "menus")
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const question = (text) => new Promise((resolve) => rl.question(text, resolve));
+
+const groupCache = new NodeCache({ stdTTL: 5 * 60, useClones: false });
 
 // ============================================================
 // 📁 BOOTSTRAP E DB
@@ -54,7 +57,7 @@ function dbSalvar(arquivo, dados) { fs.writeFileSync(path.join(DATA_DIR, arquivo
 const db = {
   grupos: () => dbLer("grupos.json", {}), salvarGrupos: (d) => dbSalvar("grupos.json", d),
   advs: () => dbLer("advs.json", {}), salvarAdvs: (d) => dbSalvar("advs.json", d),
-  config: () => dbLer("config.json", { fotoMenu: null, prefixoGlobal: null, slow: false, subdonos: [], nomeBot: "Rimuru" }),
+  config: () => dbLer("config.json", { fotoMenu: null, prefixoGlobal: null, slow: false, subdonos: [], nomeBot: "Rimuru", fotoCmd: null, tipoFotoCmd: null }),
   salvarConfig: (d) => dbSalvar("config.json", d),
   canal: () => dbLer("canal.json", { jid: null, nome: null, link: null }), salvarCanal: (d) => dbSalvar("canal.json", d),
   listanegra: () => dbLer("listanegra.json", {}), salvarListanegra: (d) => dbSalvar("listanegra.json", d),
@@ -137,6 +140,33 @@ function botEhAdmin(meta, sock) {
   return botPart && (botPart.admin === "admin" || botPart.admin === "superadmin")
 }
 function dataBrasil() { return new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).split("/").reverse().join("-") }
+function horaBrasil() { return new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hour12: false }) }
+
+// ============================================================
+// 🧠 INTELIGÊNCIA DE COMANDOS
+// ============================================================
+function levenshtein(a, b) {
+  const matrix = [];
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1];
+      else matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
+    }
+  }
+  return matrix[b.length][a.length];
+}
+function buscarComandoParecido(comandoErrado) {
+  let melhor = null; let menorDistancia = 999;
+  const todos = [...comandos.keys(), ...aliases.keys()];
+  for (const cmd of todos) {
+    const dist = levenshtein(comandoErrado, cmd);
+    if (dist < menorDistancia) { menorDistancia = dist; melhor = cmd; }
+  }
+  if (menorDistancia <= 3 && melhor) return melhor;
+  return null;
+}
 
 // ============================================================
 // 🎨 IA & AUTOMAÇÕES
@@ -228,7 +258,7 @@ async function processarAutoTtk(sock, msg, remetente, isGrupo) {
 }
 
 // ============================================================
-// 📦 CARREGADOR DE MENUS
+// 📦 CARREGADOR DE MENUS E COMANDOS DE FIGURINHA
 // ============================================================
 const comandos = new Map()
 const aliases = new Map()
@@ -400,10 +430,57 @@ async function processarFigCmd(sock, msg, remetente, sender, isGrupo, isDono, is
 }
 
 // ============================================================
+// ⏰ AGENDAMENTOS DE ABRIR E FECHAR
+// ============================================================
+function iniciarAgendamentos() {
+  setInterval(async () => {
+    if (!global.sockGlobal) return;
+    try {
+      const agora = horaBrasil();
+      const dataHoje = dataBrasil();
+      const grupos = db.grupos();
+      let alterou = false;
+
+      for (const [jid, conf] of Object.entries(grupos)) {
+        if (!jid.endsWith("@g.us")) continue;
+
+        // 🔥 ABRIR GRUPO NA HORA CERTA
+        if (conf.abrirHora === agora && conf.ultimoAbrir !== dataHoje) {
+          try {
+            await global.sockGlobal.groupSettingUpdate(jid, "not_announcement");
+            const legenda = (conf.legendaAbrir && conf.legendaAbrir.trim()) || "Território aberto!";
+            if (conf.fotoAbrir) await global.sockGlobal.sendMessage(jid, { image: Buffer.from(conf.fotoAbrir, "base64"), caption: legenda });
+            else await global.sockGlobal.sendMessage(jid, { text: legenda });
+            conf.ultimoAbrir = dataHoje;
+            alterou = true;
+            console.log(`✅ Grupo ${jid} aberto às ${agora}`);
+          } catch (e) { console.log(`❌ Erro ao abrir grupo ${jid}:`, e.message); }
+        }
+
+        // 🔥 FECHAR GRUPO NA HORA CERTA
+        if (conf.fecharHora === agora && conf.ultimoFechar !== dataHoje) {
+          try {
+            await global.sockGlobal.groupSettingUpdate(jid, "announcement");
+            const legenda = (conf.legendaFechar && conf.legendaFechar.trim()) || "Território fechado!";
+            if (conf.fotoFechar) await global.sockGlobal.sendMessage(jid, { image: Buffer.from(conf.fotoFechar, "base64"), caption: legenda });
+            else await global.sockGlobal.sendMessage(jid, { text: legenda });
+            conf.ultimoFechar = dataHoje;
+            alterou = true;
+            console.log(`✅ Grupo ${jid} fechado às ${agora}`);
+          } catch (e) { console.log(`❌ Erro ao fechar grupo ${jid}:`, e.message); }
+        }
+      }
+      if (alterou) db.salvarGrupos(grupos);
+    } catch (e) { console.log("❌ Erro no agendamento:", e.message); }
+  }, 30000); // Verifica a cada 30 segundos para não perder o minuto
+}
+
+// ============================================================
 // 🚀 START (PAINEL DE CONEXÃO + HANDLER)
 // ============================================================
 async function iniciarBot() {
   carregarMenus();
+  iniciarAgendamentos();
 
   const { state, saveCreds } = await useMultiFileAuthState("auth")
   const { version } = await fetchLatestBaileysVersion()
@@ -450,10 +527,15 @@ async function iniciarBot() {
     connectTimeoutMs: 60000,
     defaultQueryTimeoutMs: 60000,
     keepAliveIntervalMs: 30000,
-    syncFullHistory: false
+    syncFullHistory: false,
+    cachedGroupMetadata: async (jid) => groupCache.get(jid)
   });
 
   global.sockGlobal = sock; recarregarCanal(); envolverSendMessage(sock);
+
+  sock.ev.on('groups.update', async ([event]) => {
+    try { const metadata = await sock.groupMetadata(event.id); groupCache.set(event.id, metadata); } catch (_) {}
+  });
 
   if (!state.creds.registered && connectionMethod === 'pairing' && numeroCompleto) {
     setTimeout(async () => {
@@ -490,14 +572,15 @@ async function iniciarBot() {
 
       const remetente = msg.key.remoteJid;
       const isGrupo = remetente.endsWith('@g.us');
-      
-      let senderRaw = isGrupo ? msg.key.participant : remetente
+      if (!isGrupo) return;
+
+      let senderRaw = msg.key.participant;
       let sender = senderRaw
 
       if (senderRaw && senderRaw.endsWith("@lid")) {
         if (msg.key && msg.key.participantPn) sender = msg.key.participantPn
         else if (msg.key && msg.key.participantAlt) sender = msg.key.participantAlt
-        else if (isGrupo) {
+        else {
           try {
             const meta = await sock.groupMetadata(remetente).catch(() => null)
             if (meta) {
@@ -518,17 +601,17 @@ async function iniciarBot() {
       const numerosSub = (cfgSub.subdonos || []).map(soNumero)
       const isSubDono = senderNums.some(n => numerosSub.includes(n)) && !isDono
 
-      if (isGrupo && !isDono && !isSubDono) {
+      if (!isDono && !isSubDono) {
         const b = db.bangp()
         if (b.grupos && b.grupos[remetente]) return
       }
 
-      if (isGrupo && !msg.key.fromMe) {
+      if (!msg.key.fromMe) {
         const feito = await processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo, isDono, isSubDono)
         if (feito) return
       }
 
-      if (isGrupo && !msg.key.fromMe) {
+      if (!msg.key.fromMe) {
         const feito = await processarFigCmd(sock, msg, remetente, sender, isGrupo, isDono, isSubDono)
         if (feito) return
       }
@@ -538,7 +621,7 @@ async function iniciarBot() {
         if (feito) return
       }
 
-      if (isGrupo && !msg.key.fromMe) {
+      if (!msg.key.fromMe) {
         try {
           const confAuto = (db.autocfg().grupos && db.autocfg().grupos[remetente]) || {}
           if (confAuto.autottk) { const feito = await processarAutoTtk(sock, msg, remetente, isGrupo); if (feito) return }
@@ -546,7 +629,7 @@ async function iniciarBot() {
         } catch (e) {}
       }
 
-      if (isGrupo && !msg.key.fromMe) {
+      if (!msg.key.fromMe) {
         try {
           const grupos = db.grupos()
           const conf = grupos[remetente] || {}
@@ -566,9 +649,9 @@ async function iniciarBot() {
         } catch (_) {}
       }
 
-      if (isGrupo && aluguelAtivo() && !isDono && !isSubDono && !grupoTemAluguel(remetente)) return
+      if (aluguelAtivo() && !isDono && !isSubDono && !grupoTemAluguel(remetente)) return
 
-      if (isGrupo && !msg.key.fromMe) {
+      if (!msg.key.fromMe) {
         const cands = [sender, msg.key && msg.key.participantPn, msg.key && msg.key.participantLid].filter(Boolean)
         if (cands.some(j => naListaNegra(remetente, j))) {
           try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
@@ -577,10 +660,14 @@ async function iniciarBot() {
         }
       }
 
-      if (isGrupo && !msg.key.fromMe) {
+      if (!msg.key.fromMe) {
         const grupos = db.grupos()
         const conf = grupos[remetente] || {}
-        const meta = await sock.groupMetadata(remetente).catch(() => null)
+        let meta = groupCache.get(remetente)
+        if (!meta) {
+            meta = await sock.groupMetadata(remetente).catch(() => null)
+            if (meta) groupCache.set(remetente, meta)
+        }
 
         const senderCands = [sender, senderRaw, msg.key && msg.key.participant, msg.key && msg.key.participantPn, msg.key && msg.key.participantLid, msg.key && msg.key.remoteJid].filter(Boolean).map(soNumero)
         const isAdm = meta && meta.participants.find(p => {
@@ -600,15 +687,20 @@ async function iniciarBot() {
         }
         if (jidMutado && !podeBurlar) { try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {} return }
 
+        // 🔥 NOVA LÓGICA DE PALAVRÕES (REGEX CORRIGIDA)
         if (conf.palavrao && !podeBurlar) {
           const lista = db.palavroes()[remetente] || []
           const normalizar = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim()
           const textoNorm = normalizar(getTexto(msg))
+          
           const temPalavrao = lista.some(p => {
             const pl = normalizar(p)
             if (!pl) return false
-            return new RegExp("\\b" + pl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(textoNorm)
+            // Verifica a palavra exata ou com espaços/pontuação em volta
+            const regex = new RegExp(`(^|\\s)${pl}($|\\s)`, "i")
+            return regex.test(textoNorm)
           })
+
           if (lista.length && textoNorm && temPalavrao) {
             try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
             const n = adicionarAviso(remetente, sender, "palavrao")
@@ -646,80 +738,80 @@ async function iniciarBot() {
         }
 
         // =======================================================
-        // 🔥 LÓGICA DO ANTILINK E CAPTURADOR DE PARCERIA
+        // 🔥 LÓGICA DE LINK DE GRUPO (INDEPENDENTE DO ANTILINK)
         // =======================================================
         const textoMsg = getTexto(msg)
         const linkGrupo = /(chat\.whatsapp\.com|wa\.me\/)/i.test(textoMsg)
         
-        // Se tiver link de grupo, guarda em "pendentes" INDEPENDENTE do antilink estar ligado
         if (linkGrupo && !podeBurlar) {
-          const parceriasBanco = db.parcerias()
-          parceriasBanco[remetente] = parceriasBanco[remetente] || { ativo: false, parceiros: {}, pendentes: {} }
-          parceriasBanco[remetente].pendentes = parceriasBanco[remetente].pendentes || {}
-          const matchLink = textoMsg.match(/(chat\.whatsapp\.com|wa\.me\/)[^\s]+/i)
-          if (matchLink) {
-            parceriasBanco[remetente].pendentes[soNumero(sender)] = { link: matchLink[0], data: Date.now() }
-            db.salvarParcerias(parceriasBanco)
-          }
-        }
-
-        // Se o antilink estiver ligado, apaga o link
-        if (conf.antilink && !podeBurlar) {
-          if (linkGrupo) {
             const parcerias = db.parcerias()
             const p = parcerias[remetente] || {}
             const parceiros = p.parceiros || {}
             const modoParceria = p.ativo === true
 
-            let encontrado = null
-            for (const [jidP, info] of Object.entries(parceiros)) {
-              if (senderCands.some(cand => cand === soNumero(jidP))) { encontrado = info; break }
-            }
+            // Se o modo parceria estiver ON, o bot gerencia o link
+            if (modoParceria) {
+                let encontrado = null
+                for (const [jidP, info] of Object.entries(parceiros)) {
+                    if (senderCands.some(cand => cand === soNumero(jidP))) { encontrado = info; break }
+                }
 
-            if (modoParceria && encontrado && encontrado.usados < encontrado.total) {
-              encontrado.usados++
-              db.salvarParcerias(parcerias)
-              const restantes = encontrado.total - encontrado.usados
-              const extra = restantes === 0 ? "⚠️ *Esse foi o seu último link de hoje!*" : `✨ Ainda tem *${restantes}* link(s) restante(s).`
-              try { 
-                await sock.sendMessage(remetente, { 
-                  text: `💧 • 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀 𝐀𝐏𝐑𝐎𝐕𝐀𝐃𝐀 •\n\n╭─〔 ❄️ 𝐀𝐂𝐄𝐒𝐒𝐎 𝐋𝐈𝐁𝐄𝐑𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, o link foi autorizado!\n╰──────────────\n\n📊 𝐔𝐬𝐨:\n╰➜ ${encontrado.usados}/${encontrado.total} links enviados.\n\n${extra}\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
-                  mentions: [sender] 
-                }) 
-              } catch (_) {}
-              return
-            }
+                // Se a pessoa TEM parceria e ainda tem cota
+                if (encontrado && encontrado.usados < encontrado.total) {
+                    encontrado.usados++
+                    db.salvarParcerias(parcerias)
+                    const restantes = encontrado.total - encontrado.usados
+                    const extra = restantes === 0 ? "⚠️ *Esse foi o seu último link de hoje!*" : `✨ Ainda tem *${restantes}* link(s) restante(s).`
+                    try { 
+                        await sock.sendMessage(remetente, { 
+                            text: `💧 • 𝐀𝐋𝐈𝐀𝐍𝐂̧𝐀 𝐀𝐏𝐑𝐎𝐕𝐀𝐃𝐀 •\n\n╭─〔 ❄️ 𝐀𝐂𝐄𝐒𝐒𝐎 𝐋𝐈𝐁𝐄𝐑𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, o link foi autorizado!\n╰──────────────\n\n📊 𝐔𝐬𝐨:\n╰➜ ${encontrado.usados}/${encontrado.total} links enviados.\n\n${extra}\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
+                            mentions: [sender] 
+                        }) 
+                    } catch (_) {}
+                    return
+                }
 
-            try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
-          
-            try { 
-              await sock.sendMessage(remetente, { 
-                text: `💧 • 𝐀𝐕𝐈𝐒𝐎 𝐃𝐄 𝐏𝐀𝐑𝐂𝐄𝐑𝐈𝐀 •\n\n╭─〔 🚫 𝐋𝐈𝐍𝐊 𝐀𝐏𝐀𝐆𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, link apagado por falta de aliança.\n╰──────────────\n\n『 𝐏𝐀𝐒𝐒𝐎 𝐀 𝐏𝐀𝐒𝐒𝐎 』 ↴\n\n1️⃣ O bot guardou o seu link temporariamente.\n2️⃣ Para oficializar, digite:\n\n📜 𝐒𝐨𝐥𝐮𝐜̧𝐚̃𝐨:\n╰➜ \`+cadastrarparceria\`\n\n_(Isso te dará +5 links por dia)_\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
-                mentions: [sender] 
-              }) 
-            } catch (e) { console.log("Erro aviso link grupo:", e.message) }
-            return
-          }
+                // Se a pessoa NÃO tem parceria (ou acabou a cota)
+                try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+                const admins = meta ? meta.participants.filter(pa => pa.admin === "admin" || pa.admin === "superadmin").map(pa => pa.id) : [];
+                let listaAdmins = "";
+                admins.forEach(a => { listaAdmins += `@${soNumero(a)} ` });
 
-          const linkGeral = /(https?:\/\/|www\.|\.com|\.net|\.br|\.io|\.org|\.xyz|\.tv|\.me|\.gg)/i.test(textoMsg)
-          if (linkGeral) {
-            try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
-            const n = adicionarAviso(remetente, sender, "link")
-            if (n >= 3) {
-              limparAvisos(remetente, sender, "link")
-              await sock.sendMessage(remetente, { 
-                text: `💧 • 𝐄𝐗𝐏𝐔𝐋𝐒𝐎 •\n\n╭─〔 💀 𝐀𝐌𝐄𝐀𝐂̧𝐀 〕\n│ @${soNumero(sender)} atingiu 3/3 avisos.\n╰──────────────\n\n> _"Veldora, cuide disso."_\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
-                mentions: [sender] 
-              })
-              try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
-            } else {
-              await sock.sendMessage(remetente, { 
-                text: `💧 • 𝐀𝐍𝐓𝐈-𝐋𝐈𝐍𝐊 •\n\n╭─〔 🐉 𝐈𝐍𝐓𝐄𝐑𝐂𝐄𝐏𝐓𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, links não são permitidos aqui.\n╰──────────────\n\n⚠️ 𝐀𝐯𝐢𝐬𝐨𝐬:\n╰➜ ${n}/3\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
-                mentions: [sender] 
-              })
+                try { 
+                    await sock.sendMessage(remetente, { 
+                        text: `💧 • 𝐀𝐕𝐈𝐒𝐎 𝐃𝐄 𝐋𝐈𝐍𝐊 •\n\n╭─〔 🚫 𝐋𝐈𝐍𝐊 𝐀𝐏𝐀𝐆𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, link apagado por falta de parceria.\n╰──────────────\n\n👑 *ADMINS:* ${listaAdmins}\n\n👉 *SOLUÇÃO:* Use o comando abaixo para solicitar uma parceria:\n╰➜ \`+parceria\`\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
+                        mentions: [sender, ...admins] 
+                    }) 
+                } catch (e) { console.log("Erro aviso link grupo:", e.message) }
+                return
             }
-            return
-          }
+            // Se modo parceria estiver OFF, o bot ignora o link do grupo
+        }
+
+        // =======================================================
+        // 🔥 LÓGICA DE ANTILINK NORMAL (https, .com, etc)
+        // =======================================================
+        const linkGeral = /(https?:\/\/|www\.|\.com|\.net|\.br|\.io|\.org|\.xyz|\.tv|\.me|\.gg)/i.test(textoMsg)
+
+        if (conf.antilink && !podeBurlar) {
+            if (linkGeral && !linkGrupo) {
+                try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+                const n = adicionarAviso(remetente, sender, "link")
+                if (n >= 3) {
+                    limparAvisos(remetente, sender, "link")
+                    await sock.sendMessage(remetente, { 
+                        text: `💧 • 𝐄𝐗𝐏𝐔𝐋𝐒𝐎 •\n\n╭─〔 💀 𝐀𝐌𝐄𝐀𝐂̧𝐀 〕\n│ @${soNumero(sender)} atingiu 3/3 avisos.\n╰──────────────\n\n> _"Veldora, cuide disso."_\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
+                        mentions: [sender] 
+                    })
+                    try { await sock.groupParticipantsUpdate(remetente, [sender], "remove") } catch (_) {}
+                } else {
+                    await sock.sendMessage(remetente, { 
+                        text: `💧 • 𝐀𝐍𝐓𝐈-𝐋𝐈𝐍𝐊 •\n\n╭─〔 🐉 𝐈𝐍𝐓𝐄𝐑𝐂𝐄𝐏𝐓𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, links não são permitidos aqui.\n╰──────────────\n\n⚠️ 𝐀𝐯𝐢𝐬𝐨𝐬:\n╰➜ ${n}/3\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
+                        mentions: [sender] 
+                    })
+                }
+                return
+            }
         }
 
         const antimap = [
@@ -763,7 +855,7 @@ async function iniciarBot() {
 
       const prefixoGlobal = cfgGlobal.prefixoGlobal || config.prefixo || "+"
       let prefixosAtivos
-      if (isGrupo && confGrupo.multiprefixo && confGrupo.prefixo) prefixosAtivos = [confGrupo.prefixo]
+      if (confGrupo.multiprefixo && confGrupo.prefixo) prefixosAtivos = [confGrupo.prefixo]
       else prefixosAtivos = [prefixoGlobal]
 
       let texto = getTexto(msg)
@@ -802,23 +894,85 @@ async function iniciarBot() {
       }
 
       const cmd = getComando(cmdName.toLowerCase())
-      if (!cmd) return;
+      if (!cmd) {
+        const p = prefixoUsado || prefixoGlobal
+        const cmdLimpo = (cmdName || "").trim().toLowerCase()
+        
+        const VARIACOES_CMD_ERRADO = [
+          { topo: "💧 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎 •", aviso: "O comando informado não foi reconhecido.", frase: "💡 Verifique a escrita e tente novamente!" },
+          { topo: "💧 • 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐈𝐍𝐕𝐀́𝐋𝐈𝐃𝐎 •", aviso: "Isso não existe no meu repertório.", frase: "💡 Confira antes de tentar novamente." }
+        ]
+
+        const v = VARIACOES_CMD_ERRADO[Math.floor(Math.random() * VARIACOES_CMD_ERRADO.length)]
+        const numUser = soNumero(sender)
+        const hora = new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo" })
+        const data = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
+        const nomeBot = db.config().nomeBot || "Rimuru Bot"
+        const cmdExibido = cmdLimpo ? (p + cmdLimpo) : p
+
+        let sugestao = "";
+        if (cmdLimpo) {
+            const parecido = buscarComandoParecido(cmdLimpo);
+            if (parecido) sugestao = `\n🤔 *VOCÊ QUIS DIZER?*\n╰➜ \`${p}${parecido}\`\n`;
+        }
+
+        const textoBase = `${v.topo}\n\n╭─〔 🔷 𝐀𝐕𝐈𝐒𝐎 〕\n│ ${v.aviso}\n╰──────────────\n\n『 𝐃𝐞𝐭𝐚𝐥𝐡𝐞𝐬 』 ↴\n\n👤 𝐔𝐬𝐮𝐚́𝐫𝐢𝐨:\n╰➜ @${numUser}\n\n🫟 𝐏𝐫𝐞𝐟𝐢𝐱𝐨:\n╰➜ ${p}\n\n❔ 𝐂𝐨𝐦𝐚𝐧𝐝𝐨 𝐮𝐬𝐚𝐝𝐨:\n╰➜ ${cmdExibido}\n${sugestao}\n🕐 𝐇𝐨𝐫𝐚́𝐫𝐢𝐨:\n╰➜ ${hora} — ${data}\n\n${v.frase}\n\n"${nomeBot}"`
+
+        const mencoes = sender ? [sender] : []
+        const cfgCmd = db.config()
+        
+        try {
+          if (cfgCmd.fotoCmd) {
+            const buf = Buffer.from(cfgCmd.fotoCmd, "base64")
+            if (cfgCmd.tipoFotoCmd === "video") {
+              await sock.sendMessage(remetente, { video: buf, mimetype: "video/mp4", fileName: "erro.mp4", gifPlayback: true, caption: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
+            } else {
+              await sock.sendMessage(remetente, { image: buf, caption: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
+            }
+          } else {
+            await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
+          }
+        } catch (e) {
+          await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg })
+        }
+        return
+      }
+
+      try {
+        const cidData = dbLer("cidade.json", { usuarios: {} })
+        const numSender = soNumero(sender)
+        const userCidade = cidData.usuarios && cidData.usuarios[numSender]
+        if (userCidade && userCidade.preso && userCidade.preso > Date.now()) {
+          const tempoRestante = formatarTempo(userCidade.preso - Date.now())
+          if (cmdName.toLowerCase() !== "prefixo") {
+            await sock.sendMessage(remetente, { text: "❄️🚔 VOCÊ ESTÁ PRESO!\n\n⏰ Tempo: " + tempoRestante }, { quoted: msg })
+            return
+          }
+        }
+        if (userCidade && userCidade.preso && userCidade.preso <= Date.now()) {
+          cidData.usuarios[numSender].preso = null
+          dbSalvar("cidade.json", cidData)
+        }
+      } catch (_) {}
 
       let groupMetadata = null
       let isAdmin = false
-      if (isGrupo) {
-        try {
-          groupMetadata = await sock.groupMetadata(remetente)
-          const senderNums2 = [sender, senderRaw, msg.key?.participant, msg.key?.participantPn, msg.key?.participantLid, sock.user?.id, sock.user?.lid].filter(Boolean).map(soNumero)
-          const p = groupMetadata.participants.find(x => {
-            const pIds = [x.id, x.lid, x.phoneNumber].filter(Boolean).map(soNumero)
-            return pIds.some(id => senderNums2.includes(id))
-          })
-          isAdmin = p && (p.admin === "admin" || p.admin === "superadmin")
-        } catch (e) { }
+      groupMetadata = groupCache.get(remetente)
+      if (!groupMetadata) {
+          groupMetadata = await sock.groupMetadata(remetente).catch(() => null)
+          if (groupMetadata) groupCache.set(remetente, groupMetadata)
+      }
+      
+      if (groupMetadata) {
+        const senderNums2 = [sender, senderRaw, msg.key?.participant, msg.key?.participantPn, msg.key?.participantLid, sock.user?.id, sock.user?.lid].filter(Boolean).map(soNumero)
+        const p = groupMetadata.participants.find(x => {
+          const pIds = [x.id, x.lid, x.phoneNumber].filter(Boolean).map(soNumero)
+          return pIds.some(id => senderNums2.includes(id))
+        })
+        isAdmin = p && (p.admin === "admin" || p.admin === "superadmin")
       }
 
-      const ehSub = isGrupo && ehSubAdmin(remetente, sender)
+      const ehSub = ehSubAdmin(remetente, sender)
       const permitidoSub = ["mute", "desmute", "ban", "kick", "link", "linkgp", "fechar", "closenow", "abrir", "opennow"]
       const ehComandoSub = permitidoSub.includes(cmd.nome) || (cmd.aliases || []).some(a => permitidoSub.includes(a))
       const podeAdmin = isAdmin || isDono || isSubDono || (ehSub && ehComandoSub)
