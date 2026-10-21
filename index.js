@@ -1,5 +1,5 @@
 /* ============================================================
-   🔥 RIMURU BOT MD - INDEX COMPLETO (AGENDAMENTO SEM DUPLICAR)
+   🔥 RIMURU BOT MD - INDEX COMPLETO E DEFINITIVO
    ============================================================ */
 
 const {
@@ -432,7 +432,7 @@ async function processarFigCmd(sock, msg, remetente, sender, isGrupo, isDono, is
 // ============================================================
 // ⏰ AGENDAMENTOS DE ABRIR E FECHAR (SEM DUPLICAR)
 // ============================================================
-const ultimoAgendamento = {}; // 🔥 Trava em memória para evitar duplicação
+const ultimoAgendamento = {};
 
 function iniciarAgendamentos() {
   setInterval(async () => {
@@ -446,7 +446,6 @@ function iniciarAgendamentos() {
       for (const [jid, conf] of Object.entries(grupos)) {
         if (!jid.endsWith("@g.us")) continue;
 
-        // 🔥 ABRIR GRUPO NA HORA CERTA
         if (conf.abrirHora === agora && conf.ultimoAbrir !== dataHoje) {
           const chaveAbrir = `${jid}_abrir_${dataHoje}_${agora}`;
           if (ultimoAgendamento[chaveAbrir]) continue;
@@ -463,7 +462,6 @@ function iniciarAgendamentos() {
           } catch (e) { console.log(`❌ Erro ao abrir grupo ${jid}:`, e.message); }
         }
 
-        // 🔥 FECHAR GRUPO NA HORA CERTA
         if (conf.fecharHora === agora && conf.ultimoFechar !== dataHoje) {
           const chaveFechar = `${jid}_fechar_${dataHoje}_${agora}`;
           if (ultimoAgendamento[chaveFechar]) continue;
@@ -483,7 +481,6 @@ function iniciarAgendamentos() {
 
       if (alterou) db.salvarGrupos(grupos);
 
-      // Limpa a memória de agendamentos antigos
       for (const chave of Object.keys(ultimoAgendamento)) {
         if (!chave.includes(dataHoje)) delete ultimoAgendamento[chave];
       }
@@ -753,7 +750,9 @@ async function iniciarBot() {
           }
         }
 
+        // =======================================================
         // 🔥 LÓGICA DE LINK DE GRUPO
+        // =======================================================
         const textoMsg = getTexto(msg)
         const linkGrupo = /(chat\.whatsapp\.com|wa\.me\/)/i.test(textoMsg)
         
@@ -769,6 +768,7 @@ async function iniciarBot() {
                     if (senderCands.some(cand => cand === soNumero(jidP))) { encontrado = info; break }
                 }
 
+                // CASO 1: TEM PARCERIA E AINDA TEM COTA
                 if (encontrado && encontrado.usados < encontrado.total) {
                     encontrado.usados++
                     db.salvarParcerias(parcerias)
@@ -783,6 +783,19 @@ async function iniciarBot() {
                     return
                 }
 
+                // CASO 2: TEM PARCERIA MAS ACABOU A COTA
+                if (encontrado && encontrado.usados >= encontrado.total) {
+                    try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+                    try { 
+                        await sock.sendMessage(remetente, { 
+                            text: `💧 • 𝐋𝐈𝐌𝐈𝐓𝐄 𝐀𝐓𝐈𝐍𝐆𝐈𝐃𝐎 •\n\n╭─〔 🚫 𝐋𝐈𝐍𝐊 𝐀𝐏𝐀𝐆𝐀𝐃𝐎 〕\n│ @${soNumero(sender)}, você já usou todos os seus links de hoje.\n╰──────────────\n\n📊 𝐔𝐬𝐨:\n╰➜ ${encontrado.usados}/${encontrado.total} links enviados.\n\n⏰ *VOLTE AMANHÃ* para enviar mais links!\n\n"${db.config().nomeBot || "Rimuru Bot"}"`, 
+                            mentions: [sender] 
+                        }) 
+                    } catch (e) { console.log("Erro aviso limite:", e.message) }
+                    return
+                }
+
+                // CASO 3: NÃO TEM PARCERIA CADASTRADA
                 try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
                 const admins = meta ? meta.participants.filter(pa => pa.admin === "admin" || pa.admin === "superadmin").map(pa => pa.id) : [];
                 let listaAdmins = "";
@@ -798,7 +811,9 @@ async function iniciarBot() {
             }
         }
 
+        // =======================================================
         // 🔥 LÓGICA DE ANTILINK NORMAL
+        // =======================================================
         const linkGeral = /(https?:\/\/|www\.|\.com|\.net|\.br|\.io|\.org|\.xyz|\.tv|\.me|\.gg)/i.test(textoMsg)
 
         if (conf.antilink && !podeBurlar) {
