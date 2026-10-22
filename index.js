@@ -1,5 +1,5 @@
 /* ============================================================
-   🔥 RIMURU BOT MD - INDEX COMPLETO E DEFINITIVO
+   🔥 RIMURU BOT MD - INDEX COMPLETO (COM ÁUDIO NOS MENUS)
    ============================================================ */
 
 const {
@@ -57,7 +57,7 @@ function dbSalvar(arquivo, dados) { fs.writeFileSync(path.join(DATA_DIR, arquivo
 const db = {
   grupos: () => dbLer("grupos.json", {}), salvarGrupos: (d) => dbSalvar("grupos.json", d),
   advs: () => dbLer("advs.json", {}), salvarAdvs: (d) => dbSalvar("advs.json", d),
-  config: () => dbLer("config.json", { fotoMenu: null, prefixoGlobal: null, slow: false, subdonos: [], nomeBot: "Rimuru", fotoCmd: null, tipoFotoCmd: null }),
+  config: () => dbLer("config.json", { fotoMenu: null, prefixoGlobal: null, slow: false, subdonos: [], nomeBot: "Rimuru", fotoCmd: null, tipoFotoCmd: null, audioMenu: null }),
   salvarConfig: (d) => dbSalvar("config.json", d),
   canal: () => dbLer("canal.json", { jid: null, nome: null, link: null }), salvarCanal: (d) => dbSalvar("canal.json", d),
   listanegra: () => dbLer("listanegra.json", {}), salvarListanegra: (d) => dbSalvar("listanegra.json", d),
@@ -1003,6 +1003,18 @@ async function iniciarBot() {
       if (cmd.donoOnly && !isDono && !isSubDono) { return sock.sendMessage(remetente, { text: "❄️ Esse comando e so do mestre!" }, { quoted: msg }) }
       if (cmd.adminOnly && !podeAdmin) { return sock.sendMessage(remetente, { text: "❄️ Esse comando e de admin!" }, { quoted: msg }) }
       if (cmd.grupoOnly && !isGrupo) { return sock.sendMessage(remetente, { text: "❄️ So em grupo!" }, { quoted: msg }) }
+
+      // 🔥 AQUI ESTÁ A MÁGICA: ENVIA ÁUDIO ANTES DE QUALQUER MENU
+      if (cmdName.toLowerCase().startsWith("menu")) {
+        const cfgAudio = db.config()
+        if (cfgAudio.audioMenu) {
+          try {
+            const audioBuf = Buffer.from(cfgAudio.audioMenu, "base64")
+            await sock.sendMessage(remetente, { audio: audioBuf, mimetype: "audio/mp4", ptt: true }, { quoted: msg })
+            await new Promise(r => setTimeout(r, 1500)) // Espera o áudio começar
+          } catch (_) {}
+        }
+      }
 
       try {
         await cmd.executar({
