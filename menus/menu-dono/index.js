@@ -1,5 +1,5 @@
 /* ============================================================
-   💧❄️🧊 MENU DONO - RIMURU BOT MD (PREFIXO DINÂMICO E RESTART FIX)
+   🐍🌸 MENU DONO - OBANAI IGURO EDITION (DEMON SLAYER)
    ============================================================ */
 
 const fs = require("fs")
@@ -24,9 +24,7 @@ async function reagir(sock, msg, emoji) {
   try { await sock.sendMessage(msg.key.remoteJid, { react: { text: emoji, key: msg.key } }) } catch (_) {}
 }
 
-function formatarDataHora(iso) {
-  try { return new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) } catch (e) { return "?" }
-}
+function formatarDataHora(iso) { try { return new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) } catch (e) { return "?" } }
 
 function categorizarCommit(msg) {
   const m = String(msg || "").toLowerCase()
@@ -42,33 +40,35 @@ function categorizarCommit(msg) {
 function lineEmoji(emoji, label, valor) { return `${emoji} ${label}:\n╰➜ ${valor}` }
 function nomeBotDb(db) { try { return db.config().nomeBot || "Rimuru Bot" } catch { return "Rimuru Bot" } }
 
-function cardPerfil({ nomeBot, nomeUsuario, cargo, dono }) {
-  return `┏┉━─━┈━──━┈━──━┈━─━┉┉⟐
-┃╭┈ׅ᳝𑂳໋֕𔓕᳝┉۪࣮᪲۟۫─ׅ͚᷂࠭━⵿໋݊┅᮫ׅ᳝۫💧࣭࣪࣪┅⵿᳝۟━໋ׅ࣪࣪─໋͚ׅ۪֘┉᳝ׅ᪲𔓕໋۪࣪┈᩿࣪╮
-┃࣪│᨞⁞🔹️⃞⃞⟡ ʙᴏᴛ: ${nomeBot || "ʀɪᴍᴜʀᴜ - ʙᴏᴛ"}
-┃࣪│᨞⁞🔹️⃞⃞⟡ ᴜsᴜᴀʀɪᴏ: ${nomeUsuario || "ᴜsᴜᴀʀɪᴏ"}
-┃࣪│᨞⁞🔹️⃞⃞⟡ ᴄᴀʀɢᴏ: ${cargo || "👤 𝐒𝐋𝐈𝐌𝐄 𝐂𝐎𝐌𝐔𝐌"}
-┃࣪│᨞⁞🔹️⃞⃞⟡ ᴅᴏɴᴏ: ${dono || "𝐀𝐧֟፝𝐨̷𝐧𝐢𝐦𝐨̷.𝐣𝐬"}
-┃╰┈ׅ᳝𑂳໋֕𔓕᳝┉۪࣮᪲۟۫─ׅ͚᷂࠭━⵿໋݊┅᮫ׅ᳝۫💧࣭࣪࣪┅⵿᳝۟━໋ׅ࣪࣪─໋͚ׅ۪֘┉᳝ׅ᪲𔓕໋۪࣪┈᩿࣪╯
-┗┉━─━┈━──━┈━──━┈━─━┉┉⟐`
+// 🐍 TEMA OBANAI: Preto, Verde e Branco
+function cardPerfilObanai({ nomeBot, nomeUsuario, cargo, dono }) {
+  return `╭━━━〔 🐍 𝐎𝐁𝐀𝐍𝐀𝐈 𝐈𝐆𝐔𝐑𝐎 🐍 〕━━━╮
+┃ 🌸 Mestre da Serpente 🌸
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃ 🐍 𝐁𝐨𝐭: ${nomeBot || "Obanai"}
+┃ 🌸 𝐔𝐬𝐮á𝐫𝐢𝐨: ${nomeUsuario || "? "}
+┃ 🐍 𝐂𝐚𝐫𝐠𝐨: ${cargo || "Mortal"}
+┃ 🌸 𝐃𝐨𝐧𝐨: ${dono || "Obanai"}
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃ 🐍 _"A serpente não perdoa."_ 🌸
+╰━━━〔 🐍 𝐈𝐆𝐔𝐑𝐎 𝐎𝐁𝐀𝐍𝐀𝐈 🐍 〕━━━╯`
 }
-function secao(t) { return `┏✰ *${t}*ׅ\n┗┉━─━┈━──━┈━──━┈━─━┉┉⟐` }
-function item(c) { return `🧊 ${c}` }
+
+function secaoObanai(t) { return `╭━━━〔 🐍 ${t} 🐍 〕━━━╮\n┃` }
+function itemObanai(c) { return `┃ 🐍 ${c}\n┃` }
 
 function detectarCargo({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin }) {
   const num = String(sender || "").split("@")[0].split(":")[0].replace(/\D/g, "")
   const donos = (Array.isArray(config?.dono) ? config.dono : [config?.dono]).map(n => String(n).split("@")[0].split(":")[0].replace(/\D/g, "")).filter(Boolean)
-  if (isDono || donos.includes(num)) return "👑 𝐆𝐑𝐀𝐍𝐃𝐄 𝐒𝐀́𝐁𝐈𝐎"
-  try { const subs = (db.config?.().subdonos || []).map(n => String(n).split("@")[0].split(":")[0].replace(/\D/g, "")); if (isSubDono || subs.includes(num)) return "💠 𝐋𝐔𝐀 𝐒𝐔𝐏𝐄𝐑𝐈𝐎𝐑" } catch (_) {}
-  try { const vips = (db.vips?.() || {}).vips || {}; for (const [j, info] of Object.entries(vips)) { const jn = String(j).split("@")[0].split(":")[0].replace(/\D/g, ""); if (jn === num && (info.expira === "inf" || info.expira > Date.now())) return "❄️ 𝐍𝐎𝐁𝐑𝐄 𝐀𝐋𝐈𝐀𝐃𝐎" } } catch (_) {}
-  if (isAdmin) return "⚔️ 𝐂𝐎𝐌𝐀𝐍𝐃𝐀𝐍𝐓𝐄"
-  try { const subsAdm = (db.subadmins?.() || {})[groupMetadata?.id] || []; if (subsAdm.some(s => String(s).split("@")[0].split(":")[0].replace(/\D/g, "") === num)) return "🛡️ 𝐆𝐔𝐀𝐑𝐃𝐀 𝐑𝐄𝐀𝐋" } catch (_) {}
-  return "👤 𝐒𝐋𝐈𝐌𝐄 𝐂𝐎𝐌𝐔𝐌"
+  if (isDono || donos.includes(num)) return "🐍 Mestre da Serpente"
+  try { const subs = (db.config?.().subdonos || []).map(n => String(n).split("@")[0].split(":")[0].replace(/\D/g, "")); if (isSubDono || subs.includes(num)) return "🌸 Hashira da Serpente" } catch (_) {}
+  if (isAdmin) return "🐍 Espadachim"
+  return "🌸 Aprendiz"
 }
 
 function getCargoETexto(ctx) {
   const { sender, config, db, groupMetadata, isDono, isSubDono, isAdmin, msg } = ctx
-  const pushName = msg.pushName || "Mestre"
+  const pushName = msg.pushName || "Mortal"
   const donoArr = Array.isArray(config && config.dono) ? config.dono : [config && config.dono || "Chefe"]
   const nomeDono = String(donoArr[0] || "Chefe").split("@")[0].split(":")[0].replace(/\D/g, "") || "Chefe"
   const cargo = detectarCargo({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin })
@@ -98,7 +98,7 @@ module.exports = {
   commands: {
 
     menudono: {
-      aliases: ["dono", "comandosdono", "menud", "imperador", "grandesabio"],
+      aliases: ["dono", "comandosdono", "menud", "imperador", "grandesabio", "obanai", "serpente"],
       async executar({ sock, msg, prefixoAtivo, db, sender, config, isDono, isSubDono, isAdmin, groupMetadata }) {
         const jid = msg.key.remoteJid
         const p = prefixoAtivo || "+"
@@ -117,62 +117,97 @@ module.exports = {
         let versaoAtual = 0
         if (fs.existsSync(commitPath)) { try { const c = JSON.parse(fs.readFileSync(commitPath, "utf8")); versaoAtual = c.versao || 0 } catch (_) {} }
         
-        await reagir(sock, msg, "💧")
+        await reagir(sock, msg, "🐍")
         
-        const texto = `${cardPerfil({ nomeBot, nomeUsuario: pushName, cargo, dono: nomeDono })}
+        const texto = `${cardPerfilObanai({ nomeBot, nomeUsuario: pushName, cargo, dono: nomeDono })}
 
-💧 *${saudacao}, mestre.*
-❄️ ID: ${numUser}
-🧊 Versão: *V${versaoAtual}*
-🧊 Horário: ${hora} — ${data}
+🌸 *${saudacao}, ${pushName}.*
+🐍 ID: ${numUser}
+🌸 Versão: *V${versaoAtual}*
+🐍 Horário: ${hora} — ${data}
 
-_"O conhecimento é a verdadeira força."_
+_"A serpente sente o cheiro do medo."_
 
-${secao("🌌 ɢᴇʀᴀʟ")}
-${item(`${p}entrar <link> / ${p}reload / ${p}reiniciar`)}
-${item(`${p}botoff / ${p}setfoto (reply)`)}
-${item(`${p}fotocmd (reply) / ${p}nomebot <nome>`)}
-${item(`${p}teste (reply) / ${p}sora <desc>`)}
-${item(`${p}testa @user / ${p}googlevoz <txt>`)}
-${item(`${p}get <cmd> (reply)`)}
+${secaoObanai("🌌 𝐆𝐄𝐑𝐀𝐋")}
+${itemObanai(`${p}entrar <link> / ${p}reload / ${p}reiniciar`)}
+${itemObanai(`${p}botoff / ${p}setfoto (reply)`)}
+${itemObanai(`${p}fotocmd (reply) / ${p}nomebot <nome>`)}
+${itemObanai(`${p}teste (reply) / ${p}sora <desc>`)}
+${itemObanai(`${p}testa @user / ${p}googlevoz <txt>`)}
+${itemObanai(`${p}get <cmd> (reply)`)}
+${itemObanai(`${p}audiomenu (reply) / ${p}rmaudio`)}
 
-${secao("⚙️ sɪsᴛᴇᴍᴀ")}
-${item(`${p}atualizar / ${p}changelog / ${p}dono`)}
+${secaoObanai("⚙️ 𝐒𝐈𝐒𝐓𝐄𝐌𝐀")}
+${itemObanai(`${p}atualizar / ${p}changelog / ${p}dono`)}
 
-${secao("💜 ᴠɪᴘ")}
-${item(`${p}addvip @user <tempo>`)}
-${item(`${p}delvip @user / ${p}listavip`)}
+${secaoObanai("💜 𝐕𝐈𝐏")}
+${itemObanai(`${p}addvip @user <tempo>`)}
+${itemObanai(`${p}delvip @user / ${p}listavip`)}
 
-${secao("👑 ʟᴜᴀs sᴜᴘᴇʀɪᴏʀᴇs")}
-${item(`${p}addsubdono / ${p}delsubdono / ${p}listasubdono`)}
+${secaoObanai("👑 𝐋𝐔𝐀𝐒 𝐒𝐔𝐏𝐄𝐑𝐈𝐎𝐑𝐄𝐒")}
+${itemObanai(`${p}addsubdono / ${p}delsubdono / ${p}listasubdono`)}
 
-${secao("💰 ᴀʟᴜɢᴜᴇʟ")}
-${item(`${p}aluguel on/off`)}
-${item(`${p}addaluguel <tempo>`)}
-${item(`${p}listaaluguel / ${p}delaluguel`)}
+${secaoObanai("💰 𝐀𝐋𝐔𝐆𝐔𝐄𝐋")}
+${itemObanai(`${p}aluguel on/off`)}
+${itemObanai(`${p}addaluguel <tempo>`)}
+${itemObanai(`${p}listaaluguel / ${p}delaluguel`)}
 
-${secao("⚙️ ᴀᴊᴜsᴛᴇs")}
-${item(`${p}prefixoglobal <s>`)}
-${item(`${p}slow on/off`)}
+${secaoObanai("⚙️ 𝐀𝐉𝐔𝐒𝐓𝐄𝐒")}
+${itemObanai(`${p}prefixoglobal <s>`)}
+${itemObanai(`${p}slow on/off`)}
 
-${secao("🚫 ʙᴀɴɪᴍᴇɴᴛᴏ")}
-${item(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
+${secaoObanai("🚫 𝐁𝐀𝐍𝐈𝐌𝐄𝐍𝐓𝐎")}
+${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
 
-${secao("💥 ᴘᴜɴɪᴄ̧ᴀ̃ᴏ")}
-${item(`${p}nuke / ${p}limpargp`)}
+${secaoObanai("💥 𝐏𝐔𝐍𝐈𝐂̧𝐀̃𝐎")}
+${itemObanai(`${p}nuke / ${p}limpargp`)}
 
-💧 Prefixo: \`${p}\`
+🐍 Prefixo: \`${p}\`
 
+╰━━━〔 🌸 _"Não desvie o olhar."_ 🐍 〕━━━╯
 "${nomeBot}"`
 
         if (cfg.fotoMenu) {
           const buf = Buffer.from(cfg.fotoMenu, "base64")
           try {
-            if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "rimuru.mp4", gifPlayback: true, caption: texto, mentions }, { quoted: msg })
+            if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "obanai.mp4", gifPlayback: true, caption: texto, mentions }, { quoted: msg })
             return sock.sendMessage(jid, { image: buf, caption: texto, mentions }, { quoted: msg })
           } catch (e) { return sock.sendMessage(jid, { text: texto, mentions }, { quoted: msg }) }
         }
         await sock.sendMessage(jid, { text: texto, mentions }, { quoted: msg })
+      }
+    },
+
+    audiomenu: {
+      aliases: ["addaudio", "setaudio"],
+      async executar({ sock, msg, db, utils, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
+        const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
+        const quoted = ctx.quotedMessage
+        const temAudio = quoted && (quoted.audioMessage || quoted.ptvMessage)
+        if (!temAudio) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐀𝐔𝐃𝐈𝐎𝐌𝐄𝐍𝐔 •\n\n🐍 Envie/responda um áudio.\n🌸 \`${p}audiomenu\` (reply)\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🌸")
+        try {
+          const alvoMsg = Object.assign({}, msg, { message: { audioMessage: quoted.audioMessage || quoted.ptvMessage } })
+          const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
+          const cfg = db.config()
+          cfg.audioMenu = buffer.toString("base64")
+          db.salvarConfig(cfg)
+          await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐔𝐃𝐈𝐎 𝐒𝐀𝐋𝐕𝐎 •\n\n🐍 O áudio será enviado antes de qualquer menu.\n\n"${nomeBot}"` }, { quoted: msg })
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🌸 Erro: ${e.message}` }, { quoted: msg }) }
+      }
+    },
+
+    rmaudio: {
+      aliases: ["delaudio", "removeraudio"],
+      async executar({ sock, msg, db }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+        const cfg = db.config()
+        if (!cfg.audioMenu) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐑𝐌𝐀𝐔𝐃𝐈𝐎 •\n\n🐍 Não tem áudio salvo.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        cfg.audioMenu = null
+        db.salvarConfig(cfg)
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐔𝐃𝐈𝐎 𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐎 •\n\n🐍 O bot parará de enviar áudio nos menus.\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -182,13 +217,13 @@ ${item(`${p}nuke / ${p}limpargp`)}
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const ctx = (msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo) || (msg.message && msg.message.imageMessage && msg.message.imageMessage.contextInfo) || (msg.message && msg.message.videoMessage && msg.message.videoMessage.contextInfo) || (msg.message && msg.message.stickerMessage && msg.message.stickerMessage.contextInfo) || {}
         const quoted = ctx.quotedMessage
-        if (!quoted) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐓𝐄𝐒𝐓𝐄 •\n\n❄️ Responda uma mensagem.\n🧊 Use \`${p}teste\` reply\n\n"${nomeBot}"` }, { quoted: msg }) }
-        await reagir(sock, msg, "💧")
+        if (!quoted) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐓𝐄𝐒𝐓𝐄 •\n\n🐍 Responda uma mensagem.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🌸")
         const info = { key: { remoteJid: jid, fromMe: false, id: ctx.stanzaId || "", participant: ctx.participant || "" }, messageTimestamp: msg.messageTimestamp, pushName: msg.pushName || "", broadcast: false, message: quoted }
         const jsonStr = JSON.stringify(info, null, 3)
         const pedacos = []; const tamanhoMax = 3900
         for (let i = 0; i < jsonStr.length; i += tamanhoMax) pedacos.push(jsonStr.slice(i, i + tamanhoMax))
-        await sock.sendMessage(jid, { text: `💧 • 𝐉𝐒𝐎𝐍 •\n\n❄️ Debug da mensagem\n🧊 Total: ${jsonStr.length} chars\n🧊 Pedaços: ${pedacos.length}\n\n\`\`\`json\n${pedacos[0]}\`\`\`` }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `🌸 • 𝐉𝐒𝐎𝐍 •\n\n🐍 Debug\n\`\`\`json\n${pedacos[0]}\`\`\`` }, { quoted: msg })
         for (let i = 1; i < pedacos.length; i++) await sock.sendMessage(jid, { text: `\`\`\`json\n${pedacos[i]}\`\`\`` }, { quoted: msg })
       }
     },
@@ -197,14 +232,9 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["fakereply", "forcarmsg"],
       async executar({ sock, msg, db, utils, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const alvo = utils.getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐓𝐄𝐒𝐓𝐀 •\n\n❄️ Marque alguém e responda o anúncio.\n🧊 \`${p}testa @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
-        await reagir(sock, msg, "💧")
-        const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
-        const quoted = ctx.quotedMessage
-        const idMsgCitada = ctx.stanzaId || msg.key.id
-        const participanteCitado = ctx.participant || "0@s.whatsapp.net"
-        try { await sock.sendMessage(jid, { text: "o Grande Sábio analisou e você é incrível 💧", mentions: [alvo], fake: alvo }, { quoted: { key: { remoteJid: jid, fromMe: false, id: idMsgCitada, participant: participanteCitado }, message: quoted || { conversation: "Mensagem do Anúncio" } } }) }
-        catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `💧 Erro ao forjar: ${e.message}` }, { quoted: msg }) }
+        if (!alvo) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐓𝐄𝐒𝐓𝐀 •\n\n🐍 Marque alguém.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🌸")
+        try { await sock.sendMessage(jid, { text: "🐍 A serpente observa... 🌸", mentions: [alvo] }) } catch (_) {}
       }
     },
 
@@ -215,14 +245,14 @@ ${item(`${p}nuke / ${p}limpargp`)}
         let nomeComando = args[0] ? args[0].toLowerCase().replace(/[^a-z0-9]/g, "") : ""
         const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
         const quoted = ctx.quotedMessage
-        if (!quoted) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐆𝐄𝐓 •\n\n❄️ Responda a mensagem do outro bot.\n🧊 \`${p}get <nome>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!quoted) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐆𝐄𝐓 •\n\n🐍 Responda a mensagem do outro bot.\n\n"${nomeBot}"` }, { quoted: msg }) }
         const textoResposta = quoted.conversation || (quoted.extendedTextMessage && quoted.extendedTextMessage.text) || (quoted.imageMessage && quoted.imageMessage.caption) || (quoted.videoMessage && quoted.videoMessage.caption) || ""
-        if (!textoResposta) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐆𝐄𝐓 •\n\n❄️ A msg respondida não tem texto.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!textoResposta) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🌸 • 𝐆𝐄𝐓 •\n\n🐍 Não tem texto.\n\n"${nomeBot}"` }, { quoted: msg }) }
         if (!nomeComando) { const primeiraPalavra = textoResposta.trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, ""); nomeComando = primeiraPalavra || "comando_novo" }
-        await reagir(sock, msg, "💧")
+        await reagir(sock, msg, "🌸")
         const textoEscapado = textoResposta.replace(/`/g, "\\`").replace(/\$/g, "\\$")
-        const blocoCase = `case '${nomeComando}': {\n    if (!q) return reply('💧 Cadê o texto?');\n    \n    await reply(\`${textoEscapado}\`);\n    \n    break;\n}`
-        await sock.sendMessage(jid, { text: `💧 • 𝐂𝐀𝐒𝐄 •\n\n❄️ Comando \`${nomeComando}\`\n\n\`\`\`javascript\n${blocoCase}\n\`\`\`` }, { quoted: msg })
+        const blocoCase = `case '${nomeComando}': {\n    if (!q) return reply('🐍 Cadê o texto?');\n    \n    await reply(\`${textoEscapado}\`);\n    \n    break;\n}`
+        await sock.sendMessage(jid, { text: `🌸 • 𝐂𝐀𝐒𝐄 •\n\n🐍 Comando \`${nomeComando}\`\n\n\`\`\`javascript\n${blocoCase}\n\`\`\`` }, { quoted: msg })
       }
     },
 
@@ -230,10 +260,10 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["tts", "falar", "googlevoice"],
       async executar({ sock, msg, args, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const textoFinal = args.join(" ").trim()
-        if (!textoFinal) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐆𝐎𝐎𝐆𝐋𝐄 𝐕𝐎𝐙 •\n\n❄️ Digite o texto.\n🧊 \`${p}googlevoz <texto>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
-        await reagir(sock, msg, "💧")
+        if (!textoFinal) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐆𝐎𝐎𝐆𝐋𝐄 𝐕𝐎𝐙 •\n\n🐍 Digite o texto.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🌸")
         try {
-          await sock.sendMessage(jid, { text: `💧 Gerando voz pra: "${textoFinal}"...` }, { quoted: msg })
+          await sock.sendMessage(jid, { text: `🌸 Gerando voz pra: "${textoFinal}"...` }, { quoted: msg })
           const urlTTS = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(textoFinal)}&tl=pt&client=tw-ob`
           const resTTS = await fetch(urlTTS)
           if (!resTTS.ok) throw new Error("Falha ao gerar áudio.")
@@ -248,7 +278,7 @@ ${item(`${p}nuke / ${p}limpargp`)}
           try { fs.unlinkSync(tIn) } catch (_) {}
           try { fs.unlinkSync(tOut) } catch (_) {}
           await sock.sendMessage(jid, { audio: bufferOgg, mimetype: "audio/ogg; codecs=opus", ptt: true }, { quoted: msg })
-        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🌸 • 𝐄𝐑𝐑𝐎 •\n\n🐍 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
       }
     },
 
@@ -256,18 +286,18 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["gerarvideo", "iavideo"],
       async executar({ sock, msg, args, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const prompt = args.join(" ").trim()
-        if (!prompt) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎𝐑𝐀 •\n\n❄️ Informe a descrição.\n🧊 \`${p}sora <desc>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐒𝐎𝐑𝐀 •\n\n❄️ Gerando vídeo...\n🧊 Pode levar 2min\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!prompt) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐒𝐎𝐑𝐀 •\n\n🐍 Informe a descrição.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐒𝐎𝐑𝐀 •\n\n🐍 Gerando vídeo...\n🌸 Pode levar 2min\n\n"${nomeBot}"` }, { quoted: msg })
         try {
           const r = await fetch(`https://obanai-apis.eu.cc/api/ias/sora?prompt=${encodeURIComponent(prompt)}&apitoken=rj8SpI`, { signal: AbortSignal.timeout(120000) })
           const data = await r.json()
-          if (!data?.success || !data.data?.url) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎𝐑𝐀 •\n\n❄️ Não gerou.\n🧊 ${data?.message || "sem resposta"}\n\n"${nomeBot}"` }, { quoted: msg }) }
+          if (!data?.success || !data.data?.url) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🌸 • 𝐒𝐎𝐑𝐀 •\n\n🐍 Não gerou.\n🌸 ${data?.message || "sem resposta"}\n\n"${nomeBot}"` }, { quoted: msg }) }
           const videoRes = await fetch(data.data.url, { signal: AbortSignal.timeout(60000) })
           const videoBuffer = Buffer.from(await videoRes.arrayBuffer())
-          if (videoBuffer.length > 16 * 1024 * 1024) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎𝐑𝐀 •\n\n❄️ Vídeo > 16MB\n\n"${nomeBot}"` }, { quoted: msg }) }
-          await sock.sendMessage(jid, { video: videoBuffer, mimetype: "video/mp4", fileName: "sora.mp4", caption: `💧 • 𝐒𝐎𝐑𝐀 •\n\n❄️ Gerado!\n🧊 ${prompt}\n\n"${nomeBot}"` }, { quoted: msg })
-        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `💧 • 𝐒𝐎𝐑𝐀 •\n\n❄️ ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
+          if (videoBuffer.length > 16 * 1024 * 1024) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🌸 • 𝐒𝐎𝐑𝐀 •\n\n🐍 Vídeo > 16MB\n\n"${nomeBot}"` }, { quoted: msg }) }
+          await sock.sendMessage(jid, { video: videoBuffer, mimetype: "video/mp4", fileName: "sora.mp4", caption: `🌸 • 𝐒𝐎𝐑𝐀 •\n\n🐍 Gerado!\n🌸 ${prompt}\n\n"${nomeBot}"` }, { quoted: msg })
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🌸 • 𝐒𝐎𝐑𝐀 •\n\n🐍 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
       }
     },
 
@@ -283,10 +313,10 @@ ${item(`${p}nuke / ${p}limpargp`)}
         const data = agora.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })
         const mentions = numerosDono.map(n => n + "@s.whatsapp.net")
         let numerosTxt = ""
-        if (numerosDono.length) numerosDono.forEach((n) => { numerosTxt += `🧊 +${n}\n` })
-        else numerosTxt = "🧊 _não configurado_\n"
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐃𝐎𝐍𝐎 •\n\n❄️ ${nomeBot}\n\n🧊 Cargo: GRANDE SÁBIO\n${numerosTxt}🧊 Prefixo: ${prefixo}\n🧊 Horário: ${hora} — ${data}\n\n"${nomeBot}"`, mentions }, { quoted: msg })
+        if (numerosDono.length) numerosDono.forEach((n) => { numerosTxt += `🐍 +${n}\n` })
+        else numerosTxt = "🐍 _não configurado_\n"
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐃𝐎𝐍𝐎 •\n\n🐍 ${nomeBot}\n\n🌸 Cargo: MESTRE DA SERPENTE\n${numerosTxt}🐍 Prefixo: ${prefixo}\n🌸 Horário: ${hora} — ${data}\n\n"${nomeBot}"`, mentions }, { quoted: msg })
       }
     },
 
@@ -294,18 +324,18 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["update", "git"],
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
-        await reagir(sock, msg, "💧")
-        const sent = await sock.sendMessage(jid, { text: `💧 • 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐍𝐃𝐎 •\n\n❄️ Buscando no GitHub...\n🧊 [░░░░░░░░░░] 0%\n\n"${nomeBot}"` }, { quoted: msg })
-        const atualizarProgresso = async (pct, titulo, msg) => {
-          const cheios = Math.floor(pct / 10); const barra = "💧".repeat(cheios) + "⬛".repeat(10 - cheios)
-          try { await sock.sendMessage(jid, { text: `💧 • 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐍𝐃𝐎 •\n\n❄️ ${titulo}\n🧊 ${msg}\n\n🧊 [${barra}] ${pct}%\n\n"${nomeBot}"`, edit: sent.key }) } catch (_) {}
+        await reagir(sock, msg, "🐍")
+        const sent = await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐍𝐃𝐎 •\n\n🐍 Buscando no GitHub...\n🌸 [░░░░░░░░░░] 0%\n\n"${nomeBot}"` }, { quoted: msg })
+        const atualizarProgresso = async (pct, titulo, msg2) => {
+          const cheios = Math.floor(pct / 10); const barra = "🐍".repeat(cheios) + "⬛".repeat(10 - cheios)
+          try { await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐍𝐃𝐎 •\n\n🐍 ${titulo}\n🌸 ${msg2}\n\n🐍 [${barra}] ${pct}%\n\n"${nomeBot}"`, edit: sent.key }) } catch (_) {}
         }
         let zipPath, extractDir
         try {
           await new Promise(r => setTimeout(r, 800))
           await atualizarProgresso(15, "📡 VERIFICANDO", "Buscando commit mais recente...")
           if (!fs.existsSync(DATA_DIR)) { try { fs.mkdirSync(DATA_DIR, { recursive: true }) } catch (e) {} }
-          const apiResp = await fetch(REPO_API, { headers: { "User-Agent": "RimuruBot" } })
+          const apiResp = await fetch(REPO_API, { headers: { "User-Agent": "ObanaiBot" } })
           if (!apiResp.ok) throw new Error("GitHub respondeu " + apiResp.status)
           const apiData = await apiResp.json()
           const commitHash = apiData.sha
@@ -316,7 +346,7 @@ ${item(`${p}nuke / ${p}limpargp`)}
           const versaoAtual = commitSalvo.versao || 0
           if (commitSalvo.hash === commitHash) {
             await new Promise(r => setTimeout(r, 500))
-            return sock.sendMessage(jid, { text: `💧 • 𝐄𝐌 𝐃𝐈𝐀 •\n\n❄️ Versão atual.\n🧊 V${versaoAtual}\n🧊 ${commitHash.slice(0, 7)}\n🧊 ${formatarDataHora(commitData)}\n\n"${nomeBot}"`, edit: sent.key })
+            return sock.sendMessage(jid, { text: `🌸 • 𝐄𝐌 𝐃𝐈𝐀 •\n\n🐍 Versão atual.\n🌸 V${versaoAtual}\n🐍 ${commitHash.slice(0, 7)}\n🌸 ${formatarDataHora(commitData)}\n\n"${nomeBot}"`, edit: sent.key })
           }
           const versaoNova = versaoAtual + 1
           const cat = categorizarCommit(commitMsg)
@@ -324,7 +354,7 @@ ${item(`${p}nuke / ${p}limpargp`)}
           await new Promise(r => setTimeout(r, 700))
           await atualizarProgresso(60, "📥 BAIXANDO", "Baixando arquivos...")
           const tmp = os.tmpdir(); const id = Date.now()
-          zipPath = path.join(tmp, "rimuru_" + id + ".zip"); extractDir = path.join(tmp, "rimuru_" + id)
+          zipPath = path.join(tmp, "obanai_" + id + ".zip"); extractDir = path.join(tmp, "obanai_" + id)
           const r = await fetch(REPO_URL + "/archive/refs/heads/main.zip")
           if (!r.ok) throw new Error("Download falhou: HTTP " + r.status)
           fs.writeFileSync(zipPath, Buffer.from(await r.arrayBuffer()))
@@ -356,18 +386,17 @@ ${item(`${p}nuke / ${p}limpargp`)}
           await new Promise(r => setTimeout(r, 1000))
           const comandosNovos = extrairComandosDaMsg(commitMsg)
           let blocoComandos = ""
-          if (comandosNovos.length) { blocoComandos = `\n\n❄️ Novos:\n`; comandosNovos.forEach(c => { blocoComandos += `🧊 ${c}\n` }) }
+          if (comandosNovos.length) { blocoComandos = `\n\n🐍 Novos:\n`; comandosNovos.forEach(c => { blocoComandos += `🌸 ${c}\n` }) }
           
-          await sock.sendMessage(jid, { text: `💧 • 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐃𝐎 •\n\n❄️ V${versaoAtual} → *V${versaoNova}*\n\n🧊 ${commitMsg}${blocoComandos}\n\n🧊 ${cat.emoji} ${cat.tipo}\n🧊 ${formatarDataHora(commitData)}\n\n🔒 Preservado: auth/ data/ config.js\n\n♦️ Reiniciando em 3s...\n\n"${nomeBot}"`, edit: sent.key })
+          await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐃𝐎 •\n\n🐍 V${versaoAtual} → *V${versaoNova}*\n\n🌸 ${commitMsg}${blocoComandos}\n\n🐍 ${cat.emoji} ${cat.tipo}\n🌸 ${formatarDataHora(commitData)}\n\n🐍 Reiniciando em 3s...\n\n"${nomeBot}"`, edit: sent.key })
           
-          // ✅ ESPERA 3 SEGUNDOS E FECHA PARA O PM2 REINICIAR
           await new Promise(r => setTimeout(r, 3000))
           process.exit(0)
         } catch (e) {
           try { if (zipPath) fs.unlinkSync(zipPath) } catch (_) {}
           try { if (extractDir) fs.rmSync(extractDir, { recursive: true, force: true }) } catch (_) {}
           await reagir(sock, msg, "🧊")
-          await sock.sendMessage(jid, { text: `💧 • 𝐅𝐀𝐋𝐇𝐀 •\n\n❄️ ${e.message}\n\n"${nomeBot}"`, edit: sent.key })
+          await sock.sendMessage(jid, { text: `🌸 • 𝐅𝐀𝐋𝐇𝐀 •\n\n🐍 ${e.message}\n\n"${nomeBot}"`, edit: sent.key })
         }
       }
     },
@@ -376,13 +405,13 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["historico", "mudancas", "log", "novidades"],
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
-        await reagir(sock, msg, "💧")
+        await reagir(sock, msg, "🐍")
         try {
-          const r = await fetch(REPO_COMMITS, { headers: { "User-Agent": "RimuruBot" } })
+          const r = await fetch(REPO_COMMITS, { headers: { "User-Agent": "ObanaiBot" } })
           if (!r.ok) throw new Error("HTTP " + r.status)
           const commits = await r.json()
-          if (!Array.isArray(commits) || !commits.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐄𝐌 𝐍𝐎𝐕𝐈𝐃𝐀𝐃𝐄𝐒 •\n\n❄️ Nada novo.\n\n"${nomeBot}"` }, { quoted: msg }) }
-          let txt = "💧 • 𝐍𝐎𝐕𝐈𝐃𝐀𝐃𝐄𝐒 •\n\n❄️ Histórico:\n\n"
+          if (!Array.isArray(commits) || !commits.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🌸 • 𝐒𝐄𝐌 𝐍𝐎𝐕𝐈𝐃𝐀𝐃𝐄𝐒 •\n\n🐍 Nada novo.\n\n"${nomeBot}"` }, { quoted: msg }) }
+          let txt = "🌸 • 𝐍𝐎𝐕𝐈𝐃𝐀𝐃𝐄𝐒 •\n\n🐍 Histórico:\n\n"
           commits.forEach((c, i) => {
             const hash = c.sha ? c.sha.slice(0, 7) : "?"
             const msgCommit = (c.commit && c.commit.message || "").split("\n")[0].trim()
@@ -390,12 +419,12 @@ ${item(`${p}nuke / ${p}limpargp`)}
             const data = c.commit && c.commit.author && c.commit.author.date
             const cat = categorizarCommit(msgCommit)
             const dataFmt = data ? new Date(data).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "?"
-            txt += `🧊 ${cat.emoji} ${cat.tipo}\n🧊 _${msgCommit}_\n🧊 👤 ${autor}\n🧊 📅 ${dataFmt}\n🧊 \`${hash}\`\n`
+            txt += `🐍 ${cat.emoji} ${cat.tipo}\n🌸 _${msgCommit}_\n🐍 👤 ${autor}\n🌸 📅 ${dataFmt}\n🐍 \`${hash}\`\n`
             if (i < commits.length - 1) txt += "\n"
           })
-          txt += `\n🧊 Total: ${commits.length}\n\n"${nomeBot}"`
+          txt += `\n🐍 Total: ${commits.length}\n\n"${nomeBot}"`
           await sock.sendMessage(jid, { text: txt }, { quoted: msg })
-        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🌸 • 𝐄𝐑𝐑𝐎 •\n\n🐍 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
       }
     },
 
@@ -403,11 +432,11 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["setnomebot", "nomedobot"],
       async executar({ sock, msg, args, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const novoNome = args.join(" ").trim()
-        if (!novoNome) { const cfg = db.config(); await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐍𝐎𝐌𝐄 •\n\n❄️ Atual: ${cfg.nomeBot || "Rimuru"}\n🧊 \`${p}nomebot <nome>\` (máx 20)\n\n"${nomeBot}"` }, { quoted: msg }) }
-        if (novoNome.length > 20) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐍𝐎𝐌𝐄 𝐋𝐎𝐍𝐆𝐎 •\n\n❄️ Máx 20 caracteres.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!novoNome) { const cfg = db.config(); await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐍𝐎𝐌𝐄 •\n\n🐍 Atual: ${cfg.nomeBot || "Obanai"}\n🌸 \`${p}nomebot <nome>\` (máx 20)\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (novoNome.length > 20) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🌸 • 𝐍𝐎𝐌𝐄 𝐋𝐎𝐍𝐆𝐎 •\n\n🐍 Máx 20 caracteres.\n\n"${nomeBot}"` }, { quoted: msg }) }
         const cfg = db.config(); cfg.nomeBot = novoNome; db.salvarConfig(cfg)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐍𝐎𝐌𝐄 •\n\n❄️ Alterado para ${novoNome}\n🧊 \`${novoNome} fecha\`\n🧊 \`${novoNome} abre\`\n\n"${nomeBot}"` }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐍𝐎𝐌𝐄 •\n\n🐍 Alterado para ${novoNome}\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -415,19 +444,13 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["recarregar", "reloadmenus"],
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
-        await reagir(sock, msg, "💧")
+        await reagir(sock, msg, "🐍")
         try { 
-          await sock.sendMessage(jid, { text: `💧 • 𝐑𝐄𝐂𝐀𝐑𝐑𝐄𝐆𝐀𝐍𝐃𝐎 •\n\n❄️ Recarregando módulos...\n🧊 O bot reiniciará em 3s.\n\n"${nomeBot}"` }, { quoted: msg })
-          
+          await sock.sendMessage(jid, { text: `🌸 • 𝐑𝐄𝐂𝐀𝐑𝐑𝐄𝐆𝐀𝐍𝐃𝐎 •\n\n🐍 Recarregando módulos...\n🌸 O bot reiniciará em 3s.\n\n"${nomeBot}"` }, { quoted: msg })
           try { if (global.__carregarMenus) global.__carregarMenus() } catch (_) {}
-          
-          // ✅ ESPERA 3 SEGUNDOS ANTES DE FECHAR PARA O PM2 REINICIAR
           await new Promise(r => setTimeout(r, 3000))
           process.exit(0)
-        } catch (e) { 
-          await reagir(sock, msg, "🧊")
-          await sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) 
-        }
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🌸 • 𝐄𝐑𝐑𝐎 •\n\n🐍 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
       }
     },
 
@@ -435,17 +458,12 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["restart"],
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
-        await reagir(sock, msg, "💧")
+        await reagir(sock, msg, "🐍")
         try { 
-          await sock.sendMessage(jid, { text: `💧 • 𝐑𝐄𝐈𝐍𝐈𝐂𝐈𝐀𝐍𝐃𝐎 •\n\n❄️ Reiniciando o servidor...\n🧊 Aguardem alguns segundos.\n\n"${nomeBot}"` }, { quoted: msg })
-          
-          // ✅ ESPERA 3 SEGUNDOS ANTES DE FECHAR PARA O PM2 REINICIAR
+          await sock.sendMessage(jid, { text: `🌸 • 𝐑𝐄𝐈𝐍𝐈𝐂𝐈𝐀𝐍𝐃𝐎 •\n\n🐍 Reiniciando o servidor...\n🌸 Aguardem alguns segundos.\n\n"${nomeBot}"` }, { quoted: msg })
           await new Promise(r => setTimeout(r, 3000))
           process.exit(0) 
-        } catch (e) { 
-          await reagir(sock, msg, "🧊")
-          await sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) 
-        }
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🌸 • 𝐄𝐑𝐑𝐎 •\n\n🐍 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
       }
     },
 
@@ -453,10 +471,8 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["desligar", "offbot"],
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐀𝐓𝐄́ 𝐋𝐎𝐆𝐎 •\n\n❄️ Desligando...\n🧊 Até a próxima\n\n💤 _Zzzz..._\n\n"${nomeBot}"` }, { quoted: msg })
-        
-        // Aqui o processo é morto de verdade sem reiniciar (pm2 stop ou exit 2)
+        await reagir(sock, msg, "🐍")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐓𝐄́ 𝐋𝐎𝐆𝐎 •\n\n🐍 Desligando...\n🌸 Até a próxima\n\n💤 _A serpente dorme..._\n\n"${nomeBot}"` }, { quoted: msg })
         await new Promise(r => setTimeout(r, 3000))
         process.exit(2)
       }
@@ -466,12 +482,12 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["entrargp", "join", "joinlink"],
       async executar({ sock, msg, args, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const link = args[0]
-        if (!link) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐄𝐍𝐓𝐑𝐀𝐑 •\n\n❄️ Informe o link.\n🧊 \`${p}entrar <link>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!link) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐄𝐍𝐓𝐑𝐀𝐑 •\n\n🐍 Informe o link.\n\n"${nomeBot}"` }, { quoted: msg }) }
         const match = link.match(/chat\.whatsapp\.com\/([A-Za-z0-9]+)/)
-        if (!match) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐋𝐈𝐍𝐊 𝐈𝐍𝐕𝐀́𝐋𝐈𝐃𝐎 •\n\n❄️ Não é link de grupo.\n\n"${nomeBot}"` }, { quoted: msg }) }
-        await reagir(sock, msg, "💧")
-        try { await sock.sendMessage(jid, { text: `💧 • 𝐄𝐍𝐓𝐑𝐀𝐍𝐃𝐎 •\n\n❄️ Entrando no grupo...\n\n"${nomeBot}"` }, { quoted: msg }); const info = await sock.groupAcceptInvite(match[1]); await sock.sendMessage(jid, { text: `💧 • 𝐄𝐍𝐓𝐑𝐄𝐈 •\n\n❄️ Mais um território.\n🧊 ${typeof info === "string" ? "`" + info + "`" : "✅ Entrada realizada"}\n\n"${nomeBot}"` }, { quoted: msg }) }
-        catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!match) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🌸 • 𝐋𝐈𝐍𝐊 𝐈𝐍𝐕𝐀́𝐋𝐈𝐃𝐎 •\n\n🐍 Não é link de grupo.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🌸")
+        try { await sock.sendMessage(jid, { text: `🌸 • 𝐄𝐍𝐓𝐑𝐀𝐍𝐃𝐎 •\n\n🐍 Entrando no grupo...\n\n"${nomeBot}"` }, { quoted: msg }); const info = await sock.groupAcceptInvite(match[1]); await sock.sendMessage(jid, { text: `🌸 • 𝐄𝐍𝐓𝐑𝐄𝐈 •\n\n🐍 Mais um território.\n🌸 ${typeof info === "string" ? "`" + info + "`" : "✅ Entrada realizada"}\n\n"${nomeBot}"` }, { quoted: msg }) }
+        catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🌸 • 𝐄𝐑𝐑𝐎 •\n\n🐍 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
       }
     },
 
@@ -485,15 +501,15 @@ ${item(`${p}nuke / ${p}limpargp`)}
         let temVid = (msg.message && msg.message.videoMessage) || (quoted && quoted.videoMessage)
         if (quoted && quoted.viewOnceMessage) { temImg = temImg || quoted.viewOnceMessage.message?.imageMessage; temVid = temVid || quoted.viewOnceMessage.message?.videoMessage }
         if (quoted && quoted.viewOnceMessageV2) { temImg = temImg || quoted.viewOnceMessageV2.message?.imageMessage; temVid = temVid || quoted.viewOnceMessageV2.message?.videoMessage }
-        if (!temImg && !temVid) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐄𝐓𝐅𝐎𝐓𝐎 •\n\n❄️ Envie/responda imagem/vídeo.\n🧊 \`${p}setfoto\` (reply)\n\n"${nomeBot}"` }, { quoted: msg }) }
-        await reagir(sock, msg, "💧")
+        if (!temImg && !temVid) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐒𝐄𝐓𝐅𝐎𝐓𝐎 •\n\n🐍 Envie/responda imagem/vídeo.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🌸")
         try {
           const cfg = db.config()
           if (temImg) {
             const alvoMsg = (msg.message && msg.message.imageMessage) ? msg : Object.assign({}, msg, { message: { imageMessage: quoted.imageMessage || quoted.viewOnceMessage?.message?.imageMessage || quoted.viewOnceMessageV2?.message?.imageMessage } })
             const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
             cfg.fotoMenu = buffer.toString("base64"); cfg.tipoMenu = "foto"; db.salvarConfig(cfg)
-            return sock.sendMessage(jid, { image: buffer, caption: `💧 • 𝐅𝐎𝐓𝐎 •\n\n❄️ Salva no menu.\n\n"${nomeBot}"` }, { quoted: msg })
+            return sock.sendMessage(jid, { image: buffer, caption: `🌸 • 𝐅𝐎𝐓𝐎 •\n\n🐍 Salva no menu.\n\n"${nomeBot}"` }, { quoted: msg })
           }
           const vidMsg = (msg.message && msg.message.videoMessage) ? msg : Object.assign({}, msg, { message: { videoMessage: quoted.videoMessage || quoted.viewOnceMessage?.message?.videoMessage || quoted.viewOnceMessageV2?.message?.videoMessage } })
           const vidBuffer = await utils.downloadMediaMessage(vidMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
@@ -505,8 +521,8 @@ ${item(`${p}nuke / ${p}limpargp`)}
           if (outBuffer.length > 15 * 1024 * 1024) { const tOut2 = path.join(tmp, "menu_" + Date.now() + "_out2.mp4"); execSync(`"${ff}" -y -i "${tOut}" -vf "fps=8,scale=384:384:force_original_aspect_ratio=decrease,pad=384:384:(ow-iw)/2:(oh-ih)/2:color=black" -an -c:v libx264 -preset fast -crf 32 -pix_fmt yuv420p -movflags +faststart "${tOut2}"`, { stdio: "ignore", timeout: 180000 }); outBuffer = fs.readFileSync(tOut2); try { fs.unlinkSync(tOut2) } catch (_) {} }
           cfg.fotoMenu = outBuffer.toString("base64"); cfg.tipoMenu = "video"; db.salvarConfig(cfg)
           try { fs.unlinkSync(tIn) } catch (_) {}; try { fs.unlinkSync(tOut) } catch (_) {}
-          await sock.sendMessage(jid, { video: outBuffer, mimetype: "video/mp4", fileName: "rimuru.mp4", gifPlayback: true, caption: `💧 • 𝐕𝐈́𝐃𝐄𝐎 •\n\n❄️ Salvo no menu.\n\n"${nomeBot}"` }, { quoted: msg })
-        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
+          await sock.sendMessage(jid, { video: outBuffer, mimetype: "video/mp4", fileName: "rimuru.mp4", gifPlayback: true, caption: `🌸 • 𝐕𝐈́𝐃𝐄𝐎 •\n\n🐍 Salvo no menu.\n\n"${nomeBot}"` }, { quoted: msg })
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🌸 • 𝐄𝐑𝐑𝐎 •\n\n🐍 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
       }
     },
 
@@ -520,15 +536,15 @@ ${item(`${p}nuke / ${p}limpargp`)}
         let temVid = (msg.message && msg.message.videoMessage) || (quoted && quoted.videoMessage)
         if (quoted && quoted.viewOnceMessage) { temImg = temImg || quoted.viewOnceMessage.message?.imageMessage; temVid = temVid || quoted.viewOnceMessage.message?.videoMessage }
         if (quoted && quoted.viewOnceMessageV2) { temImg = temImg || quoted.viewOnceMessageV2.message?.imageMessage; temVid = temVid || quoted.viewOnceMessageV2.message?.videoMessage }
-        if (!temImg && !temVid) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐅𝐎𝐓𝐎𝐂𝐌𝐃 •\n\n❄️ Envie/responda imagem/vídeo.\n🧊 \`${p}fotocmd\` (reply)\n\n"${nomeBot}"` }, { quoted: msg }) }
-        await reagir(sock, msg, "💧")
+        if (!temImg && !temVid) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐅𝐎𝐓𝐎𝐂𝐌𝐃 •\n\n🐍 Envie/responda imagem/vídeo.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🌸")
         try {
           const cfg = db.config()
           if (temImg) {
             const alvoMsg = (msg.message && msg.message.imageMessage) ? msg : Object.assign({}, msg, { message: { imageMessage: quoted.imageMessage || quoted.viewOnceMessage?.message?.imageMessage || quoted.viewOnceMessageV2?.message?.imageMessage } })
             const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
             cfg.fotoCmd = buffer.toString("base64"); cfg.tipoFotoCmd = "foto"; db.salvarConfig(cfg)
-            return sock.sendMessage(jid, { image: buffer, caption: `💧 • 𝐅𝐎𝐓𝐎 𝐂𝐌𝐃 •\n\n❄️ Aparecerá no "comando não encontrado".\n\n"${nomeBot}"` }, { quoted: msg })
+            return sock.sendMessage(jid, { image: buffer, caption: `🌸 • 𝐅𝐎𝐓𝐎 𝐂𝐌𝐃 •\n\n🐍 Aparecerá no "comando não encontrado".\n\n"${nomeBot}"` }, { quoted: msg })
           }
           const vidMsg = (msg.message && msg.message.videoMessage) ? msg : Object.assign({}, msg, { message: { videoMessage: quoted.videoMessage || quoted.viewOnceMessage?.message?.videoMessage || quoted.viewOnceMessageV2?.message?.videoMessage } })
           const vidBuffer = await utils.downloadMediaMessage(vidMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
@@ -540,8 +556,8 @@ ${item(`${p}nuke / ${p}limpargp`)}
           if (outBuffer.length > 15 * 1024 * 1024) { const tOut2 = path.join(tmp, "cmd_" + Date.now() + "_out2.mp4"); execSync(`"${ff}" -y -i "${tOut}" -vf "fps=8,scale=384:384:force_original_aspect_ratio=decrease,pad=384:384:(ow-iw)/2:(oh-ih)/2:color=black" -an -c:v libx264 -preset fast -crf 32 -pix_fmt yuv420p -movflags +faststart "${tOut2}"`, { stdio: "ignore", timeout: 180000 }); outBuffer = fs.readFileSync(tOut2); try { fs.unlinkSync(tOut2) } catch (_) {} }
           cfg.fotoCmd = outBuffer.toString("base64"); cfg.tipoFotoCmd = "video"; db.salvarConfig(cfg)
           try { fs.unlinkSync(tIn) } catch (_) {}; try { fs.unlinkSync(tOut) } catch (_) {}
-          await sock.sendMessage(jid, { video: outBuffer, mimetype: "video/mp4", fileName: "rimuru.mp4", gifPlayback: true, caption: `💧 • 𝐕𝐈́𝐃𝐄𝐎 𝐂𝐌𝐃 •\n\n❄️ Aparecerá no "comando não encontrado".\n\n"${nomeBot}"` }, { quoted: msg })
-        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
+          await sock.sendMessage(jid, { video: outBuffer, mimetype: "video/mp4", fileName: "obanai.mp4", gifPlayback: true, caption: `🌸 • 𝐕𝐈́𝐃𝐄𝐎 𝐂𝐌𝐃 •\n\n🐍 Aparecerá no "comando não encontrado".\n\n"${nomeBot}"` }, { quoted: msg })
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🌸 • 𝐄𝐑𝐑𝐎 •\n\n🐍 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
       }
     },
 
@@ -549,15 +565,15 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["darvip", "setvip"],
       async executar({ sock, msg, args, db, utils, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const alvo = utils.getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐃𝐃𝐕𝐈𝐏 •\n\n❄️ Marque o novo nobre.\n🧊 \`${p}addvip @user <tempo>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!alvo) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐀𝐃𝐃𝐕𝐈𝐏 •\n\n🐍 Marque o novo nobre.\n🌸 \`${p}addvip @user <tempo>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         const tempo = (args.find(a => /^(inf|\d+[dhm])$/i.test(a)) || "").toLowerCase()
-        if (!tempo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐃𝐃𝐕𝐈𝐏 •\n\n❄️ Informe o tempo.\n🧊 1d / 7d / 30d / inf\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!tempo) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐀𝐃𝐃𝐕𝐈𝐏 •\n\n🐍 Informe o tempo.\n🌸 1d / 7d / 30d / inf\n\n"${nomeBot}"` }, { quoted: msg }) }
         let expira = "inf"
         if (tempo !== "inf") { const v = parseInt(tempo); const u = tempo.slice(-1); let ms = 0; if (u === "d") ms = v * 24 * 60 * 60 * 1000; if (u === "h") ms = v * 60 * 60 * 1000; if (u === "m") ms = v * 60 * 1000; expira = Date.now() + ms }
         const v = db.vips(); v.vips = v.vips || {}; v.vips[alvo] = { expira, desde: Date.now() }; db.salvarVips(v)
         const num = utils.soNumero(alvo)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐍𝐎𝐁𝐑𝐄 •\n\n❄️ Adicionado\n🧊 @${num}\n🧊 Tempo: ${tempo === "inf" ? "ETERNO ♾️" : tempo.toUpperCase()}\n\n"${nomeBot}"`, mentions: [alvo] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐍𝐎𝐁𝐑𝐄 •\n\n🐍 Adicionado\n🌸 @${num}\n🐍 Tempo: ${tempo === "inf" ? "ETERNO ♾️" : tempo.toUpperCase()}\n\n"${nomeBot}"`, mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -565,12 +581,12 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["rmvip", "removervip"],
       async executar({ sock, msg, db, utils, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const alvo = utils.getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐃𝐄𝐋𝐕𝐈𝐏 •\n\n❄️ Marque o usuário.\n🧊 \`${p}delvip @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!alvo) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐃𝐄𝐋𝐕𝐈𝐏 •\n\n🐍 Marque o usuário.\n\n"${nomeBot}"` }, { quoted: msg }) }
         const v = db.vips()
-        if (!v.vips || !v.vips[alvo]) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐍𝐀̃𝐎 𝐄́ 𝐕𝐈𝐏 •\n\n❄️ Meus olhos não erram.\n🧊 @${utils.soNumero(alvo)}\n\n"${nomeBot}"`, mentions: [alvo] }, { quoted: msg }) }
+        if (!v.vips || !v.vips[alvo]) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🌸 • 𝐍𝐀̃𝐎 𝐄́ 𝐕𝐈𝐏 •\n\n🐍 A serpente não erra.\n🌸 @${utils.soNumero(alvo)}\n\n"${nomeBot}"`, mentions: [alvo] }, { quoted: msg }) }
         delete v.vips[alvo]; db.salvarVips(v)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐕𝐈𝐏 𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐎 •\n\n❄️ @${utils.soNumero(alvo)}\n\n"${nomeBot}"`, mentions: [alvo] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐕𝐈𝐏 𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐎 •\n\n🐍 @${utils.soNumero(alvo)}\n\n"${nomeBot}"`, mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -578,11 +594,11 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["vips", "vervips"],
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const v = db.vips(); const vips = Object.entries(v.vips || {})
-        if (!vips.length) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐍𝐈𝐍𝐆𝐔𝐄́𝐌 •\n\n❄️ Sem nobres.\n\n"${nomeBot}"` }, { quoted: msg }) }
-        let txt = "💧 • 𝐋𝐈𝐒𝐓𝐀 𝐕𝐈𝐏 •\n\n❄️ Nobres:\n\n"; const mentions = []
-        vips.forEach(([jidVip, info], i) => { const num = utils.soNumero(jidVip); const expira = info.expira === "inf" ? "♾️ Eterno" : new Date(info.expira).toLocaleString("pt-BR"); txt += `🧊 ${i + 1}. @${num} — ${expira}\n`; mentions.push(jidVip) })
-        txt += `\n🧊 Total: ${vips.length}\n\n"${nomeBot}"`
-        await reagir(sock, msg, "💧")
+        if (!vips.length) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐍𝐈𝐍𝐆𝐔𝐄́𝐌 •\n\n🐍 Sem nobres.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        let txt = "🌸 • 𝐋𝐈𝐒𝐓𝐀 𝐕𝐈𝐏 •\n\n🐍 Nobres:\n\n"; const mentions = []
+        vips.forEach(([jidVip, info], i) => { const num = utils.soNumero(jidVip); const expira = info.expira === "inf" ? "♾️ Eterno" : new Date(info.expira).toLocaleString("pt-BR"); txt += `🐍 ${i + 1}. @${num} — ${expira}\n`; mentions.push(jidVip) })
+        txt += `\n🐍 Total: ${vips.length}\n\n"${nomeBot}"`
+        await reagir(sock, msg, "🌸")
         await sock.sendMessage(jid, { text: txt, mentions }, { quoted: msg })
       }
     },
@@ -591,12 +607,12 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["addsub", "darsub"],
       async executar({ sock, msg, db, utils, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const alvo = utils.getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐃𝐃𝐒𝐔𝐁 •\n\n❄️ Marque o usuário.\n🧊 \`${p}addsubdono @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!alvo) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐀𝐃𝐃𝐒𝐔𝐁 •\n\n🐍 Marque o usuário.\n\n"${nomeBot}"` }, { quoted: msg }) }
         const cfg = db.config(); cfg.subdonos = cfg.subdonos || []; const num = utils.soNumero(alvo)
-        if (cfg.subdonos.some(s => utils.soNumero(s) === num)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐉𝐀́ 𝐄́ •\n\n❄️ Já é Lua Superior.\n🧊 @${num}\n\n"${nomeBot}"`, mentions: [alvo] }, { quoted: msg }) }
+        if (cfg.subdonos.some(s => utils.soNumero(s) === num)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🌸 • 𝐉𝐀́ 𝐄́ •\n\n🐍 Já é Hashira.\n🌸 @${num}\n\n"${nomeBot}"`, mentions: [alvo] }, { quoted: msg }) }
         cfg.subdonos.push(alvo); db.salvarConfig(cfg)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐍𝐎𝐕𝐀 𝐋𝐔𝐀 •\n\n❄️ Você agora vê como eu vejo.\n🧊 @${num}\n\n"${nomeBot}"`, mentions: [alvo] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐍𝐎𝐕𝐀 𝐋𝐔𝐀 •\n\n🐍 Você agora vê como eu vejo.\n🌸 @${num}\n\n"${nomeBot}"`, mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -604,11 +620,11 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["delsub", "rmsub", "rmsubdono"],
       async executar({ sock, msg, db, utils, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const alvo = utils.getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐃𝐄𝐋𝐒𝐔𝐁 •\n\n❄️ Marque o usuário.\n🧊 \`${p}delsubdono @user\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!alvo) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐃𝐄𝐋𝐒𝐔𝐁 •\n\n🐍 Marque o usuário.\n\n"${nomeBot}"` }, { quoted: msg }) }
         const cfg = db.config(); const num = utils.soNumero(alvo)
         cfg.subdonos = (cfg.subdonos || []).filter(s => utils.soNumero(s) !== num); db.salvarConfig(cfg)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐑𝐄𝐁𝐀𝐈𝐗𝐀𝐃𝐎 •\n\n❄️ Seus olhos se fecham.\n🧊 @${num}\n\n"${nomeBot}"`, mentions: [alvo] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐑𝐄𝐁𝐀𝐈𝐗𝐀𝐃𝐎 •\n\n🐍 Seus olhos se fecham.\n🌸 @${num}\n\n"${nomeBot}"`, mentions: [alvo] }, { quoted: msg })
       }
     },
 
@@ -616,11 +632,11 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["subdonos", "listasub"],
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const cfg = db.config(); const subs = cfg.subdonos || []
-        if (!subs.length) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐍𝐈𝐍𝐆𝐔𝐄́𝐌 •\n\n❄️ Só eu vejo a verdade.\n\n"${nomeBot}"` }, { quoted: msg }) }
-        let txt = "💧 • 𝐋𝐔𝐀𝐒 𝐒𝐔𝐏𝐄𝐑𝐈𝐎𝐑𝐄𝐒 •\n\n❄️ Lista:\n\n"; const mentions = []
-        subs.forEach((jidS, i) => { txt += `🧊 ${i + 1}. @${utils.soNumero(jidS)}\n`; mentions.push(jidS) })
-        txt += `\n🧊 Total: ${subs.length}\n\n"${nomeBot}"`
-        await reagir(sock, msg, "💧")
+        if (!subs.length) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐍𝐈𝐍𝐆𝐔𝐄́𝐌 •\n\n🐍 Só eu vejo a verdade.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        let txt = "🌸 • 𝐋𝐔𝐀𝐒 𝐒𝐔𝐏𝐄𝐑𝐈𝐎𝐑𝐄𝐒 •\n\n🐍 Lista:\n\n"; const mentions = []
+        subs.forEach((jidS, i) => { txt += `🐍 ${i + 1}. @${utils.soNumero(jidS)}\n`; mentions.push(jidS) })
+        txt += `\n🐍 Total: ${subs.length}\n\n"${nomeBot}"`
+        await reagir(sock, msg, "🌸")
         await sock.sendMessage(jid, { text: txt, mentions }, { quoted: msg })
       }
     },
@@ -629,10 +645,10 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["setprefixoglobal"],
       async executar({ sock, msg, args, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const novo = args[0]
-        if (!novo || novo.length > 3) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 •\n\n❄️ Prefixo curto, pf.\n🧊 \`${p}prefixoglobal <s>\` (máx 3)\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!novo || novo.length > 3) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 •\n\n🐍 Prefixo curto, pf.\n\n"${nomeBot}"` }, { quoted: msg }) }
         const cfg = db.config(); cfg.prefixoGlobal = novo; db.salvarConfig(cfg)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 •\n\n❄️ Alterado\n🧊 \`${novo}\`\n\n"${nomeBot}"` }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 •\n\n🐍 Alterado\n🌸 \`${novo}\`\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -640,10 +656,10 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["modolento"],
       async executar({ sock, msg, args, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const opcao = (args[0] || "").toLowerCase()
-        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐋𝐎𝐖 •\n\n❄️ Use on/off.\n🧊 \`${p}slow on/off\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐒𝐋𝐎𝐖 •\n\n🐍 Use on/off.\n\n"${nomeBot}"` }, { quoted: msg }) }
         const cfg = db.config(); cfg.slow = opcao === "on"; db.salvarConfig(cfg)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐌𝐎𝐃𝐎 𝐋𝐄𝐍𝐓𝐎 •\n\n❄️ ${opcao.toUpperCase()}\n\n"${nomeBot}"` }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐌𝐎𝐃𝐎 𝐋𝐄𝐍𝐓𝐎 •\n\n🐍 ${opcao.toUpperCase()}\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -651,10 +667,10 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["modoaluguel", "sistaluguel"],
       async executar({ sock, msg, args, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const opcao = (args[0] || "").toLowerCase(); const a = db.aluguel()
-        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n❄️ Status: ${a.ativo ? "ON ✅" : "OFF ❌"}\n🧊 \`${p}aluguel on/off\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n🐍 Status: ${a.ativo ? "ON ✅" : "OFF ❌"}\n\n"${nomeBot}"` }, { quoted: msg }) }
         a.ativo = opcao === "on"; db.salvarAluguel(a)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n❄️ ${opcao.toUpperCase()}\n\n"${nomeBot}"` }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n🐍 ${opcao.toUpperCase()}\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -662,14 +678,14 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["davaluguel", "setaluguel"], grupoOnly: true,
       async executar({ sock, msg, args, db, utils, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const tempoStr = args.join(" ").trim().toLowerCase()
-        if (!tempoStr) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐀𝐃𝐃𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n❄️ Informe o tempo.\n🧊 1dia, 30min, 1mes...\n🧊 \`${p}addaluguel <tempo>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!tempoStr) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐀𝐃𝐃𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n🐍 Informe o tempo.\n\n"${nomeBot}"` }, { quoted: msg }) }
         const partes = tempoStr.split(/\s+/); let totalMs = 0
         for (const part of partes) { const m = part.match(/^(\d+)(min|h|dia|d|sem|mes|ano)$/); if (!m) continue; const v = parseInt(m[1]); const u = m[2]; let ms = 0; if (u === "min") ms = v * 60 * 1000; else if (u === "h") ms = v * 60 * 60 * 1000; else if (u === "d" || u === "dia") ms = v * 24 * 60 * 60 * 1000; else if (u === "sem") ms = v * 7 * 24 * 60 * 60 * 1000; else if (u === "mes") ms = v * 30 * 24 * 60 * 60 * 1000; else if (u === "ano") ms = v * 365 * 24 * 60 * 60 * 1000; totalMs += ms }
-        if (totalMs <= 0) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ Formato inválido.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (totalMs <= 0) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🌸 • 𝐄𝐑𝐑𝐎 •\n\n🐍 Formato inválido.\n\n"${nomeBot}"` }, { quoted: msg }) }
         const a = db.aluguel(); a.grupos = a.grupos || {}; const agora = Date.now(); const atual = (a.grupos[jid] > agora) ? a.grupos[jid] : agora
         a.grupos[jid] = atual + totalMs; if (!a.ativo) a.ativo = true; db.salvarAluguel(a)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n❄️ Adicionado\n🧊 Expira em ${utils.formatarTempo(a.grupos[jid] - agora)}\n\n"${nomeBot}"` }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n🐍 Adicionado\n🌸 Expira em ${utils.formatarTempo(a.grupos[jid] - agora)}\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -678,11 +694,11 @@ ${item(`${p}nuke / ${p}limpargp`)}
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const a = db.aluguel(); const agora = Date.now()
         const entradas = Object.entries(a.grupos || {}).filter(e => e[1] > agora)
-        if (!entradas.length) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐍𝐀𝐃𝐀 𝐀𝐋𝐔𝐆𝐀𝐃𝐎 •\n\n❄️ Vazio.\n\n"${nomeBot}"` }, { quoted: msg }) }
-        let txt = "💧 • 𝐀𝐋𝐔𝐆𝐀𝐃𝐎𝐒 •\n\n❄️ Lista:\n\n"
-        for (const [jidG, exp] of entradas) { try { const meta = await sock.groupMetadata(jidG); txt += `🧊 ${meta.subject || "?"} — ${utils.formatarTempo(exp - agora)}\n` } catch (_) { txt += `🧊 \`${jidG}\` — ${utils.formatarTempo(exp - agora)}\n` } }
+        if (!entradas.length) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐍𝐀𝐃𝐀 𝐀𝐋𝐔𝐆𝐀𝐃𝐎 •\n\n🐍 Vazio.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        let txt = "🌸 • 𝐀𝐋𝐔𝐆𝐀𝐃𝐎𝐒 •\n\n🐍 Lista:\n\n"
+        for (const [jidG, exp] of entradas) { try { const meta = await sock.groupMetadata(jidG); txt += `🐍 ${meta.subject || "?"} — ${utils.formatarTempo(exp - agora)}\n` } catch (_) { txt += `🐍 \`${jidG}\` — ${utils.formatarTempo(exp - agora)}\n` } }
         txt += `\n"${nomeBot}"`
-        await reagir(sock, msg, "💧")
+        await reagir(sock, msg, "🌸")
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
@@ -692,12 +708,12 @@ ${item(`${p}nuke / ${p}limpargp`)}
       async executar({ sock, msg, args, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const a = db.aluguel(); a.grupos = a.grupos || {}
         if (!args.length && jid.endsWith("@g.us")) {
-          if (!a.grupos[jid]) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐄𝐌 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n❄️ Vazio.\n\n"${nomeBot}"` }, { quoted: msg }) }
-          delete a.grupos[jid]; db.salvarAluguel(a); await reagir(sock, msg, "💧")
-          return sock.sendMessage(jid, { text: `💧 • 𝐋𝐈𝐁𝐄𝐑𝐓𝐀𝐃𝐎 •\n\n❄️ Aluguel removido.\n\n"${nomeBot}"` }, { quoted: msg })
+          if (!a.grupos[jid]) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🌸 • 𝐒𝐄𝐌 𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n🐍 Vazio.\n\n"${nomeBot}"` }, { quoted: msg }) }
+          delete a.grupos[jid]; db.salvarAluguel(a); await reagir(sock, msg, "🌸")
+          return sock.sendMessage(jid, { text: `🌸 • 𝐋𝐈𝐁𝐄𝐑𝐓𝐀𝐃𝐎 •\n\n🐍 Aluguel removido.\n\n"${nomeBot}"` }, { quoted: msg })
         }
-        await reagir(sock, msg, "❄️")
-        await sock.sendMessage(jid, { text: `💧 • 𝐃𝐄𝐋𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n❄️ Use em grupo: \`${p}delaluguel\`\n\n"${nomeBot}"` }, { quoted: msg })
+        await reagir(sock, msg, "🐍")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐃𝐄𝐋𝐀𝐋𝐔𝐆𝐔𝐄𝐋 •\n\n🐍 Use em grupo.\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -705,8 +721,8 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["bangp", "banirgrupo"],
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const b = db.bangp(); b.grupos = b.grupos || {}; b.grupos[jid] = true; db.salvarBangp(b)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐁𝐀𝐍𝐈𝐃𝐎 •\n\n❄️ Meus olhos não querem ver vocês.\n🧊 _"Tchau."_\n\n"${nomeBot}"` }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐁𝐀𝐍𝐈𝐃𝐎 •\n\n🐍 Meus olhos não querem ver vocês.\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -714,9 +730,9 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["desbangp"],
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const b = db.bangp()
-        if (b.grupos && b.grupos[jid]) { delete b.grupos[jid]; db.salvarBangp(b); await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: `💧 • 𝐋𝐈𝐁𝐄𝐑𝐀𝐃𝐎 •\n\n❄️ Perdoado... uma vez.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (b.grupos && b.grupos[jid]) { delete b.grupos[jid]; db.salvarBangp(b); await reagir(sock, msg, "🌸"); return sock.sendMessage(jid, { text: `🌸 • 𝐋𝐈𝐁𝐄𝐑𝐀𝐃𝐎 •\n\n🐍 Perdoado... uma vez.\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "🧊")
-        await sock.sendMessage(jid, { text: `💧 • 𝐍𝐀̃𝐎 𝐁𝐀𝐍𝐈𝐃𝐎 •\n\n❄️ Você não presta atenção.\n\n"${nomeBot}"` }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `🌸 • 𝐍𝐀̃𝐎 𝐁𝐀𝐍𝐈𝐃𝐎 •\n\n🐍 Não presta atenção.\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -724,9 +740,9 @@ ${item(`${p}nuke / ${p}limpargp`)}
       aliases: ["gruposbanidos"],
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const b = db.bangp(); const grupos = Object.keys(b.grupos || {})
-        if (!grupos.length) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `💧 • 𝐍𝐀𝐃𝐀 •\n\n❄️ Por enquanto.\n\n"${nomeBot}"` }, { quoted: msg }) }
-        let txt = "💧 • 𝐁𝐀𝐍𝐈𝐃𝐎𝐒 •\n\n❄️ Lista:\n\n"; grupos.forEach((g, i) => { txt += `🧊 ${i + 1}. \`${g}\`\n` }); txt += `\n🧊 Total: ${grupos.length}\n\n"${nomeBot}"`
-        await reagir(sock, msg, "💧")
+        if (!grupos.length) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🌸 • 𝐍𝐀𝐃𝐀 •\n\n🐍 Por enquanto.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        let txt = "🌸 • 𝐁𝐀𝐍𝐈𝐃𝐎𝐒 •\n\n🐍 Lista:\n\n"; grupos.forEach((g, i) => { txt += `🐍 ${i + 1}. \`${g}\`\n` }); txt += `\n🐍 Total: ${grupos.length}\n\n"${nomeBot}"`
+        await reagir(sock, msg, "🌸")
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
@@ -736,9 +752,9 @@ ${item(`${p}nuke / ${p}limpargp`)}
       async executar({ sock, msg, groupMetadata, utils, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         if (!jid.endsWith("@g.us")) return
-        if (!utils.botEhAdmin(groupMetadata, sock)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐑𝐄𝐂𝐈𝐒𝐎 𝐀𝐃𝐌 •\n\n❄️ Até o Grande Sábio precisa permissão.\n\n"${nomeBot}"` }, { quoted: msg }) }
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐍𝐔𝐊𝐄 •\n\n❄️ Não olhe pra trás.\n🧊 _"Habilidade Única: Aniquilação."_\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!utils.botEhAdmin(groupMetadata, sock)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🌸 • 𝐏𝐑𝐄𝐂𝐈𝐒𝐎 𝐀𝐃𝐌 •\n\n🐍 Até a serpente precisa permissão.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐍𝐔𝐊𝐄 •\n\n🐍 Não olhe pra trás.\n🌸 _"Respiração da Serpente: Aniquilação."_\n\n"${nomeBot}"` }, { quoted: msg })
         const meta = await sock.groupMetadata(jid); const botNum = utils.soNumero(sock.user && sock.user.id)
         const alvos = meta.participants.filter(p => utils.soNumero(p.id) !== botNum).map(p => p.id)
         for (const a of alvos) { try { await sock.groupParticipantsUpdate(jid, [a], "remove") } catch (_) {}; await new Promise(r => setTimeout(r, 500)) }
@@ -750,9 +766,9 @@ ${item(`${p}nuke / ${p}limpargp`)}
       async executar({ sock, msg, groupMetadata, utils, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         if (!jid.endsWith("@g.us")) return
-        if (!utils.botEhAdmin(groupMetadata, sock)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐑𝐄𝐂𝐈𝐒𝐎 𝐀𝐃𝐌 •\n\n❄️ Série...\n\n"${nomeBot}"` }, { quoted: msg }) }
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐋𝐈𝐌𝐏𝐄𝐙𝐀 •\n\n❄️ O silêncio observa.\n🧊 _"Os indignos partem."_\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!utils.botEhAdmin(groupMetadata, sock)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🌸 • 𝐏𝐑𝐄𝐂𝐈𝐒𝐎 𝐀𝐃𝐌 •\n\n🐍 Série...\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐋𝐈𝐌𝐏𝐄𝐙𝐀 •\n\n🐍 O silêncio observa.\n🌸 _"Os indignos partem."_\n\n"${nomeBot}"` }, { quoted: msg })
         const meta = await sock.groupMetadata(jid); const botNum = utils.soNumero(sock.user && sock.user.id)
         const alvos = meta.participants.filter(p => { if (utils.soNumero(p.id) === botNum) return false; if (p.admin === "admin" || p.admin === "superadmin") return false; return true }).map(p => p.id)
         for (const a of alvos) { try { await sock.groupParticipantsUpdate(jid, [a], "remove") } catch (_) {}; await new Promise(r => setTimeout(r, 500)) }
