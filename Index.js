@@ -1,6 +1,6 @@
 /* ============================================================
-   🔥 RIMURU BOT MD - INDEX COMPLETO
-   (@itsliaaa/baileys + BOTÕES + BEM-VINDO/SAIU + AUTO-RESTART)
+   🔥 RIMURU BOT MD - INDEX COMPLETO (CORRIGIDO)
+   @itsliaaa/baileys + BOTÕES + BEM-VINDO/SAIU + AUTO-RESTART
    ============================================================ */
 
 const {
@@ -17,7 +17,7 @@ const path = require('path');
 const readline = require('readline');
 const crypto = require('crypto');
 const os = require('os');
-const { execSync, spawn } = require('child_process');
+const { execSync } = require('child_process');
 const NodeCache = require('node-cache');
 const config = require('./config');
 
@@ -399,7 +399,6 @@ async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo,
       }
     }
 
-    // 🆕 CASO 1: só o nome do bot → saudação + botão
     if (apenasNome) {
       const h = parseInt(new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false }));
       let saud, emoji;
@@ -409,7 +408,6 @@ async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo,
 
       const numUser = soNumero(sender);
       const nomeExibicao = db.config().nomeBot || "Rimuru";
-      const prefixo = db.config().prefixoGlobal || config.prefixo || "+";
 
       const textoMenu = `${emoji} *${saud}, @${numUser}!* 🌸
 
@@ -431,7 +429,6 @@ async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo,
 _"A serpente observa."_ 🐍`;
 
       try {
-        // 🆕 Botões interativos (itsliaaa/baileys)
         await sock.sendMessage(remetente, {
           text: textoMenu,
           footer: nomeExibicao,
@@ -451,7 +448,6 @@ _"A serpente observa."_ 🐍`;
       }
     }
 
-    // CASO 2: fecha/abre
     if (!comando) return false;
 
     let ehAdmin = false;
@@ -530,7 +526,7 @@ async function processarFigCmd(sock, msg, remetente, sender, isGrupo, isDono, is
 }
 
 // ============================================================
-// ⏰ AGENDAMENTOS DE ABRIR E FECHAR
+// ⏰ AGENDAMENTOS
 // ============================================================
 const ultimoAgendamento = {};
 function iniciarAgendamentos() {
@@ -556,8 +552,7 @@ function iniciarAgendamentos() {
             else await global.sockGlobal.sendMessage(jid, { text: legenda });
             conf.ultimoAbrir = dataHoje;
             alterou = true;
-            console.log(`✅ Grupo ${jid} aberto às ${agora}`);
-          } catch (e) { console.log(`❌ Erro ao abrir grupo ${jid}:`, e.message); }
+          } catch (e) {}
         }
 
         if (conf.fecharHora === agora && conf.ultimoFechar !== dataHoje) {
@@ -571,8 +566,7 @@ function iniciarAgendamentos() {
             else await global.sockGlobal.sendMessage(jid, { text: legenda });
             conf.ultimoFechar = dataHoje;
             alterou = true;
-            console.log(`✅ Grupo ${jid} fechado às ${agora}`);
-          } catch (e) { console.log(`❌ Erro ao fechar grupo ${jid}:`, e.message); }
+          } catch (e) {}
         }
       }
 
@@ -581,7 +575,7 @@ function iniciarAgendamentos() {
       for (const chave of Object.keys(ultimoAgendamento)) {
         if (!chave.includes(dataHoje)) delete ultimoAgendamento[chave];
       }
-    } catch (e) { console.log("❌ Erro no agendamento:", e.message); }
+    } catch (e) {}
   }, 30000);
 }
 
@@ -592,7 +586,7 @@ function iniciarRendasAutomaticas() {
   setInterval(async () => {
     if (!global.sockGlobal) return;
     for (const fn of global.rendasAutomaticas) {
-      try { await fn(global.sockGlobal, db); } catch (e) { console.log("❌ Erro renda automática:", e.message); }
+      try { await fn(global.sockGlobal, db); } catch (e) {}
     }
   }, 60 * 1000);
 }
@@ -651,6 +645,7 @@ async function iniciarBot() {
     defaultQueryTimeoutMs: 60000,
     keepAliveIntervalMs: 30000,
     syncFullHistory: false,
+    shouldSyncHistoryMessage: (msg) => (msg && msg.syncType) !== 2, // 🔥 CORREÇÃO CRÍTICA
     cachedGroupMetadata: async (jid) => groupCache.get(jid)
   });
 
@@ -662,7 +657,6 @@ async function iniciarBot() {
     try { const metadata = await sock.groupMetadata(event.id); groupCache.set(event.id, metadata); } catch (_) {}
   });
 
-  // 🆕 BEM-VINDO / SAIU
   sock.ev.on('group-participants.update', async (event) => {
     try {
       const { id: jid, participants, action } = event;
@@ -700,7 +694,6 @@ async function iniciarBot() {
             } else {
               await sock.sendMessage(jid, { text: texto, mentions }, {});
             }
-            console.log(`👋 Bem-vindo enviado para ${num} em ${jid}`);
           } catch (e) { console.log('❌ Erro bem-vindo:', e.message); }
         }
 
@@ -715,7 +708,6 @@ async function iniciarBot() {
             } else {
               await sock.sendMessage(jid, { text: texto, mentions }, {});
             }
-            console.log(`👋 Despedida enviada para ${num} em ${jid}`);
           } catch (e) { console.log('❌ Erro saiu:', e.message); }
         }
       }
@@ -793,7 +785,6 @@ async function iniciarBot() {
         if (b.grupos && b.grupos[remetente]) return;
       }
 
-      // 🆕 CLIQUE EM BOTÃO INTERATIVO
       if (!msg.key.fromMe && isGrupo) {
         const btnId = getTextoBotao(msg);
         if (btnId && /^[1-6]$/.test(String(btnId))) {
@@ -816,7 +807,6 @@ async function iniciarBot() {
         }
       }
 
-      // 🆕 RESPOSTA NUMÉRICA (fallback)
       if (!msg.key.fromMe && isGrupo) {
         const txt = getTexto(msg).trim();
         const ctxInfo = msg.message?.extendedTextMessage?.contextInfo || {};
