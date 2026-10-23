@@ -1,5 +1,5 @@
 /* ============================================================
-   💧❄️🧊 MENU VIP - RIMURU BOT MD (PREFIXO DINÂMICO)
+   💧❄️🧊 MENU VIP - RIMURU BOT MD (PREFIXO DINÂMICO + CEP)
    ============================================================ */
 
 const fs = require("fs")
@@ -70,9 +70,65 @@ function getCargoETexto(ctx) {
   return { pushName, nomeDono, cargo, nomeBot }
 }
 
+// ============================================================
+// 🆕 CACHE DE CEP (evita chamar API toda hora)
+// ============================================================
+const cepCache = new Map()
+const CEP_CACHE_TTL = 24 * 60 * 60 * 1000 // 24h
+
+function obanaiToken() {
+  try { return require("../../config").obanaiToken || "rj8SpI" } catch (_) { return "rj8SpI" }
+}
+function obanaiBase() {
+  try { return require("../../config").obanaiApiBase || "https://obanai-apis.eu.cc" } catch (_) { return "https://obanai-apis.eu.cc" }
+}
+
+async function buscarCep(cep) {
+  // 1) cache
+  if (cepCache.has(cep)) {
+    const c = cepCache.get(cep)
+    if (Date.now() - c.ts < CEP_CACHE_TTL) return c.data
+    cepCache.delete(cep)
+  }
+
+  // 2) tenta obanai
+  try {
+    const r = await fetch(`${obanaiBase()}/api/outros/cep?cep=${cep}&apitoken=${obanaiToken()}`)
+    const data = await r.json()
+    if (data?.success && data?.data?.cep) {
+      cepCache.set(cep, { data: data.data, ts: Date.now() })
+      return data.data
+    }
+  } catch (_) {}
+
+  // 3) fallback ViaCEP (público, sem token)
+  try {
+    const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+    const v = await r.json()
+    if (!v.erro) {
+      const data = {
+        cep: v.cep,
+        logradouro: v.logradouro,
+        complemento: v.complemento,
+        bairro: v.bairro,
+        localidade: v.localidade,
+        uf: v.uf,
+        estado: v.estado || "",
+        regiao: v.regiao || "",
+        ddd: v.ddd,
+        ibge: v.ibge
+      }
+      cepCache.set(cep, { data, ts: Date.now() })
+      return data
+    }
+  } catch (_) {}
+
+  return null
+}
+
 async function baixarMusica(busca, qualidade = 64) {
   try {
-    const apiRes = await fetch(`https://obanai-apis.eu.cc/api/dl/play?q=${encodeURIComponent(busca)}&apitoken=rj8SpI`)
+    const apiRes = await fetch(`${obanaiBase()}/api/dl/play?q=${encodeURIComponent(busca)}&apitoken=${obanaiToken()}`)
     const apiData = await apiRes.json()
     if (apiData.success && apiData.data?.url?.mp3) {
       const audioRes = await fetch(apiData.data.url.mp3)
@@ -160,18 +216,17 @@ module.exports = {
         const p = prefixoAtivo || "+"
         const cfg = db.config()
         const { pushName, nomeDono, cargo, nomeBot } = getCargoETexto({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin, msg })
-        
-        // Verifica se é VIP
+
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
         const ehVipUser = checarVip(db, sJ, isDono, isSubDono)
-        
+
         if (!ehVipUser) {
           await reagir(sock, msg, "❄️")
           return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Você não é um aliado nobre.\n\n_"O Grande Sábio não te reconhece."_\n\n"${nomeBot}"` }, { quoted: msg })
         }
 
         await reagir(sock, msg, "💧")
-        
+
         const texto = `${cardPerfil({ nomeBot, nomeUsuario: pushName, cargo, dono: nomeDono })}
 
 ${secao("🎵 ᴍᴜ́sɪᴄᴀ")}
@@ -188,6 +243,9 @@ ${item(`${p}vasco`)}
 
 ${secao("🔍 ᴇsᴛᴀᴛɪ́sᴛɪᴄᴀs")}
 ${item(`${p}tiktoktag <hashtag>`)}
+
+${secao("📍 ᴜᴛɪʟɪᴅᴀᴅᴇs")}
+${item(`${p}cep <8 dígitos>`)}
 
 ${secao("🎨 ғɪɢᴜʀɪɴʜᴀs")}
 ${item(`${p}brat / ${p}s / ${p}rename`)}
@@ -223,6 +281,85 @@ ${item(`${p}autottk on/off`)}
           return sock.sendMessage(jid, { image: buf, caption: texto }, { quoted: msg })
         }
         await sock.sendMessage(jid, { text: texto }, { quoted: msg })
+      }
+    },
+
+    // ============================================================
+    // 🆕 CEP — tema Obanai (🐍🌸), preto e branco, sem corações
+    // ============================================================
+    cep: {
+      aliases: ["buscacep", "consultarcep"],
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const p = prefixoAtivo || "+"
+
+        // 🔒 VIP only (padrão do menu-vip)
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) {
+          await reagir(sock, msg, "🧊")
+          return sock.sendMessage(jid, { text: `💧 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n❄️ Só nobres!\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+
+        // 🧹 Sanitiza (só dígitos)
+        const cep = args.join("").replace(/\D/g, "")
+
+        // ⚠️ Valida 8 dígitos
+        if (cep.length !== 8) {
+          await reagir(sock, msg, "❄️")
+          return sock.sendMessage(jid, {
+            text: `💧 • 𝐂𝐄𝐏 •\n\n❄️ Informe um CEP válido.\n🧊 \`${p}cep 01310930\`\n\n🐍 _"O Grande Sábio não adivinha números."_\n\n"${nomeBot}"`
+          }, { quoted: msg })
+        }
+
+        await reagir(sock, msg, "💧")
+
+        try {
+          const d = await buscarCep(cep)
+
+          if (!d) {
+            await reagir(sock, msg, "🧊")
+            return sock.sendMessage(jid, {
+              text: `💧 • 𝐂𝐄𝐏 •\n\n❄️ CEP *${cep}* não encontrado.\n\n🐍 _"Existe, mas a serpente não acha."_\n\n"${nomeBot}"`
+            }, { quoted: msg })
+          }
+
+          const texto =
+`🐍 • 𝐂𝐄𝐏 • 🌸
+
+❄️ *${d.cep || cep}*
+
+🧊 *𝐑𝐔𝐀:*
+╰➜ ${d.logradouro || "—"}${d.complemento ? ` (${d.complemento})` : ""}
+
+🧊 *𝐁𝐀𝐈𝐑𝐑𝐎:*
+╰➜ ${d.bairro || "—"}
+
+🧊 *𝐂𝐈𝐃𝐀𝐃𝐄:*
+╰➜ ${d.localidade || "—"} - ${d.uf || "—"}
+
+🧊 *𝐄𝐒𝐓𝐀𝐃𝐎:*
+╰➜ ${d.estado || "—"} (${d.regiao || "—"})
+
+🧊 *𝐃𝐃𝐃:*
+╰➜ ${d.ddd || "—"}
+
+🧊 *𝐈𝐁𝐆𝐄:*
+╰➜ ${d.ibge || "—"}
+
+🌸 _"A serpente mapeia cada esquina."_
+🐍 _"Não desvie o olhar."_
+
+"${nomeBot}"`
+
+          await sock.sendMessage(jid, { text: texto }, { quoted: msg })
+        } catch (e) {
+          console.log("❌ Erro CEP:", e.message)
+          await reagir(sock, msg, "🧊")
+          await sock.sendMessage(jid, {
+            text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ Falha ao consultar o CEP.\n\n🐍 _"A serpente foi interrompida."_\n\n"${nomeBot}"`
+          }, { quoted: msg })
+        }
       }
     },
 
@@ -286,14 +423,14 @@ ${item(`${p}autottk on/off`)}
         await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: `💧 • 𝐒𝐎𝐔𝐍𝐃𝐂𝐋𝐎𝐔𝐃 •\n\n❄️ Procurando...\n\n"${nomeBot}"` }, { quoted: msg })
         try {
-          const sR = await fetch(`https://obanai-apis.eu.cc/api/search/soundcloud?q=${encodeURIComponent(busca)}&apitoken=rj8SpI`)
+          const sR = await fetch(`${obanaiBase()}/api/search/soundcloud?q=${encodeURIComponent(busca)}&apitoken=${obanaiToken()}`)
           const sD = await sR.json()
           if (!sD.success || !sD.data?.data?.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐄𝐈 •\n\n❄️ Nada encontrado.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const m = sD.data.data[0]
           const segs = parseInt(m.duration)
           const durFmt = `${Math.floor(segs / 60)}:${(segs % 60).toString().padStart(2, "0")}`
           await sock.sendMessage(jid, { image: { url: m.thumbnail }, caption: `💧 • 𝐒𝐎𝐔𝐍𝐃𝐂𝐋𝐎𝐔𝐃 •\n\n🧊 ${m.title}\n🧊 🎤 ${m.artist}\n🧊 ⏱️ ${durFmt}\n\n"${nomeBot}"` }, { quoted: msg })
-          const dlR = await fetch(`https://obanai-apis.eu.cc/api/dl/soundcloud?url=${encodeURIComponent(m.url)}&apitoken=rj8SpI`)
+          const dlR = await fetch(`${obanaiBase()}/api/dl/soundcloud?url=${encodeURIComponent(m.url)}&apitoken=${obanaiToken()}`)
           const dlD = await dlR.json()
           if (!dlD.success || !dlD.data?.download_url) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ Falha ao baixar.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const aR = await fetch(dlD.data.download_url)
@@ -315,7 +452,7 @@ ${item(`${p}autottk on/off`)}
         await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: `💧 • 𝐏𝐈𝐍𝐓𝐄𝐑𝐄𝐒𝐓 •\n\n❄️ Procurando "${busca}"...\n\n"${nomeBot}"` }, { quoted: msg })
         try {
-          const r = await fetch(`https://obanai-apis.eu.cc/api/dl/pinterest?q=${encodeURIComponent(busca)}&apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/dl/pinterest?q=${encodeURIComponent(busca)}&apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data.success || !data.data || !data.data.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐄𝐈 •\n\n❄️ Nenhuma imagem.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const items = data.data.slice(0, 5)
@@ -335,7 +472,7 @@ ${item(`${p}autottk on/off`)}
         await reagir(sock, msg, "💧")
         await sock.sendMessage(jid, { text: `💧 • 𝐓𝐈𝐊𝐓𝐎𝐊 𝐓𝐀𝐆 •\n\n❄️ Analisando #${busca}...\n\n"${nomeBot}"` }, { quoted: msg })
         try {
-          const r = await fetch(`https://obanai-apis.eu.cc/api/search/tiktok-tag?q=${encodeURIComponent(busca)}&apitoken=rj8SpI`, { headers: { "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36" } })
+          const r = await fetch(`${obanaiBase()}/api/search/tiktok-tag?q=${encodeURIComponent(busca)}&apitoken=${obanaiToken()}`, { headers: { "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36" } })
           const data = await r.json()
           if (!data.success) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ Não consegui obter estatísticas.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const res = data.data
@@ -359,7 +496,7 @@ ${item(`${p}autottk on/off`)}
         try {
           await sock.sendPresenceUpdate("composing", jid)
           await sock.sendMessage(jid, { text: `💧 • 𝐀𝐗𝐈𝐒 •\n\n❄️ Consultando o Grande Sábio...\n🧊 ${pergunta}\n\n"${nomeBot}"` }, { quoted: msg })
-          const r = await fetch(`https://obanai-apis.eu.cc/api/ias/axis?q=${encodeURIComponent(pergunta)}&apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/ias/axis?q=${encodeURIComponent(pergunta)}&apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data?.success) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ IA indisponível.\n\n"${nomeBot}"` }, { quoted: msg }) }
           await sock.sendMessage(jid, { text: data.data.texto }, { quoted: msg })
@@ -373,7 +510,7 @@ ${item(`${p}autottk on/off`)}
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         await reagir(sock, msg, "💧")
         try {
-          const r = await fetch(`https://obanai-apis.eu.cc/api/noticias/g1?apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/noticias/g1?apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data?.status || !data.data?.resultado?.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐆𝟏 •\n\n❄️ Erro.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const n = data.data.resultado[Math.floor(Math.random() * data.data.resultado.length)]
@@ -388,7 +525,7 @@ ${item(`${p}autottk on/off`)}
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         await reagir(sock, msg, "💧")
         try {
-          const r = await fetch(`https://obanai-apis.eu.cc/api/noticias/uol?apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/noticias/uol?apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data?.status || !data.data?.resultado?.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐔𝐎𝐋 •\n\n❄️ Erro.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const n = data.data.resultado[Math.floor(Math.random() * data.data.resultado.length)]
@@ -403,7 +540,7 @@ ${item(`${p}autottk on/off`)}
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         await reagir(sock, msg, "💧")
         try {
-          const r = await fetch(`https://obanai-apis.eu.cc/api/noticias/jovempan?apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/noticias/jovempan?apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data?.status || !data.data?.resultado?.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐉𝐎𝐕𝐄𝐌 𝐏𝐀𝐍 •\n\n❄️ Erro.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const n = data.data.resultado[Math.floor(Math.random() * data.data.resultado.length)]
@@ -418,7 +555,7 @@ ${item(`${p}autottk on/off`)}
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         await reagir(sock, msg, "💧")
         try {
-          const r = await fetch(`https://obanai-apis.eu.cc/api/noticias/vasco?apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/noticias/vasco?apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data?.status || !data.data?.resultado?.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐕𝐀𝐒𝐂𝐎 •\n\n❄️ Erro.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const n = data.data.resultado[Math.floor(Math.random() * data.data.resultado.length)]
@@ -438,7 +575,7 @@ ${item(`${p}autottk on/off`)}
         await reagir(sock, msg, "💧")
         try {
           const textoLimpo = texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-          const r = await fetch(`https://obanai-apis.eu.cc/api/tools/gerarnick?texto=${encodeURIComponent(textoLimpo)}&apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/tools/gerarnick?texto=${encodeURIComponent(textoLimpo)}&apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data?.success || !data.data?.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ Não consegui gerar.\n\n"${nomeBot}"` }, { quoted: msg }) }
           let txt = `💧 • 𝐍𝐈𝐂𝐊𝐒 •\n\n❄️ Estilos para "${textoLimpo}":\n\n`
@@ -455,7 +592,7 @@ ${item(`${p}autottk on/off`)}
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const ano = (args[0] && /^\d{4}$/.test(args[0].trim())) ? args[0].trim() : new Date().getFullYear()
         await reagir(sock, msg, "💧")
         try {
-          const r = await fetch(`https://obanai-apis.eu.cc/api/outros/feriados?ano=${ano}&apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/outros/feriados?ano=${ano}&apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data?.success || !data.data?.total) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐅𝐄𝐑𝐈𝐀𝐃𝐎𝐒 •\n\n❄️ Nenhum feriado.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const lista = data.data.feriados.map(f => `🧊 ${f.date} — ${f.name} (${f.weekday})`).join("\n")
@@ -472,7 +609,7 @@ ${item(`${p}autottk on/off`)}
         await reagir(sock, msg, "💧")
         try {
           await sock.sendPresenceUpdate("composing", jid)
-          const r = await fetch(`https://obanai-apis.eu.cc/api/ias/unliai?q=${encodeURIComponent(pergunta)}&apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/ias/unliai?q=${encodeURIComponent(pergunta)}&apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data?.success || !data?.response) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐄𝐑𝐑𝐎 •\n\n❄️ IA indisponível.\n\n"${nomeBot}"` }, { quoted: msg }) }
           await sock.sendMessage(jid, { text: data.response }, { quoted: msg })
