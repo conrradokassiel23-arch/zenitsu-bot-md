@@ -1,5 +1,5 @@
 /* ============================================================
-   🔥 RIMURU BOT MD - INDEX COMPLETO (ÁUDIO MENU FIX)
+   🔥 RIMURU BOT MD - INDEX COMPLETO (BEM-VINDO CLICÁVEL FIX)
    ============================================================ */
 
 const {
@@ -1006,7 +1006,7 @@ async function iniciarBot() {
       if (cmd.adminOnly && !podeAdmin) { return sock.sendMessage(remetente, { text: "❄️ Esse comando e de admin!" }, { quoted: msg }) }
       if (cmd.grupoOnly && !isGrupo) { return sock.sendMessage(remetente, { text: "❄️ So em grupo!" }, { quoted: msg }) }
 
-      // 🔥 ENVIA ÁUDIO ANTES DE QUALQUER MENU (CONVERTENDO PARA OPUS)
+      // 🔥 AQUI ESTÁ A MÁGICA DO ÁUDIO
       if (cmdName.toLowerCase().startsWith("menu")) {
         const cfgAudio = db.config()
         if (cfgAudio.audioMenu) {
@@ -1015,7 +1015,7 @@ async function iniciarBot() {
             const ff = require("@ffmpeg-installer/ffmpeg").path
             
             const tmp = os.tmpdir()
-            const tIn = path.join(tmp, "audio_in_" + Date.now() + ".mp3")
+            const tIn = path.join(tmp, "audio_in_" + Date.now())
             const tOut = path.join(tmp, "audio_out_" + Date.now() + ".ogg")
             
             fs.writeFileSync(tIn, audioBuffer)
