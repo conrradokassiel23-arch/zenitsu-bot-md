@@ -1,6 +1,6 @@
 /* ============================================================
    🔥 RIMURU BOT MD - INDEX COMPLETO
-   (BEM-VINDO/SAIU + AUTO-RESTART + RENDAS AUTOMÁTICAS)
+   (@itsliaaa/baileys + BOTÕES + BEM-VINDO/SAIU + AUTO-RESTART)
    ============================================================ */
 
 const {
@@ -9,7 +9,8 @@ const {
   DisconnectReason,
   fetchLatestBaileysVersion,
   downloadMediaMessage
-} = require('@whiskeysockets/baileys');
+} = require('@itsliaaa/baileys');
+
 const pino = require('pino');
 const fs = require('fs');
 const path = require('path');
@@ -24,7 +25,6 @@ const config = require('./config');
 // 🆕 AUTO-RESPAWN (bot reinicia sozinho sem PM2)
 // ============================================================
 if (!process.env.RIMURU_CHILD) {
-  // 👶 Este é o "pai" — ele spawna o filho e monitora
   const { fork } = require('child_process');
   function iniciarFilho() {
     const filho = fork(__filename, [], {
@@ -46,10 +46,9 @@ if (!process.env.RIMURU_CHILD) {
     });
   }
   iniciarFilho();
-  return; // 🚨 impede o pai de rodar o resto
+  return;
 }
 
-// 👇 Daqui pra baixo, SÓ o filho executa
 process.on('uncaughtException', (err) => console.error('⚠️ [SISTEMA] Uncaught Exception:', err?.message || err));
 process.on('unhandledRejection', (reason) => console.error('⚠️ [SISTEMA] Unhandled Rejection:', reason?.message || reason));
 
@@ -340,7 +339,6 @@ function carregarMenus() {
   const categorias = {};
   for (const [nome, cmd] of comandos.entries()) { const cat = cmd.categoria || "outros"; categorias[cat] = (categorias[cat] || 0) + 1; }
   global.totalComandos = comandos.size; global.totalAliases = aliases.size; global.comandosPorCategoria = categorias;
-  // 🆕 expõe pra módulos externos
   global.__carregarMenus = carregarMenus;
   console.log("\n🔥 Bot carregou " + comandos.size + " comandos e " + aliases.size + " aliases...\n");
 }
@@ -352,7 +350,7 @@ function envolverSendMessage(sock) {
   const original = sock.sendMessage.bind(sock);
   sock.sendMessage = async (jid, content, options = {}) => {
     try {
-      const temBotoes = content && (content.buttons || content.sections || content.templateButtons || content.buttonText || content.interactiveButtons || content.listMessage);
+      const temBotoes = content && (content.buttons || content.sections || content.templateButtons || content.buttonText || content.interactiveButtons || content.listMessage || content.nativeFlow);
       if (temBotoes || options.edit || options.ignorarCanal) return original(jid, content, options);
       if (!canalCache) recarregarCanal();
       const c = canalCache;
@@ -367,7 +365,7 @@ function envolverSendMessage(sock) {
 }
 
 // ============================================================
-// 🔥 COMANDOS SEM PREFIXO E FIGURINHAS
+// 🔥 COMANDOS SEM PREFIXO + BOTÕES (itsliaaa/baileys)
 // ============================================================
 async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo, isDono, isSubDono) {
   if (!isGrupo) return false;
@@ -383,20 +381,77 @@ async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo,
     const textoSemEspaco = texto.replace(/\s+/g, " ");
     const nomeSemEspaco = nomeBot.replace(/\s+/g, "");
     let comando = null;
+    let apenasNome = false;
 
     if (textoSemEspaco.startsWith(nomeBot)) {
       const resto = textoSemEspaco.slice(nomeBot.length).trim();
       if (resto === "fecha") comando = "fecha";
       else if (resto === "abre") comando = "abre";
+      else if (resto === "") apenasNome = true;
     }
-    if (!comando) {
+    if (!comando && !apenasNome) {
       const textoSemEspacoTotal = texto.replace(/\s+/g, "");
       if (textoSemEspacoTotal.startsWith(nomeSemEspaco)) {
         const resto = textoSemEspacoTotal.slice(nomeSemEspaco.length);
         if (resto === "fecha") comando = "fecha";
         else if (resto === "abre") comando = "abre";
+        else if (resto === "") apenasNome = true;
       }
     }
+
+    // 🆕 CASO 1: só o nome do bot → saudação + botão
+    if (apenasNome) {
+      const h = parseInt(new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false }));
+      let saud, emoji;
+      if (h >= 5 && h < 12) { saud = "Bom dia"; emoji = "🌅" }
+      else if (h >= 12 && h < 18) { saud = "Boa tarde"; emoji = "☀️" }
+      else { saud = "Boa noite"; emoji = "🌙" }
+
+      const numUser = soNumero(sender);
+      const nomeExibicao = db.config().nomeBot || "Rimuru";
+      const prefixo = db.config().prefixoGlobal || config.prefixo || "+";
+
+      const textoMenu = `${emoji} *${saud}, @${numUser}!* 🌸
+
+🐍 Sou o *${nomeExibicao}*.
+
+╭━━━〔 🐍 𝐎 𝐐𝐔𝐄 𝐃𝐄𝐒𝐄𝐉𝐀? 🐍 〕━━━╮
+┃
+┃ *1* — 🌸 Menu Principal
+┃ *2* — 🐍 Comandos de Admin
+┃ *3* — 🌸 Comandos de Dono
+┃ *4* — 🐍 Comandos VIP
+┃ *5* — 🌸 Jogos (RPG/Fazenda/Cidade/FNAF)
+┃ *6* — 🐍 Meu Prefixo
+┃
+╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯
+
+💡 *Toque no botão* ou responda com o número.
+
+_"A serpente observa."_ 🐍`;
+
+      try {
+        // 🆕 Botões interativos (itsliaaa/baileys)
+        await sock.sendMessage(remetente, {
+          text: textoMenu,
+          footer: nomeExibicao,
+          mentions: [sender],
+          buttons: [
+            { buttonId: "1", buttonText: { displayText: "🌸 Menu Principal" }, type: 1 },
+            { buttonId: "2", buttonText: { displayText: "🐍 Admin" }, type: 1 },
+            { buttonId: "3", buttonText: { displayText: "🌸 Dono" }, type: 1 }
+          ],
+          headerType: 1
+        }, { quoted: msg });
+        return true;
+      } catch (e) {
+        console.log("⚠️ Botão falhou, fallback texto:", e.message);
+        await sock.sendMessage(remetente, { text: textoMenu, mentions: [sender] }, { quoted: msg });
+        return true;
+      }
+    }
+
+    // CASO 2: fecha/abre
     if (!comando) return false;
 
     let ehAdmin = false;
@@ -531,7 +586,7 @@ function iniciarAgendamentos() {
 }
 
 // ============================================================
-// 🆕 RENDAS AUTOMÁTICAS (rpg, fazenda, cidade)
+// 🆕 RENDAS AUTOMÁTICAS
 // ============================================================
 function iniciarRendasAutomaticas() {
   setInterval(async () => {
@@ -548,7 +603,7 @@ function iniciarRendasAutomaticas() {
 async function iniciarBot() {
   carregarMenus();
   iniciarAgendamentos();
-  iniciarRendasAutomaticas(); // 🆕
+  iniciarRendasAutomaticas();
 
   const { state, saveCreds } = await useMultiFileAuthState("auth");
   const { version } = await fetchLatestBaileysVersion();
@@ -607,9 +662,7 @@ async function iniciarBot() {
     try { const metadata = await sock.groupMetadata(event.id); groupCache.set(event.id, metadata); } catch (_) {}
   });
 
-  // 🆕 ============================================================
-  // 🆕 BEM-VINDO / SAIU (group-participants.update)
-  // 🆕 ============================================================
+  // 🆕 BEM-VINDO / SAIU
   sock.ev.on('group-participants.update', async (event) => {
     try {
       const { id: jid, participants, action } = event;
@@ -629,10 +682,7 @@ async function iniciarBot() {
       if (meta) groupCache.set(jid, meta);
 
       for (const p of participants) {
-        // v6: string | v7: objeto
-        let jidParticipante = typeof p === 'object'
-          ? (p.id || p.phoneNumber || p.lid)
-          : p;
+        let jidParticipante = typeof p === 'object' ? (p.id || p.phoneNumber || p.lid) : p;
         if (!jidParticipante) continue;
         if (!String(jidParticipante).includes('@')) jidParticipante = String(jidParticipante) + '@s.whatsapp.net';
 
@@ -641,9 +691,7 @@ async function iniciarBot() {
 
         if (action === 'add') {
           const textoPadrao = `💧 Bem-vindo(a) ao grupo, @${num}!\n\n❄️ Leia as regras e aproveite.\n\n_"${nomeBot}"_`;
-          const texto = (conf.textobv && conf.textobv.trim())
-            ? conf.textobv.replace(/%nmr%/g, '@' + num).replace(/%grupo%/g, nomeGrupo)
-            : textoPadrao;
+          const texto = (conf.textobv && conf.textobv.trim()) ? conf.textobv.replace(/%nmr%/g, '@' + num).replace(/%grupo%/g, nomeGrupo) : textoPadrao;
           const mentions = [jidParticipante];
           try {
             if (conf.fundobv) {
@@ -658,9 +706,7 @@ async function iniciarBot() {
 
         if (action === 'remove') {
           const textoPadrao = `💧 @${num} saiu do grupo...\n\n❄️ _"Até a próxima."_\n\n_${nomeBot}_`;
-          const texto = (conf.legendasaiu && conf.legendasaiu.trim())
-            ? conf.legendasaiu.replace(/%nmr%/g, '@' + num).replace(/%grupo%/g, nomeGrupo)
-            : textoPadrao;
+          const texto = (conf.legendasaiu && conf.legendasaiu.trim()) ? conf.legendasaiu.replace(/%nmr%/g, '@' + num).replace(/%grupo%/g, nomeGrupo) : textoPadrao;
           const mentions = [jidParticipante];
           try {
             if (conf.fundosaiu) {
@@ -745,6 +791,54 @@ async function iniciarBot() {
       if (!isDono && !isSubDono) {
         const b = db.bangp();
         if (b.grupos && b.grupos[remetente]) return;
+      }
+
+      // 🆕 CLIQUE EM BOTÃO INTERATIVO
+      if (!msg.key.fromMe && isGrupo) {
+        const btnId = getTextoBotao(msg);
+        if (btnId && /^[1-6]$/.test(String(btnId))) {
+          const prefixo = db.config().prefixoGlobal || config.prefixo || "+";
+          const mapaMenus = { "1": "menu", "2": "menuadmin", "3": "menudono", "4": "menuvip", "5": "menurpg", "6": "prefixo" };
+          const cmdAlvo = mapaMenus[btnId];
+          if (cmdAlvo) {
+            const cmdObj = getComando(cmdAlvo);
+            if (cmdObj) {
+              try {
+                await cmdObj.executar({
+                  sock, msg, args: [], sender, isGrupo, isAdmin: false, isDono, isSubDono, ehSub: false, podeAdmin: isDono || isSubDono,
+                  groupMetadata: groupCache.get(remetente), config, prefixoAtivo: prefixo, db,
+                  utils: { getAlvo, soNumero, getTexto, downloadMediaMessage, recarregarCanal, naListaNegra, aluguelAtivo, grupoTemAluguel, formatarTempo, adicionarAviso, limparAvisos, DATA_DIR, botEhAdmin, dbLer, dbSalvar, getTextoBotao, ehSubAdmin }
+                });
+                return;
+              } catch (e) { console.log("❌ Erro botão:", e.message); }
+            }
+          }
+        }
+      }
+
+      // 🆕 RESPOSTA NUMÉRICA (fallback)
+      if (!msg.key.fromMe && isGrupo) {
+        const txt = getTexto(msg).trim();
+        const ctxInfo = msg.message?.extendedTextMessage?.contextInfo || {};
+        const respondendoBot = ctxInfo.participant && soNumero(ctxInfo.participant) === soNumero(sock.user?.id);
+        if (/^[1-6]$/.test(txt) && respondendoBot) {
+          const prefixo = db.config().prefixoGlobal || config.prefixo || "+";
+          const mapaMenus = { "1": "menu", "2": "menuadmin", "3": "menudono", "4": "menuvip", "5": "menurpg", "6": "prefixo" };
+          const cmdAlvo = mapaMenus[txt];
+          if (cmdAlvo) {
+            const cmdObj = getComando(cmdAlvo);
+            if (cmdObj) {
+              try {
+                await cmdObj.executar({
+                  sock, msg, args: [], sender, isGrupo, isAdmin: false, isDono, isSubDono, ehSub: false, podeAdmin: isDono || isSubDono,
+                  groupMetadata: groupCache.get(remetente), config, prefixoAtivo: prefixo, db,
+                  utils: { getAlvo, soNumero, getTexto, downloadMediaMessage, recarregarCanal, naListaNegra, aluguelAtivo, grupoTemAluguel, formatarTempo, adicionarAviso, limparAvisos, DATA_DIR, botEhAdmin, dbLer, dbSalvar, getTextoBotao, ehSubAdmin }
+                });
+                return;
+              } catch (e) { console.log("❌ Erro menu numérico:", e.message); }
+            }
+          }
+        }
       }
 
       if (!msg.key.fromMe) {
@@ -876,9 +970,6 @@ async function iniciarBot() {
           }
         }
 
-        // =======================================================
-        // 🔥 LÓGICA DE LINK DE GRUPO
-        // =======================================================
         const textoMsg = getTexto(msg);
         const linkGrupo = /(chat\.whatsapp\.com|wa\.me\/)/i.test(textoMsg);
 
@@ -934,9 +1025,6 @@ async function iniciarBot() {
           }
         }
 
-        // =======================================================
-        // 🔥 LÓGICA DE ANTILINK NORMAL
-        // =======================================================
         const linkGeral = /(https?:\/\/|www\.|\.com|\.net|\.br|\.io|\.org|\.xyz|\.tv|\.me|\.gg)/i.test(textoMsg);
 
         if (conf.antilink && !podeBurlar) {
@@ -1088,7 +1176,6 @@ async function iniciarBot() {
         const cidData = dbLer("cidade.json", { usuarios: {} });
         const numSender = soNumero(sender);
         const userCidade = cidData.usuarios && cidData.usuarios[numSender];
-        // 🆕 corrigido: permite comandos de fiança/fuga enquanto preso
         const CMD_LIBERA_PRESO = ["pagar", "fianca", "pagarfianca", "fugircadeia", "fugir", "statuspreso", "cadeia", "minhapena", "menucidade", "menu", "menus", "prefixo", "ping"];
         const ehLiberado = CMD_LIBERA_PRESO.includes(cmdName.toLowerCase());
         if (userCidade && userCidade.preso && userCidade.preso > Date.now() && !ehLiberado) {
@@ -1128,7 +1215,6 @@ async function iniciarBot() {
       if (cmd.adminOnly && !podeAdmin) { return sock.sendMessage(remetente, { text: "❄️ Esse comando e de admin!" }, { quoted: msg }); }
       if (cmd.grupoOnly && !isGrupo) { return sock.sendMessage(remetente, { text: "❄️ So em grupo!" }, { quoted: msg }); }
 
-      // 🔥 ÁUDIO NO MENU
       if (cmdName.toLowerCase().startsWith("menu")) {
         const cfgAudio = db.config();
         if (cfgAudio.audioMenu) {
