@@ -1,5 +1,5 @@
 /* ============================================================
-   🐍🌸 MENU DONO - OBANAI IGURO EDITION (COMPLETO + DIVULGAÇÃO)
+   🐍🌸 MENU DONO - OBANAI IGURO EDITION (DORMIR + DIVULGAÇÃO)
    ============================================================ */
 
 const fs = require("fs")
@@ -95,7 +95,6 @@ function extrairComandosDaMsg(mensagem) {
 
 const confirmacoesPendentes = new Map()
 
-// Variáveis globais de divulgação
 global.dvRodando = false
 global.dvTimeout = null
 
@@ -117,6 +116,14 @@ function parseTempo(str) {
   if (u === "h") return v * 60 * 60 * 1000
   if (u === "d") return v * 24 * 60 * 60 * 1000
   return 0
+}
+
+// 🆕 Função para checar se está no horário de dormir
+function ehHoraDeDormir() {
+  const agora = new Date()
+  const hora = agora.getHours()
+  // Se a hora for maior ou igual a 00:00 e menor que 06:00, está dormindo
+  return hora >= 0 && hora < 6
 }
 
 module.exports = {
@@ -167,6 +174,8 @@ ${itemObanai(`${p}testa @user / ${p}googlevoz <txt>`)}
 ${itemObanai(`${p}get <cmd> (reply)`)}
 ${itemObanai(`${p}audiomenu (reply) / ${p}rmaudio`)}
 ${itemObanai(`${p}testebv`)}
+${itemObanai(`${p}autoentrar on/off`)}
+${itemObanai(`${p}dormir / ${p}acordar`)}
 ${itemObanai(`${p}nuke / ${p}limpargp`)}
 
 ${secaoObanai("📢 𝐃𝐈𝐕𝐔𝐋𝐆𝐀𝐂̧𝐀̃𝐎")}
@@ -212,6 +221,55 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
           } catch (e) { return sock.sendMessage(jid, { text: texto, mentions }, { quoted: msg }) }
         }
         await sock.sendMessage(jid, { text: texto, mentions }, { quoted: msg })
+      }
+    },
+
+    // ============================================================
+    // 🆕 DORMIR / ACORDAR
+    // ============================================================
+    dormir: {
+      aliases: ["sleep", "modosono"],
+      async executar({ sock, msg, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        await reagir(sock, msg, "🐍")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐃𝐎𝐑𝐌𝐈𝐑 •\n\n🐍 O bot entrará em modo de descanso.\n🌸 Divulgações pausadas.\n🐍 Ele voltará sozinho às 06:00.\n\n💤 _"A serpente dorme..."_\n\n"${nomeBot}"` }, { quoted: msg })
+      }
+    },
+
+    acordar: {
+      aliases: ["wakeup", "acordardono"],
+      async executar({ sock, msg, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        await reagir(sock, msg, "🐍")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐂𝐎𝐑𝐃𝐀𝐑 •\n\n🐍 O bot acordou!\n🌸 Divulgações retomadas.\n\n"${nomeBot}"` }, { quoted: msg })
+      }
+    },
+
+    // ============================================================
+    // 🆕 AUTO ENTRAR
+    // ============================================================
+    autoentrar: {
+      aliases: ["autojoin", "entrarauto"],
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const p = prefixoAtivo || "+"
+        const op = (args[0] || "").toLowerCase()
+        
+        const cfg = db.config()
+        if (!["on", "off"].includes(op)) {
+          const status = cfg.autoEntrar ? "ON ✅" : "OFF ❌"
+          await reagir(sock, msg, "🐍")
+          return sock.sendMessage(jid, { text: `🌸 • 𝐀𝐔𝐓𝐎 𝐄𝐍𝐓𝐑𝐀𝐑 •\n\n🐍 Status: ${status}\n🌸 Use: \`${p}autoentrar on/off\`\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+        
+        cfg.autoEntrar = op === "on"
+        db.salvarConfig(cfg)
+        
+        await reagir(sock, msg, "🐍")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐔𝐓𝐎 𝐄𝐍𝐓𝐑𝐀𝐑 •\n\n🐍 ${op.toUpperCase()}\n${cfg.autoEntrar ? "🌸 O bot entrará em todos os links que mandarem." : "🌸 O bot não entrará mais em links."}\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -359,13 +417,21 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
 
         if (comDiv.length > 0) {
           txt += `✅ *RECEBEM:*\n`
-          comDiv.forEach((g, i) => { txt += `🐍 ${i + 1}. ${g}\n` })
+          for (let i = 0; i < comDiv.length; i++) {
+            let nomeG = comDiv[i]
+            try { const meta = await sock.groupMetadata(comDiv[i]); nomeG = meta.subject || comDiv[i] } catch (_) {}
+            txt += `🐍 ${i + 1}. ${nomeG}\n`
+          }
           txt += `\n`
         }
 
         if (semDiv.length > 0) {
           txt += `❌ *NÃO RECEBEM:*\n`
-          semDiv.forEach((g, i) => { txt += `🧊 ${i + 1}. ${g}\n` })
+          for (let i = 0; i < semDiv.length; i++) {
+            let nomeG = semDiv[i]
+            try { const meta = await sock.groupMetadata(semDiv[i]); nomeG = meta.subject || semDiv[i] } catch (_) {}
+            txt += `🧊 ${i + 1}. ${nomeG}\n`
+          }
         }
 
         txt += `\n_"Use ${db.config().prefixoGlobal || "+"}addtodos ou ${db.config().prefixoGlobal || "+"}deltodos"_\n\n"${nomeBot}"`
@@ -557,6 +623,14 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
         const executarCiclo = async () => {
           if (!global.dvRodando) return
 
+          // 🆕 CHECAGEM DE DORMIR
+          if (ehHoraDeDormir()) {
+            console.log(`\n💤 [DIVULGAÇÃO] Bot dormindo (00:00 - 06:00). Pausando envios...`)
+            await new Promise(r => setTimeout(r, 5 * 60 * 1000)) // Espera 5 min e tenta de novo
+            if (global.dvRodando) executarCiclo()
+            return
+          }
+
           const divsAtuais = dbLer("divulgacoes.json", { lista: [] })
           const ativasAgora = (divsAtuais.lista || []).filter(d => d.expiraEm > Date.now())
 
@@ -577,6 +651,14 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
 
           for (const grupo of gruposAgora) {
             if (!global.dvRodando) return
+            
+            // 🆕 CHECAGEM DE DORMIR NO MEIO DO ENVIO
+            if (ehHoraDeDormir()) {
+              console.log(`\n💤 [DIVULGAÇÃO] Deu 00:00. Pausando envios...`)
+              await new Promise(r => setTimeout(r, 5 * 60 * 1000))
+              if (global.dvRodando) executarCiclo()
+              return
+            }
 
             console.log(`\n🚀 [DIVULGAÇÃO] Enviando para o grupo: ${grupo}`)
             
@@ -637,6 +719,7 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
       }
     },
 
+    // Resto dos comandos (audiomenu, teste, etc)
     audiomenu: {
       aliases: ["addaudio", "setaudio"],
       async executar({ sock, msg, db, utils, prefixoAtivo }) {
