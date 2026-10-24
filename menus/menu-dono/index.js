@@ -97,6 +97,8 @@ const confirmacoesPendentes = new Map()
 
 global.dvRodando = false
 global.dvTimeout = null
+global.dvStats = { ciclos: 0, enviados: 0, falhas: 0 }
+global.dvProximoCiclo = null
 
 function formatarTempo(ms) {
   const s = Math.floor(ms / 1000), m = Math.floor(s / 60), h = Math.floor(m / 60), d = Math.floor(h / 24)
@@ -207,6 +209,7 @@ ${itemObanai(`${p}grupos / ${p}addtodos / ${p}deltodos`)}
 ${itemObanai(`${p}addgp <nºs> / ${p}removergp <nºs>`)}
 ${itemObanai(`${p}intervalo <tempo>`)}
 ${itemObanai(`${p}iniciardv / ${p}parardv`)}
+${itemObanai(`${p}estado / ${p}statusdiv`)}
 
 ${secaoObanai("⚙️ 𝐒𝐈𝐒𝐓𝐄𝐌𝐀")}
 ${itemObanai(`${p}atualizar / ${p}changelog / ${p}dono`)}
@@ -511,9 +514,6 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
       }
     },
 
-    // ============================================================
-    // 🔥 INICIARDV — REESCRITO COM TIMER ROBUSTO
-    // ============================================================
     iniciardv: {
       aliases: ["startdiv", "enviardv"],
       async executar({ sock, msg, db, prefixoAtivo }) {
@@ -546,6 +546,8 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
 
         global.dvRodando = true
         const stats = { ciclos: 0, enviados: 0, falhas: 0 }
+        global.dvStats = stats
+        global.dvProximoCiclo = null
 
         logDiv("inicio", `Loop iniciado | Grupos: ${grupos.length} | Divs ativas: ${ativas.length} | Intervalo: ${formatarTempo(intervalo)}`)
 
@@ -556,6 +558,7 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
           }
 
           stats.ciclos++
+          global.dvProximoCiclo = null
           logDiv("ciclo", `▶️ CICLO #${stats.ciclos} INICIADO`)
 
           try {
@@ -629,9 +632,11 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
           logDiv("ciclo", `💤 Próximo ciclo em ${formatarTempo(novoIntervalo)} (${new Date(Date.now() + novoIntervalo).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })})`)
 
           if (global.dvTimeout) { clearTimeout(global.dvTimeout) }
+          global.dvProximoCiclo = Date.now() + novoIntervalo
           global.dvTimeout = setTimeout(() => {
             logDiv("ciclo", `⏰ Timer disparou! Iniciando ciclo #${stats.ciclos + 1}`)
             global.dvTimeout = null
+            global.dvProximoCiclo = null
             rodarCiclo().catch(err => {
               logDiv("erro", `Erro fatal no rodarCiclo: ${err.message}`)
             })
@@ -642,6 +647,7 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
           logDiv("erro", `Erro fatal no primeiro ciclo: ${err.message}`)
           global.dvRodando = false
           if (global.dvTimeout) { clearTimeout(global.dvTimeout); global.dvTimeout = null }
+          global.dvProximoCiclo = null
         })
       }
     },
@@ -654,9 +660,113 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
         const estavaRodando = global.dvRodando
         global.dvRodando = false
         if (global.dvTimeout) { clearTimeout(global.dvTimeout); global.dvTimeout = null }
+        global.dvProximoCiclo = null
         logDiv("fim", estavaRodando ? "Loop parado manualmente pelo dono" : "Comando +parardv usado (loop já não estava rodando)")
         await reagir(sock, msg, "🐍")
         await sock.sendMessage(jid, { text: `🌸 • 𝐏𝐀𝐑𝐀𝐃𝐎 •\n\n🐍 O loop de divulgação foi encerrado.\n\n"${nomeBot}"` }, { quoted: msg })
+      }
+    },
+
+    // ============================================================
+    // 🆕 ESTADO DO LOOP DE DIVULGAÇÃO
+    // ============================================================
+    estado: {
+      aliases: ["status", "statusdiv", "estadodiv", "infodiv"],
+      async executar({ sock, msg, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const p = prefixoAtivo || "+"
+
+        await reagir(sock, msg, "🐍")
+
+        const agora = Date.now()
+        const divs = dbLer("divulgacoes.json", { lista: [] })
+        const todasDivs = divs.lista || []
+        const divsAtivas = todasDivs.filter(d => d.expiraEm > agora)
+        const divsExpiradas = todasDivs.filter(d => d.expiraEm <= agora)
+
+        const todosObj = dbLer("todosgrupos.json", { ativos: [] })
+        const gruposAtivos = todosObj.ativos || []
+
+        const cfg = db.config() || {}
+        const intervalo = cfg.intervaloDiv || 1800000
+
+        const rodando = global.dvRodando === true
+        const temTimer = global.dvTimeout !== null && global.dvTimeout !== undefined
+
+        const emojiStatus = rodando ? "🟢" : "🔴"
+        const txtStatus = rodando ? "RODANDO" : "PARADO"
+
+        // Divulgações ativas
+        let blocoDivs = ""
+        if (divsAtivas.length === 0) {
+          blocoDivs = `🐍 _Nenhuma ativa_\n`
+        } else {
+          divsAtivas.forEach((d, i) => {
+            const restante = formatarTempo(d.expiraEm - agora)
+            const tipo = d.tipo === "video" ? "🎥" : "🖼️"
+            const legenda = d.legenda ? d.legenda.slice(0, 30).replace(/\n/g, " ") + "..." : "sem legenda"
+            blocoDivs += `🐍 ${i + 1}. ${tipo} ID ${String(d.id).slice(-6)}\n`
+            blocoDivs += `   🌸 Expira em: ${restante}\n`
+            blocoDivs += `   🐍 ${legenda}\n`
+          })
+        }
+
+        // Grupos
+        const blocoGrupos = gruposAtivos.length === 0
+          ? `🐍 _Nenhum grupo ativo_\n   🌸 Use \`${p}addtodos\`\n`
+          : `🐍 Total ativo: ${gruposAtivos.length}\n   🌸 Cada ciclo envia pra todos\n`
+
+        // Próximo ciclo
+        let blocoProximo = ""
+        if (!rodando) {
+          blocoProximo = `🐍 _Loop parado_\n   🌸 Use \`${p}iniciardv\`\n`
+        } else if (!temTimer) {
+          blocoProximo = `🐍 _Em execução agora..._\n   🌸 Enviando as divulgações\n`
+        } else {
+          const proximo = global.dvProximoCiclo || (agora + intervalo)
+          const falta = Math.max(0, proximo - agora)
+          const horaProximo = new Date(proximo).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })
+          blocoProximo = `🐍 Intervalo: ${formatarTempo(intervalo)}\n`
+          blocoProximo += `🌸 Falta: *${formatarTempo(falta)}*\n`
+          blocoProximo += `🐍 Próximo ciclo: ${horaProximo}\n`
+        }
+
+        // Stats
+        const stats = global.dvStats || { ciclos: 0, enviados: 0, falhas: 0 }
+        const blocoStats = rodando
+          ? `🐍 Ciclos: ${stats.ciclos}\n🌸 Enviados: ${stats.enviados}\n🐍 Falhas: ${stats.falhas}\n`
+          : `🐍 _Sem dados (loop parado)_\n`
+
+        const texto = `╭━━━〔 🐍 𝐄𝐒𝐓𝐀𝐃𝐎 𝐃𝐎 𝐋𝐎𝐎𝐏 🐍 〕━━━╮
+┃ 🌸 Obanai Iguro 🌸
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃ 🐍 Status: ${emojiStatus} *${txtStatus}*
+┃ 🌸 Timer ativo: ${temTimer ? "✅" : "❌"}
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃ 📸 𝐃𝐈𝐕𝐔𝐋𝐆𝐀𝐂̧𝐎̃𝐄𝐒
+┃
+${blocoDivs.split("\n").map(l => l ? "┃ " + l : "┃").join("\n")}
+┃
+┃ 🌸 Ativas: *${divsAtivas.length}* | Expiradas: ${divsExpiradas.length}
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃ 👥 𝐆𝐑𝐔𝐏𝐎𝐒
+┃
+${blocoGrupos.split("\n").map(l => l ? "┃ " + l : "┃").join("\n")}
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃ ⏰ 𝐏𝐑𝐎́𝐗𝐈𝐌𝐎 𝐂𝐈𝐂𝐋𝐎
+┃
+${blocoProximo.split("\n").map(l => l ? "┃ " + l : "┃").join("\n")}
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃ 📊 𝐒𝐓𝐀𝐓𝐒
+┃
+${blocoStats.split("\n").map(l => l ? "┃ " + l : "┃").join("\n")}
+┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
+┃ 🐍 Prefixo: \`${p}\`
+╰━━━━〔 🌸 _"A serpente observa."_ 🐍 〕━━━━╯
+"${nomeBot}"`
+
+        await sock.sendMessage(jid, { text: texto }, { quoted: msg })
       }
     },
 
