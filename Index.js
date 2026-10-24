@@ -1,13 +1,13 @@
 /* ============================================================
-   🔥 RIMURU BOT MD - INDEX COMPLETO (CORRIGIDO)
-   @itsliaaa/baileys + BOTÕES + BEM-VINDO/SAIU + AUTO-RESTART
+   🔥 RIMURU BOT MD - INDEX COMPLETO
+   @itsliaaa/baileys + BOTÕES + BEM-VINDO + AUTO-RESTART
    ============================================================ */
 
 const {
   default: makeWASocket,
   useMultiFileAuthState,
   DisconnectReason,
-  fetchLatestBaileysVersion,
+  fetchLatestWaWebVersion,
   downloadMediaMessage
 } = require('@itsliaaa/baileys');
 
@@ -22,7 +22,7 @@ const NodeCache = require('node-cache');
 const config = require('./config');
 
 // ============================================================
-// 🆕 AUTO-RESPAWN (bot reinicia sozinho sem PM2)
+// 🆕 AUTO-RESPAWN
 // ============================================================
 if (!process.env.RIMURU_CHILD) {
   const { fork } = require('child_process');
@@ -350,7 +350,7 @@ function envolverSendMessage(sock) {
   const original = sock.sendMessage.bind(sock);
   sock.sendMessage = async (jid, content, options = {}) => {
     try {
-      const temBotoes = content && (content.buttons || content.sections || content.templateButtons || content.buttonText || content.interactiveButtons || content.listMessage || content.nativeFlow);
+      const temBotoes = content && (content.buttons || content.sections || content.templateButtons || content.buttonText || content.interactiveButtons || content.listMessage);
       if (temBotoes || options.edit || options.ignorarCanal) return original(jid, content, options);
       if (!canalCache) recarregarCanal();
       const c = canalCache;
@@ -365,7 +365,7 @@ function envolverSendMessage(sock) {
 }
 
 // ============================================================
-// 🔥 COMANDOS SEM PREFIXO + BOTÕES (itsliaaa/baileys)
+// 🔥 COMANDOS SEM PREFIXO + BOTÕES
 // ============================================================
 async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo, isDono, isSubDono) {
   if (!isGrupo) return false;
@@ -600,7 +600,15 @@ async function iniciarBot() {
   iniciarRendasAutomaticas();
 
   const { state, saveCreds } = await useMultiFileAuthState("auth");
-  const { version } = await fetchLatestBaileysVersion();
+  
+  let version;
+  try {
+    const versionInfo = await fetchLatestWaWebVersion({});
+    version = versionInfo.version;
+  } catch (err) {
+    console.warn("⚠️ Falha ao buscar versão do WA Web, usando fallback.");
+    version = undefined;
+  }
 
   let qrOption = false;
   let connectionMethod = 'qr';
@@ -640,12 +648,13 @@ async function iniciarBot() {
     logger: pino({ level: 'silent' }),
     printQRInTerminal: qrOption,
     auth: state,
-    browser: ["Ubuntu", "Chrome", "20.0.04"],
+    // 🔥 CORREÇÃO: Usar Windows para o código funcionar
+    browser: ["Windows", "Chrome", "10.0.22631"],
     connectTimeoutMs: 60000,
     defaultQueryTimeoutMs: 60000,
     keepAliveIntervalMs: 30000,
     syncFullHistory: false,
-    shouldSyncHistoryMessage: (msg) => (msg && msg.syncType) !== 2, // 🔥 CORREÇÃO CRÍTICA
+    shouldSyncHistoryMessage: (msg) => (msg && msg.syncType) !== 2,
     cachedGroupMetadata: async (jid) => groupCache.get(jid)
   });
 
@@ -716,21 +725,18 @@ async function iniciarBot() {
     }
   });
 
-  if (!state.creds.registered && connectionMethod === 'pairing' && numeroCompleto) {
-    setTimeout(async () => {
+  sock.ev.on('connection.update', async (update) => {
+    const { connection, qr, lastDisconnect } = update;
+
+    if (qr && connectionMethod === 'pairing' && numeroCompleto && !sock.authState.creds.registered) {
       try {
         const code = await sock.requestPairingCode(numeroCompleto);
         console.log(`\n🔑 CÓDIGO DE PAREAMENTO: ${code}\n`);
       } catch (err) {
-        console.error("❌ Erro ao solicitar código:", err.message || err);
+        console.error("❌ Erro ao solicitar código:", err.message);
       }
-    }, 3000);
-  }
+    }
 
-  sock.ev.on('creds.update', saveCreds);
-
-  sock.ev.on('connection.update', (update) => {
-    const { connection, lastDisconnect } = update;
     if (connection === 'close') {
       const statusCode = lastDisconnect?.error?.output?.statusCode;
       if (statusCode !== DisconnectReason.loggedOut) {
@@ -742,6 +748,8 @@ async function iniciarBot() {
       console.log('========================================\n');
     }
   });
+
+  sock.ev.on('creds.update', saveCreds);
 
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
     try {
@@ -1084,9 +1092,9 @@ async function iniciarBot() {
 
       let texto = getTexto(msg);
 
-      const btnId = getTextoBotao(msg);
-      if (btnId) {
-        texto = btnId.replace(new RegExp("^\\" + prefixoGlobal + "+"), prefixoGlobal);
+      const btnId2 = getTextoBotao(msg);
+      if (btnId2) {
+        texto = btnId2.replace(new RegExp("^\\" + prefixoGlobal + "+"), prefixoGlobal);
       }
 
       let prefixoUsado = prefixosAtivos.find(p => texto.startsWith(p));
