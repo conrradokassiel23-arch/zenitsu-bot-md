@@ -1,6 +1,6 @@
 /* ============================================================
    🔥 RIMURU BOT MD - INDEX COMPLETO
-   @itsliaaa/baileys + BOTÕES + BEM-VINDO + AUTO-RESTART
+   @itsliaaa/baileys + BOTÕES + BEM-VINDO + AUTO-RESTART + AUTO ENTRAR
    ============================================================ */
 
 const {
@@ -816,6 +816,25 @@ async function iniciarBot() {
       if (!isDono && !isSubDono) {
         const b = db.bangp();
         if (b.grupos && b.grupos[remetente]) return;
+      }
+
+      // 🆕 AUTO ENTRAR
+      if (!msg.key.fromMe) {
+        const txt = getTexto(msg)
+        const temLink = txt.match(/chat\.whatsapp\.com\/([A-Za-z0-9]+)/)
+        const cfgAuto = db.config()
+        
+        if (temLink && cfgAuto.autoEntrar === true) {
+          const codigo = temLink[1]
+          console.log(`\n🔗 [AUTO ENTRAR] Link detectado! Tentando entrar no grupo...`)
+          try {
+            await sock.groupAcceptInvite(codigo)
+            console.log(`✅ [AUTO ENTRAR] Entrou no grupo com sucesso!`)
+            await sock.sendMessage(remetente, { text: "🌸 • 𝐀𝐔𝐓𝐎 𝐄𝐍𝐓𝐑𝐀𝐑 •\n\n🐍 Entrei no grupo do link!" }, { quoted: msg })
+          } catch (e) {
+            console.log(`❌ [AUTO ENTRAR] Falha ao entrar:`, e.message)
+          }
+        }
       }
 
       if (!msg.key.fromMe && isGrupo) {
