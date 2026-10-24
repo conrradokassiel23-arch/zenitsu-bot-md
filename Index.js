@@ -1,6 +1,6 @@
 /* ============================================================
    🔥 RIMURU BOT MD - INDEX COMPLETO
-   @itsliaaa/baileys + BOTÕES + BEM-VINDO + AUTO-RESTART + AUTO ENTRAR
+   @itsliaaa/baileys + AUTO-SAVE GRUPOS + DORMIR MANUAL
    ============================================================ */
 
 const {
@@ -91,7 +91,7 @@ function dbSalvar(arquivo, dados) { fs.writeFileSync(path.join(DATA_DIR, arquivo
 const db = {
   grupos: () => dbLer("grupos.json", {}), salvarGrupos: (d) => dbSalvar("grupos.json", d),
   advs: () => dbLer("advs.json", {}), salvarAdvs: (d) => dbSalvar("advs.json", d),
-  config: () => dbLer("config.json", { fotoMenu: null, prefixoGlobal: null, slow: false, subdonos: [], nomeBot: "Rimuru", fotoCmd: null, tipoFotoCmd: null, audioMenu: null }),
+  config: () => dbLer("config.json", { fotoMenu: null, prefixoGlobal: null, slow: false, subdonos: [], nomeBot: "Rimuru", fotoCmd: null, tipoFotoCmd: null, audioMenu: null, dormindo: false }),
   salvarConfig: (d) => dbSalvar("config.json", d),
   canal: () => dbLer("canal.json", { jid: null, nome: null, link: null }), salvarCanal: (d) => dbSalvar("canal.json", d),
   listanegra: () => dbLer("listanegra.json", {}), salvarListanegra: (d) => dbSalvar("listanegra.json", d),
@@ -804,6 +804,16 @@ async function iniciarBot() {
         }
       }
 
+      // 🆕 AUTO-SAVE: Salva o grupo na lista sempre que receber uma mensagem dele
+      if (isGrupo) {
+        const grupos = db.grupos();
+        if (!grupos[remetente]) {
+          grupos[remetente] = {};
+          db.salvarGrupos(grupos);
+          console.log(`\n📁 [GRUPO SALVO] Novo grupo adicionado à lista: ${remetente}`);
+        }
+      }
+
       const numerosDono = (Array.isArray(config.dono) ? config.dono : [config.dono]).map(soNumero);
       const senderCandidatos = [sender, senderRaw, msg.key && msg.key.participant, msg.key && msg.key.participantPn, msg.key && msg.key.participantLid, msg.key && msg.key.remoteJid, msg.participant, sock.user && sock.user.id, sock.user && sock.user.lid].filter(Boolean);
       const senderNums = senderCandidatos.map(soNumero).filter(Boolean);
@@ -818,7 +828,7 @@ async function iniciarBot() {
         if (b.grupos && b.grupos[remetente]) return;
       }
 
-      // 🆕 AUTO ENTRAR (SILENCIOSO NO GRUPO, APENAS NO CONSOLE)
+      // 🆕 AUTO ENTRAR (SILENCIOSO NO GRUPO)
       if (!msg.key.fromMe) {
         const txt = getTexto(msg)
         const temLink = txt.match(/chat\.whatsapp\.com\/([A-Za-z0-9]+)/)
@@ -829,8 +839,7 @@ async function iniciarBot() {
           console.log(`\n🔗 [AUTO ENTRAR] Link detectado! Tentando entrar no grupo...`)
           try {
             await sock.groupAcceptInvite(codigo)
-            console.log(`✅ [AUTO ENTRAR] Entrou no grupo com sucesso! (Aviso enviado apenas no console)`)
-            // Removida a mensagem no grupo para ficar silencioso
+            console.log(`✅ [AUTO ENTRAR] Entrou no grupo com sucesso!`)
           } catch (e) {
             console.log(`❌ [AUTO ENTRAR] Falha ao entrar:`, e.message)
           }
