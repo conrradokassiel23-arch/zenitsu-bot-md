@@ -1,5 +1,5 @@
 /* ============================================================
-   🐍🌸 MENU VIP - OBANAI EDITION (PLAY CORRIGIDO - ARQUIVO FÍSICO)
+   🐍🌸 MENU VIP - OBANAI EDITION (PLAY CORRIGIDO - DISCO)
    ============================================================ */
 
 const fs = require("fs")
@@ -69,38 +69,6 @@ function getCargoETexto(ctx) {
   const cargo = detectarCargo({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin })
   const nomeBot = (config && config.nomeBot) || nomeBotDb(db)
   return { pushName, nomeDono, cargo, nomeBot }
-}
-
-async function baixarMusica(busca, qualidade = 64) {
-  try {
-    const apiRes = await fetch(`https://obanai-apis.eu.cc/api/dl/play?q=${encodeURIComponent(busca)}&apitoken=rj8SpI`)
-    const apiData = await apiRes.json()
-    if (apiData.success && apiData.data?.url?.mp3) {
-      const audioRes = await fetch(apiData.data.url.mp3)
-      const buffer = Buffer.from(await audioRes.arrayBuffer())
-      if (buffer.length > 0 && buffer.length < 16 * 1024 * 1024) return { ok: true, buffer, titulo: apiData.data.titulo || busca, info: apiData.data }
-      if (buffer.length >= 16 * 1024 * 1024) return { ok: false, erro: "Música muito grande (limite 16MB)" }
-    }
-  } catch (e) {}
-  try {
-    const youtubeDl = require("youtube-dl-exec")
-    const tmpDir = os.tmpdir()
-    const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
-    const outTpl = path.join(tmpDir, "rimuru_mus_" + id + ".%(ext)s")
-    const ehUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(busca)
-    const alvo = ehUrl ? busca : "ytsearch1:" + busca
-    await youtubeDl(alvo, { extractAudio: true, audioFormat: "mp3", audioQuality: qualidade + "K", output: outTpl, noPlaylist: true, maxFilesize: "16M", noWarnings: true, noCheckCertificates: true, extractorArgs: "youtube:player_client=web,web_safari,web_embedded", noCacheDir: true })
-    const prefixo = "rimuru_mus_" + id
-    const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && (f.endsWith(".mp3") || f.endsWith(".m4a") || f.endsWith(".webm") || f.endsWith(".opus")))
-    if (arquivos.length > 0) {
-      const caminho = path.join(tmpDir, arquivos[0])
-      const buffer = fs.readFileSync(caminho)
-      try { fs.unlinkSync(caminho) } catch (_) {}
-      if (buffer.length < 16 * 1024 * 1024) return { ok: true, buffer, titulo: busca }
-      return { ok: false, erro: "Música muito grande (limite 16MB)" }
-    }
-  } catch (e) {}
-  return { ok: false, erro: "Todas as tentativas falharam. Tente outra música." }
 }
 
 async function baixarInstagram(link) {
@@ -232,39 +200,102 @@ ${item(`${p}autottk on/off`)}
     play: {
       aliases: ["tocar", "musica", "music"],
       async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
-        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n🌸 Música é privilégio dos nobres.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        
+        if (!checarVip(db, sJ, isDono, isSubDono)) {
+          await reagir(sock, msg, "🧊")
+          return sock.sendMessage(jid, { text: `🐍 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n🌸 Música é privilégio dos nobres.\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+
         const busca = args.join(" ").trim()
-        if (!busca) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `🐍 • 𝐏𝐋𝐀𝐘 •\n\n🌸 Me diga o que quer ouvir.\n🐍 \`${p}play <nome>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!busca) {
+          await reagir(sock, msg, "❄️")
+          return sock.sendMessage(jid, { text: `🐍 • 𝐏𝐋𝐀𝐘 •\n\n🌸 Me diga o que quer ouvir.\n🐍 \`${p}play <nome ou artista>\`\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+
         await reagir(sock, msg, "🐍")
         await sock.sendMessage(jid, { text: `🌸 • 𝐁𝐔𝐒𝐂𝐀𝐍𝐃𝐎 •\n\n🐍 Procurando a música...\n\n"${nomeBot}"` }, { quoted: msg })
-        
-        const res = await baixarMusica(busca, 32)
-        if (!res.ok) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 ${res.erro}\n\n"${nomeBot}"` }, { quoted: msg }) }
-        if (res.info && res.info.thumb) { try { await sock.sendMessage(jid, { image: { url: res.info.thumb }, caption: `🌸 • 𝐏𝐋𝐀𝐘 •\n\n🐍 Tocando agora\n🌸 ${res.info.titulo || busca}\n🐍 👤 ${res.info.canal || "?"}\n🌸 ⏱️ ${res.info.duracao || "?"}\n\n"${nomeBot}"` }, { quoted: msg }) } catch (_) {} }
-        
-        if (res.buffer.length > 16 * 1024 * 1024) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n🌸 Limite: 16MB\n\n"${nomeBot}"` }, { quoted: msg }) }
 
-        // 🔥 CORREÇÃO: SALVA NO DISCO, LÊ E ENVIA
         const tempPath = path.join(os.tmpdir(), `play_${Date.now()}.mp3`)
+
         try {
-          fs.writeFileSync(tempPath, res.buffer)
+          let audioBuffer = null
+          let infoMsg = null
+
+          // 1️⃣ TENTA PELA API PRINCIPAL (OBANAI)
+          try {
+            const apiRes = await fetch(`https://obanai-apis.eu.cc/api/dl/play?q=${encodeURIComponent(busca)}&apitoken=rj8SpI`)
+            const apiData = await apiRes.json()
+
+            if (apiData.success && apiData.data?.url?.mp3) {
+              infoMsg = apiData.data
+              const audioUrl = apiData.data.url.mp3
+              const audioReq = await fetch(audioUrl)
+              audioBuffer = Buffer.from(await audioReq.arrayBuffer())
+            }
+          } catch (err) {
+            console.log("⚠️ Falha na API Principal, tentando ytdl...", err.message)
+          }
+
+          // 2️⃣ FALLBACK: SE A API FALHAR OU VIER VAZIA, USA O IGUKO-YTDL
+          if (!audioBuffer || audioBuffer.length < 10240) {
+            try {
+              const { ytplay } = require("iguro-ytdl")
+              const resultado = await ytplay(busca)
+              if (resultado.status && resultado.result?.download?.mp3) {
+                const dlUrl = resultado.result.download.mp3
+                const dlReq = await fetch(dlUrl)
+                audioBuffer = Buffer.from(await dlReq.arrayBuffer())
+                
+                infoMsg = {
+                  titulo: resultado.result.title,
+                  canal: resultado.result.channel,
+                  duracao: resultado.result.duration,
+                  views: resultado.result.views,
+                  thumb: resultado.result.thumbnail
+                }
+              }
+            } catch (err) {
+              console.log("⚠️ Falha no fallback iguro-ytdl:", err.message)
+            }
+          }
+
+          if (!audioBuffer || audioBuffer.length < 10240) {
+            await reagir(sock, msg, "🧊")
+            return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Não consegui encontrar ou baixar a música.\n\n"${nomeBot}"` }, { quoted: msg })
+          }
+
+          // 🖼️ ENVIA A FOTO COM AS INFORMAÇÕES
+          if (infoMsg && infoMsg.thumb) {
+            try {
+              const viewsFmt = infoMsg.views >= 1000000 ? `${(infoMsg.views/1000000).toFixed(1)}M` : infoMsg.views >= 1000 ? `${(infoMsg.views/1000).toFixed(1)}K` : infoMsg.views
+              await sock.sendMessage(jid, {
+                image: { url: infoMsg.thumb },
+                caption: `🌸 • 𝐏𝐋𝐀𝐘 •\n\n🐍 *Título:* ${infoMsg.titulo || busca}\n🌸 *Canal:* ${infoMsg.canal || "Desconhecido"}\n🐍 *Duração:* ${infoMsg.duracao || "?"}\n🌸 *Views:* ${viewsFmt || "?"}\n\n"${nomeBot}"`
+              }, { quoted: msg })
+            } catch (_) {}
+          }
+
+          // 🎵 SALVA NO DISCO, LÊ E ENVIA
+          fs.writeFileSync(tempPath, audioBuffer)
           
-          // Envia lendo o arquivo físico do disco
           await sock.sendMessage(jid, { 
             audio: fs.readFileSync(tempPath), 
             mimetype: "audio/mpeg", 
             ptt: false, 
             fileName: busca.slice(0, 30) + ".mp3" 
           }, { quoted: msg })
-          
+
         } catch (e) {
-          console.log("❌ Erro ao salvar/enviar áudio:", e.message)
-          await sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Falha ao enviar o áudio.\n\n"${nomeBot}"` }, { quoted: msg })
+          console.log("❌ Erro geral no play:", e)
+          await reagir(sock, msg, "🧊")
+          await sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Ocorreu um erro ao processar a música.\n\n"${nomeBot}"` }, { quoted: msg })
         } finally {
           // Apaga o arquivo após o envio
-          try { fs.unlinkSync(tempPath) } catch (_) {}
+          try { if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath) } catch (_) {}
         }
       }
     },
