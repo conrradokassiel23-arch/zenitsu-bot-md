@@ -22,7 +22,7 @@ const NodeCache = require('node-cache');
 const config = require('./config');
 
 // ============================================================
-// 🆕 AUTO-RESPAWN
+// 🆕 AUTO-RESPAWN (O BOT REINICIA SOZINHO)
 // ============================================================
 if (!process.env.RIMURU_CHILD) {
   const { fork } = require('child_process');
@@ -591,6 +591,31 @@ function iniciarRendasAutomaticas() {
   }, 60 * 1000);
 }
 
+function iniciarVerificadorDivs() {
+  setInterval(() => {
+    try {
+      const divsPath = path.join(DATA_DIR, "divulgacoes.json")
+      if (!fs.existsSync(divsPath)) return
+      const divs = JSON.parse(fs.readFileSync(divsPath, "utf8"))
+      if (!divs.lista || !divs.lista.length) return
+      let alterou = false
+      const listaAtualizada = []
+      for (const d of divs.lista) {
+        if (d.expiraEm <= Date.now()) {
+          console.log(`\n⚠️ [AVISO DONO] A divulgação (ID: ${d.id}) EXPIROU e foi removida!\n`)
+          alterou = true
+        } else {
+          listaAtualizada.push(d)
+        }
+      }
+      if (alterou) {
+        divs.lista = listaAtualizada
+        fs.writeFileSync(divsPath, JSON.stringify(divs, null, 2))
+      }
+    } catch (e) {}
+  }, 60000)
+}
+
 // ============================================================
 // 🚀 START
 // ============================================================
@@ -598,6 +623,7 @@ async function iniciarBot() {
   carregarMenus();
   iniciarAgendamentos();
   iniciarRendasAutomaticas();
+  iniciarVerificadorDivs();
 
   const { state, saveCreds } = await useMultiFileAuthState("auth");
   
@@ -648,7 +674,6 @@ async function iniciarBot() {
     logger: pino({ level: 'silent' }),
     printQRInTerminal: qrOption,
     auth: state,
-    // 🔥 CORREÇÃO: Usar Windows para o código funcionar
     browser: ["Windows", "Chrome", "10.0.22631"],
     connectTimeoutMs: 60000,
     defaultQueryTimeoutMs: 60000,
