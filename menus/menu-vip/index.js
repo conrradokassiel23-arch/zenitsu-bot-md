@@ -1,5 +1,5 @@
 /* ============================================================
-   🐍🌸 MENU VIP - OBANAI EDITION (PLAY CORRIGIDO FINAL)
+   🐍🌸 MENU VIP - OBANAI EDITION (PLAY CORRIGIDO - MP3)
    ============================================================ */
 
 const fs = require("fs")
@@ -302,7 +302,7 @@ ${item(`${p}autottk on/off`)}
             } catch (_) {}
           }
 
-          // 🎵 ENVIO DO ÁUDIO COMO ARQUIVO NORMAL (NÃO PTT)
+          // 🎵 ENVIO DO ÁUDIO COMO MP3 NORMAL (FUNCIONA EM TODOS OS APARELHOS)
           await sock.sendMessage(jid, { 
             audio: audioBuffer, 
             mimetype: "audio/mpeg", 
