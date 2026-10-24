@@ -818,7 +818,7 @@ async function iniciarBot() {
         if (b.grupos && b.grupos[remetente]) return;
       }
 
-      // 🆕 AUTO ENTRAR
+      // 🆕 AUTO ENTRAR (SILENCIOSO NO GRUPO, APENAS NO CONSOLE)
       if (!msg.key.fromMe) {
         const txt = getTexto(msg)
         const temLink = txt.match(/chat\.whatsapp\.com\/([A-Za-z0-9]+)/)
@@ -829,8 +829,8 @@ async function iniciarBot() {
           console.log(`\n🔗 [AUTO ENTRAR] Link detectado! Tentando entrar no grupo...`)
           try {
             await sock.groupAcceptInvite(codigo)
-            console.log(`✅ [AUTO ENTRAR] Entrou no grupo com sucesso!`)
-            await sock.sendMessage(remetente, { text: "🌸 • 𝐀𝐔𝐓𝐎 𝐄𝐍𝐓𝐑𝐀𝐑 •\n\n🐍 Entrei no grupo do link!" }, { quoted: msg })
+            console.log(`✅ [AUTO ENTRAR] Entrou no grupo com sucesso! (Aviso enviado apenas no console)`)
+            // Removida a mensagem no grupo para ficar silencioso
           } catch (e) {
             console.log(`❌ [AUTO ENTRAR] Falha ao entrar:`, e.message)
           }
