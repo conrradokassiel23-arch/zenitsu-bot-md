@@ -1,5 +1,5 @@
 /* ============================================================
-   🐍🌸 MENU DONO - OBANAI IGURO EDITION (DIVULGAÇÃO CORRIGIDA)
+   🐍🌸 MENU DONO - OBANAI IGURO EDITION (COMPLETO)
    ============================================================ */
 
 const fs = require("fs")
@@ -216,28 +216,168 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
     },
 
     // ============================================================
-    // 🆕 AUTO ENTRAR
+    // 🆕 LISTA UNIFICADA DE GRUPOS
     // ============================================================
-    autoentrar: {
-      aliases: ["autojoin", "entrarauto"],
+    grupos: {
+      aliases: ["listagrupos"],
+      async executar({ sock, msg, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        
+        const todosGrupos = Object.keys(db.grupos()).filter(g => g.endsWith("@g.us"))
+        const todosObj = dbLer("todosgrupos.json", { ativos: [] })
+        const ativos = todosObj.ativos || []
+
+        if (!todosGrupos.length) {
+          await reagir(sock, msg, "🧊")
+          return sock.sendMessage(jid, { text: `🐍 • 𝐆𝐑𝐔𝐏𝐎𝐒 •\n\n🌸 Nenhum grupo salvo ainda.\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+
+        await reagir(sock, msg, "🐍")
+
+        let txt = `🌸 • 𝐋𝐈𝐒𝐓𝐀 𝐃𝐄 𝐆𝐑𝐔𝐏𝐎𝐒 •\n\n`
+        txt += `🐍 Total: ${todosGrupos.length}\n`
+        txt += `👍 Recebem: ${todosGrupos.filter(g => ativos.includes(g)).length}\n`
+        txt += `🚫 Não recebem: ${todosGrupos.filter(g => !ativos.includes(g)).length}\n\n`
+
+        for (let i = 0; i < todosGrupos.length; i++) {
+          const grupoJid = todosGrupos[i]
+          let nomeG = grupoJid
+          try { const meta = await sock.groupMetadata(grupoJid); nomeG = meta.subject || grupoJid } catch (_) {}
+          
+          const taAtivo = ativos.includes(grupoJid)
+          const emoji = taAtivo ? "👍" : "🚫"
+          
+          txt += `🐍 ${i + 1}. ${nomeG} ${emoji}\n`
+        }
+
+        txt += `\n_"Use ${db.config().prefixoGlobal || "+"}addgp <nº> ou ${db.config().prefixoGlobal || "+"}removergp <nº>"_\n\n"${nomeBot}"`
+
+        await sock.sendMessage(jid, { text: txt }, { quoted: msg })
+      }
+    },
+
+    addgp: {
+      aliases: ["addgrupo", "ativargp"],
       async executar({ sock, msg, args, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
-        const op = (args[0] || "").toLowerCase()
         
-        const cfg = db.config()
-        if (!["on", "off"].includes(op)) {
-          const status = cfg.autoEntrar ? "ON ✅" : "OFF ❌"
-          await reagir(sock, msg, "🐍")
-          return sock.sendMessage(jid, { text: `🌸 • 𝐀𝐔𝐓𝐎 𝐄𝐍𝐓𝐑𝐀𝐑 •\n\n🐍 Status: ${status}\n🌸 Use: \`${p}autoentrar on/off\`\n\n"${nomeBot}"` }, { quoted: msg })
+        if (!args.length) {
+          await reagir(sock, msg, "🧊")
+          return sock.sendMessage(jid, { text: `🐍 • 𝐀𝐃𝐃𝐆𝐏 •\n\n🌸 Use: \`${p}addgp 1 2 3\`\n🐍 Veja os números com \`${p}grupos\`\n\n"${nomeBot}"` }, { quoted: msg })
         }
+
+        const todosGrupos = Object.keys(db.grupos()).filter(g => g.endsWith("@g.us"))
+        const todosObj = dbLer("todosgrupos.json", { ativos: [] })
+        let ativos = todosObj.ativos || []
         
-        cfg.autoEntrar = op === "on"
-        db.salvarConfig(cfg)
-        
+        const adicionados = []
+        const erros = []
+
+        for (const arg of args) {
+          const num = parseInt(arg)
+          if (!num || num < 1 || num > todosGrupos.length) {
+            erros.push(`${arg} (inválido)`)
+            continue
+          }
+          const grupoJid = todosGrupos[num - 1]
+          if (!ativos.includes(grupoJid)) {
+            ativos.push(grupoJid)
+            adicionados.push(num)
+          }
+        }
+
+        todosObj.ativos = ativos
+        dbSalvar("todosgrupos.json", todosObj)
+
         await reagir(sock, msg, "🐍")
-        await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐔𝐓𝐎 𝐄𝐍𝐓𝐑𝐀𝐑 •\n\n🐍 ${op.toUpperCase()}\n${cfg.autoEntrar ? "🌸 O bot entrará em todos os links que mandarem." : "🌸 O bot não entrará mais em links."}\n\n"${nomeBot}"` }, { quoted: msg })
+        
+        let texto = `🌸 • 𝐀𝐃𝐃𝐆𝐏 •\n\n`
+        if (adicionados.length > 0) texto += `🐍 Adicionados: ${adicionados.join(", ")}\n`
+        if (erros.length > 0) texto += `🧊 Erros: ${erros.join(", ")}\n`
+        texto += `🌸 Total ativo: ${ativos.length}\n\n"${nomeBot}"`
+        
+        await sock.sendMessage(jid, { text: texto }, { quoted: msg })
+      }
+    },
+
+    removergp: {
+      aliases: ["removergrupo", "desativargp", "rmgp"],
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const p = prefixoAtivo || "+"
+        
+        if (!args.length) {
+          await reagir(sock, msg, "🧊")
+          return sock.sendMessage(jid, { text: `🐍 • 𝐑𝐄𝐌𝐎𝐕𝐄𝐑𝐆𝐏 •\n\n🌸 Use: \`${p}removergp 1 2\`\n🐍 Veja os números com \`${p}grupos\`\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+
+        const todosGrupos = Object.keys(db.grupos()).filter(g => g.endsWith("@g.us"))
+        const todosObj = dbLer("todosgrupos.json", { ativos: [] })
+        let ativos = todosObj.ativos || []
+        
+        const removidos = []
+        const erros = []
+
+        for (const arg of args) {
+          const num = parseInt(arg)
+          if (!num || num < 1 || num > todosGrupos.length) {
+            erros.push(`${arg} (inválido)`)
+            continue
+          }
+          const grupoJid = todosGrupos[num - 1]
+          if (ativos.includes(grupoJid)) {
+            ativos = ativos.filter(g => g !== grupoJid)
+            removidos.push(num)
+          }
+        }
+
+        todosObj.ativos = ativos
+        dbSalvar("todosgrupos.json", todosObj)
+
+        await reagir(sock, msg, "🐍")
+        
+        let texto = `🌸 • 𝐑𝐄𝐌𝐎𝐕𝐄𝐑𝐆𝐏 •\n\n`
+        if (removidos.length > 0) texto += `🐍 Removidos: ${removidos.join(", ")}\n`
+        if (erros.length > 0) texto += `🧊 Erros: ${erros.join(", ")}\n`
+        texto += `🌸 Total ativo: ${ativos.length}\n\n"${nomeBot}"`
+        
+        await sock.sendMessage(jid, { text: texto }, { quoted: msg })
+      }
+    },
+
+    addtodos: {
+      aliases: ["ativartodos"],
+      async executar({ sock, msg, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        
+        const todosGrupos = Object.keys(db.grupos()).filter(g => g.endsWith("@g.us"))
+        
+        const todosObj = dbLer("todosgrupos.json", { ativos: [] })
+        todosObj.ativos = todosGrupos
+        dbSalvar("todosgrupos.json", todosObj)
+
+        await reagir(sock, msg, "🐍")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐃𝐈𝐂𝐈𝐎𝐍𝐀𝐃𝐎𝐒 •\n\n🐍 Todos os ${todosGrupos.length} grupos vão receber as divulgações.\n\n"${nomeBot}"` }, { quoted: msg })
+      }
+    },
+
+    deltodos: {
+      aliases: ["desativartodos", "removergrupos"],
+      async executar({ sock, msg, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        
+        const todosObj = dbLer("todosgrupos.json", { ativos: [] })
+        todosObj.ativos = []
+        dbSalvar("todosgrupos.json", todosObj)
+
+        await reagir(sock, msg, "🐍")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐎𝐒 •\n\n🐍 Nenhum grupo vai receber as divulgações.\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -360,175 +500,6 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
 
         await reagir(sock, msg, "🐍")
         await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐏𝐀𝐆𝐀𝐃𝐀 •\n\n🐍 Divulgação #${num} removida.\n\n"${nomeBot}"` }, { quoted: msg })
-      }
-    },
-
-    grupos: {
-      aliases: ["listagrupos"],
-      async executar({ sock, msg, db }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        
-        const todosGrupos = Object.keys(db.grupos()).filter(g => g.endsWith("@g.us"))
-        const todosObj = dbLer("todosgrupos.json", { ativos: [] })
-        const ativos = todosObj.ativos || []
-
-        const comDiv = todosGrupos.filter(g => ativos.includes(g))
-        const semDiv = todosGrupos.filter(g => !ativos.includes(g))
-
-        await reagir(sock, msg, "🐍")
-
-        let txt = `🌸 • 𝐆𝐑𝐔𝐏𝐎𝐒 •\n\n`
-        txt += `🐍 Total: ${todosGrupos.length}\n`
-        txt += `🌸 Com Divulgação: ${comDiv.length}\n`
-        txt += `🧊 Sem Divulgação: ${semDiv.length}\n\n`
-
-        if (comDiv.length > 0) {
-          txt += `✅ *RECEBEM:*\n`
-          for (let i = 0; i < comDiv.length; i++) {
-            let nomeG = comDiv[i]
-            try { const meta = await sock.groupMetadata(comDiv[i]); nomeG = meta.subject || comDiv[i] } catch (_) {}
-            txt += `🐍 ${i + 1}. ${nomeG}\n`
-          }
-          txt += `\n`
-        }
-
-        if (semDiv.length > 0) {
-          txt += `❌ *NÃO RECEBEM:*\n`
-          for (let i = 0; i < semDiv.length; i++) {
-            let nomeG = semDiv[i]
-            try { const meta = await sock.groupMetadata(semDiv[i]); nomeG = meta.subject || semDiv[i] } catch (_) {}
-            txt += `🧊 ${i + 1}. ${nomeG}\n`
-          }
-        }
-
-        txt += `\n_"Use ${db.config().prefixoGlobal || "+"}addtodos ou ${db.config().prefixoGlobal || "+"}deltodos"_\n\n"${nomeBot}"`
-
-        await sock.sendMessage(jid, { text: txt }, { quoted: msg })
-      }
-    },
-
-    addtodos: {
-      aliases: ["ativartodos"],
-      async executar({ sock, msg, db }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        
-        const todosGrupos = Object.keys(db.grupos()).filter(g => g.endsWith("@g.us"))
-        
-        const todosObj = dbLer("todosgrupos.json", { ativos: [] })
-        todosObj.ativos = todosGrupos
-        dbSalvar("todosgrupos.json", todosObj)
-
-        await reagir(sock, msg, "🐍")
-        await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐃𝐈𝐂𝐈𝐎𝐍𝐀𝐃𝐎𝐒 •\n\n🐍 Todos os ${todosGrupos.length} grupos vão receber as divulgações.\n\n"${nomeBot}"` }, { quoted: msg })
-      }
-    },
-
-    deltodos: {
-      aliases: ["desativartodos", "removergrupos"],
-      async executar({ sock, msg, db }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        
-        const todosObj = dbLer("todosgrupos.json", { ativos: [] })
-        todosObj.ativos = []
-        dbSalvar("todosgrupos.json", todosObj)
-
-        await reagir(sock, msg, "🐍")
-        await sock.sendMessage(jid, { text: `🌸 • 𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐎𝐒 •\n\n🐍 Nenhum grupo vai receber as divulgações.\n\n"${nomeBot}"` }, { quoted: msg })
-      }
-    },
-
-    addgp: {
-      aliases: ["addgrupo", "ativargp"],
-      async executar({ sock, msg, args, db, prefixoAtivo }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        const p = prefixoAtivo || "+"
-        
-        if (!args.length) {
-          await reagir(sock, msg, "🧊")
-          return sock.sendMessage(jid, { text: `🐍 • 𝐀𝐃𝐃𝐆𝐏 •\n\n🌸 Use: \`${p}addgp 1 2 3\`\n🐍 Veja os números com \`${p}grupos\`\n\n"${nomeBot}"` }, { quoted: msg })
-        }
-
-        const todosGrupos = Object.keys(db.grupos()).filter(g => g.endsWith("@g.us"))
-        const todosObj = dbLer("todosgrupos.json", { ativos: [] })
-        let ativos = todosObj.ativos || []
-        
-        const adicionados = []
-        const erros = []
-
-        for (const arg of args) {
-          const num = parseInt(arg)
-          if (!num || num < 1 || num > todosGrupos.length) {
-            erros.push(`${arg} (inválido)`)
-            continue
-          }
-          const grupoJid = todosGrupos[num - 1]
-          if (!ativos.includes(grupoJid)) {
-            ativos.push(grupoJid)
-            adicionados.push(num)
-          }
-        }
-
-        todosObj.ativos = ativos
-        dbSalvar("todosgrupos.json", todosObj)
-
-        await reagir(sock, msg, "🐍")
-        
-        let texto = `🌸 • 𝐀𝐃𝐃𝐆𝐏 •\n\n`
-        if (adicionados.length > 0) texto += `🐍 Adicionados: ${adicionados.join(", ")}\n`
-        if (erros.length > 0) texto += `🧊 Erros: ${erros.join(", ")}\n`
-        texto += `🌸 Total ativo: ${ativos.length}\n\n"${nomeBot}"`
-        
-        await sock.sendMessage(jid, { text: texto }, { quoted: msg })
-      }
-    },
-
-    removergp: {
-      aliases: ["removergrupo", "desativargp", "rmgp"],
-      async executar({ sock, msg, args, db, prefixoAtivo }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        const p = prefixoAtivo || "+"
-        
-        if (!args.length) {
-          await reagir(sock, msg, "🧊")
-          return sock.sendMessage(jid, { text: `🐍 • 𝐑𝐄𝐌𝐎𝐕𝐄𝐑𝐆𝐏 •\n\n🌸 Use: \`${p}removergp 1 2\`\n🐍 Veja os números com \`${p}grupos\`\n\n"${nomeBot}"` }, { quoted: msg })
-        }
-
-        const todosGrupos = Object.keys(db.grupos()).filter(g => g.endsWith("@g.us"))
-        const todosObj = dbLer("todosgrupos.json", { ativos: [] })
-        let ativos = todosObj.ativos || []
-        
-        const removidos = []
-        const erros = []
-
-        for (const arg of args) {
-          const num = parseInt(arg)
-          if (!num || num < 1 || num > todosGrupos.length) {
-            erros.push(`${arg} (inválido)`)
-            continue
-          }
-          const grupoJid = todosGrupos[num - 1]
-          if (ativos.includes(grupoJid)) {
-            ativos = ativos.filter(g => g !== grupoJid)
-            removidos.push(num)
-          }
-        }
-
-        todosObj.ativos = ativos
-        dbSalvar("todosgrupos.json", todosObj)
-
-        await reagir(sock, msg, "🐍")
-        
-        let texto = `🌸 • 𝐑𝐄𝐌𝐎𝐕𝐄𝐑𝐆𝐏 •\n\n`
-        if (removidos.length > 0) texto += `🐍 Removidos: ${removidos.join(", ")}\n`
-        if (erros.length > 0) texto += `🧊 Erros: ${erros.join(", ")}\n`
-        texto += `🌸 Total ativo: ${ativos.length}\n\n"${nomeBot}"`
-        
-        await sock.sendMessage(jid, { text: texto }, { quoted: msg })
       }
     },
 
