@@ -1,5 +1,5 @@
 /* ============================================================
-   🐍🌸 MENU VIP - OBANAI EDITION (PLAY CORRIGIDO)
+   🐍🌸 MENU VIP - OBANAI EDITION (PLAY CORRIGIDO FINAL)
    ============================================================ */
 
 const fs = require("fs")
@@ -264,7 +264,7 @@ ${item(`${p}autottk on/off`)}
           }
 
           // 2️⃣ FALLBACK: SE A API FALHAR OU VIER VAZIA, USA O IGURO-YTDL
-          if (!audioBuffer || audioBuffer.length < 10240) { // Se for menor que 10KB, considera falha
+          if (!audioBuffer || audioBuffer.length < 10240) {
             try {
               const { ytplay } = require("iguro-ytdl")
               const resultado = await ytplay(busca)
@@ -302,56 +302,13 @@ ${item(`${p}autottk on/off`)}
             } catch (_) {}
           }
 
-          // 🎵 CONVERSÃO E ENVIO DO ÁUDIO
-          const ff = require("@ffmpeg-installer/ffmpeg").path
-          const tmp = os.tmpdir()
-          const tIn = path.join(tmp, "play_in_" + Date.now() + ".mp3")
-          const tOut = path.join(tmp, "play_out_" + Date.now() + ".ogg")
-          fs.writeFileSync(tIn, audioBuffer)
-
-          try {
-            await execFileAsync(ff, [
-              "-i", tIn, 
-              "-c:a", "libopus", 
-              "-b:a", "48k", 
-              "-vbr", "on", 
-              "-ar", "48000", 
-              "-ac", "1", 
-              "-application", "voip",
-              "-avoid_negative_ts", "make_zero",
-              "-f", "ogg",
-              tOut
-            ], { timeout: 60000 })
-            
-            const audioConvertido = fs.readFileSync(tOut)
-            
-            if (!audioConvertido || audioConvertido.length < 1000) {
-              throw new Error("Áudio convertido muito pequeno ou vazio")
-            }
-            
-            await sock.sendMessage(jid, { 
-              audio: audioConvertido, 
-              mimetype: "audio/ogg; codecs=opus", 
-              ptt: true, 
-              fileName: busca.slice(0, 30) + ".ogg" 
-            }, { quoted: msg })
-
-          } catch (e) {
-            console.log("❌ Erro na conversão do FFmpeg:", e.message)
-            // Fallback final: tenta enviar o MP3 original como PTT
-            try {
-              await sock.sendMessage(jid, { 
-                audio: audioBuffer, 
-                mimetype: "audio/mp4", 
-                ptt: true 
-              }, { quoted: msg })
-            } catch (err2) {
-              await sock.sendMessage(jid, { text: "❌ Erro ao enviar o áudio." }, { quoted: msg })
-            }
-          } finally {
-            try { fs.unlinkSync(tIn) } catch (_) {}
-            try { fs.unlinkSync(tOut) } catch (_) {}
-          }
+          // 🎵 ENVIO DO ÁUDIO COMO ARQUIVO NORMAL (NÃO PTT)
+          await sock.sendMessage(jid, { 
+            audio: audioBuffer, 
+            mimetype: "audio/mpeg", 
+            ptt: false, 
+            fileName: busca.slice(0, 30) + ".mp3" 
+          }, { quoted: msg })
 
         } catch (e) {
           console.log("❌ Erro geral no play:", e)
@@ -389,7 +346,7 @@ ${item(`${p}autottk on/off`)}
           
           if (buffer.length > 16 * 1024 * 1024) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n🌸 Limite: 16MB\n\n"${nomeBot}"` }, { quoted: msg }) }
           
-          await sock.sendMessage(jid, { audio: buffer, mimetype: "audio/mp4", ptt: true }, { quoted: msg })
+          await sock.sendMessage(jid, { audio: buffer, mimetype: "audio/mpeg", ptt: false }, { quoted: msg })
         } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
       }
     },
@@ -419,7 +376,7 @@ ${item(`${p}autottk on/off`)}
           const aBuf = Buffer.from(await aR.arrayBuffer())
           if (aBuf.length > 16 * 1024 * 1024) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n🌸 Limite: 16MB\n\n"${nomeBot}"` }, { quoted: msg }) }
           
-          await sock.sendMessage(jid, { audio: aBuf, mimetype: "audio/mp4", ptt: true }, { quoted: msg })
+          await sock.sendMessage(jid, { audio: aBuf, mimetype: "audio/mpeg", ptt: false }, { quoted: msg })
         } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
       }
     },
