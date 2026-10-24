@@ -1,6 +1,5 @@
 /* ============================================================
-   🔥 RIMURU BOT MD - INDEX COMPLETO
-   @itsliaaa/baileys + AUTO-SAVE GRUPOS + DORMIR MANUAL
+   🔥 RIMURU BOT MD - INDEX COMPLETO (AUTO-SAVE DE GRUPOS)
    ============================================================ */
 
 const {
@@ -687,6 +686,22 @@ async function iniciarBot() {
   recarregarCanal();
   envolverSendMessage(sock);
 
+  // 🆕 AUTO-SAVE: Salva o grupo assim que o bot entra nele
+  sock.ev.on('groups.upsert', async (grupos) => {
+    try {
+      const gruposDB = db.grupos();
+      let alterou = false;
+      for (const g of grupos) {
+        if (!gruposDB[g.id]) {
+          gruposDB[g.id] = {};
+          alterou = true;
+          console.log(`\n📁 [GRUPO SALVO] Novo grupo adicionado à lista: ${g.id}`);
+        }
+      }
+      if (alterou) db.salvarGrupos(gruposDB);
+    } catch (e) { console.log('❌ Erro ao salvar grupo novo:', e.message) }
+  });
+
   sock.ev.on('groups.update', async ([event]) => {
     try { const metadata = await sock.groupMetadata(event.id); groupCache.set(event.id, metadata); } catch (_) {}
   });
@@ -804,7 +819,7 @@ async function iniciarBot() {
         }
       }
 
-      // 🆕 AUTO-SAVE: Salva o grupo na lista sempre que receber uma mensagem dele
+      // 🆕 AUTO-SAVE: Salva o grupo sempre que receber mensagem
       if (isGrupo) {
         const grupos = db.grupos();
         if (!grupos[remetente]) {
