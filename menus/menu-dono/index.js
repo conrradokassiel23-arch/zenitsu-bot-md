@@ -173,6 +173,7 @@ ${secaoObanai("📢 𝐃𝐈𝐕𝐔𝐋𝐆𝐀𝐂̧𝐀̃𝐎")}
 ${itemObanai(`${p}div <tempo> (reply mídia)`)}
 ${itemObanai(`${p}listadiv / ${p}apagardiv <nº>`)}
 ${itemObanai(`${p}grupos / ${p}addtodos / ${p}deltodos`)}
+${itemObanai(`${p}addgp <nºs> / ${p}removergp <nºs>`)}
 ${itemObanai(`${p}intervalo <tempo>`)}
 ${itemObanai(`${p}iniciardv / ${p}parardv`)}
 
@@ -405,6 +406,98 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
       }
     },
 
+    addgp: {
+      aliases: ["addgrupo", "ativargp"],
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const p = prefixoAtivo || "+"
+        
+        if (!args.length) {
+          await reagir(sock, msg, "🧊")
+          return sock.sendMessage(jid, { text: `🐍 • 𝐀𝐃𝐃𝐆𝐏 •\n\n🌸 Use: \`${p}addgp 1 2 3\`\n🐍 Veja os números com \`${p}grupos\`\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+
+        const todosGrupos = Object.keys(db.grupos()).filter(g => g.endsWith("@g.us"))
+        const todosObj = dbLer("todosgrupos.json", { ativos: [] })
+        let ativos = todosObj.ativos || []
+        
+        const adicionados = []
+        const erros = []
+
+        for (const arg of args) {
+          const num = parseInt(arg)
+          if (!num || num < 1 || num > todosGrupos.length) {
+            erros.push(`${arg} (inválido)`)
+            continue
+          }
+          const grupoJid = todosGrupos[num - 1]
+          if (!ativos.includes(grupoJid)) {
+            ativos.push(grupoJid)
+            adicionados.push(num)
+          }
+        }
+
+        todosObj.ativos = ativos
+        dbSalvar("todosgrupos.json", todosObj)
+
+        await reagir(sock, msg, "🐍")
+        
+        let texto = `🌸 • 𝐀𝐃𝐃𝐆𝐏 •\n\n`
+        if (adicionados.length > 0) texto += `🐍 Adicionados: ${adicionados.join(", ")}\n`
+        if (erros.length > 0) texto += `🧊 Erros: ${erros.join(", ")}\n`
+        texto += `🌸 Total ativo: ${ativos.length}\n\n"${nomeBot}"`
+        
+        await sock.sendMessage(jid, { text: texto }, { quoted: msg })
+      }
+    },
+
+    removergp: {
+      aliases: ["removergrupo", "desativargp", "rmgp"],
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const p = prefixoAtivo || "+"
+        
+        if (!args.length) {
+          await reagir(sock, msg, "🧊")
+          return sock.sendMessage(jid, { text: `🐍 • 𝐑𝐄𝐌𝐎𝐕𝐄𝐑𝐆𝐏 •\n\n🌸 Use: \`${p}removergp 1 2\`\n🐍 Veja os números com \`${p}grupos\`\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+
+        const todosGrupos = Object.keys(db.grupos()).filter(g => g.endsWith("@g.us"))
+        const todosObj = dbLer("todosgrupos.json", { ativos: [] })
+        let ativos = todosObj.ativos || []
+        
+        const removidos = []
+        const erros = []
+
+        for (const arg of args) {
+          const num = parseInt(arg)
+          if (!num || num < 1 || num > todosGrupos.length) {
+            erros.push(`${arg} (inválido)`)
+            continue
+          }
+          const grupoJid = todosGrupos[num - 1]
+          if (ativos.includes(grupoJid)) {
+            ativos = ativos.filter(g => g !== grupoJid)
+            removidos.push(num)
+          }
+        }
+
+        todosObj.ativos = ativos
+        dbSalvar("todosgrupos.json", todosObj)
+
+        await reagir(sock, msg, "🐍")
+        
+        let texto = `🌸 • 𝐑𝐄𝐌𝐎𝐕𝐄𝐑𝐆𝐏 •\n\n`
+        if (removidos.length > 0) texto += `🐍 Removidos: ${removidos.join(", ")}\n`
+        if (erros.length > 0) texto += `🧊 Erros: ${erros.join(", ")}\n`
+        texto += `🌸 Total ativo: ${ativos.length}\n\n"${nomeBot}"`
+        
+        await sock.sendMessage(jid, { text: texto }, { quoted: msg })
+      }
+    },
+
     intervalo: {
       aliases: ["setintervalo", "tempociclo"],
       async executar({ sock, msg, args, db, prefixoAtivo }) {
@@ -544,9 +637,6 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
       }
     },
 
-    // ============================================================
-    // RESTO DOS COMANDOS DO DONO
-    // ============================================================
     audiomenu: {
       aliases: ["addaudio", "setaudio"],
       async executar({ sock, msg, db, utils, prefixoAtivo }) {
