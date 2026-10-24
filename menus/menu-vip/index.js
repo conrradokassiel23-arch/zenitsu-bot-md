@@ -1,5 +1,5 @@
 /* ============================================================
-   💧❄️🧊 MENU VIP - RIMURU BOT MD (CORRIGIDO E FUNCIONAL)
+   🐍🌸 MENU VIP - OBANAI EDITION (PLAY CORRIGIDO - ARQUIVO FÍSICO)
    ============================================================ */
 
 const fs = require("fs")
@@ -143,7 +143,7 @@ async function enviarFigTexto(sock, jid, buf, texto, quoted) {
     const ov = await sharp(Buffer.from(svg)).png().toBuffer()
     const out = await sharp(buf, { animated: false }).resize(T, T, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).composite([{ input: ov, top: 0, left: 0 }]).webp({ quality: 90 }).toBuffer()
     await sock.sendMessage(jid, { sticker: out }, { quoted })
-  } catch (e) { await sock.sendMessage(jid, { text: "💧💢 " + e.message }, { quoted }) }
+  } catch (e) { await sock.sendMessage(jid, { text: "🐍💢 " + e.message }, { quoted }) }
 }
 
 module.exports = {
@@ -239,13 +239,33 @@ ${item(`${p}autottk on/off`)}
         if (!busca) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `🐍 • 𝐏𝐋𝐀𝐘 •\n\n🌸 Me diga o que quer ouvir.\n🐍 \`${p}play <nome>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "🐍")
         await sock.sendMessage(jid, { text: `🌸 • 𝐁𝐔𝐒𝐂𝐀𝐍𝐃𝐎 •\n\n🐍 Procurando a música...\n\n"${nomeBot}"` }, { quoted: msg })
+        
         const res = await baixarMusica(busca, 32)
         if (!res.ok) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 ${res.erro}\n\n"${nomeBot}"` }, { quoted: msg }) }
         if (res.info && res.info.thumb) { try { await sock.sendMessage(jid, { image: { url: res.info.thumb }, caption: `🌸 • 𝐏𝐋𝐀𝐘 •\n\n🐍 Tocando agora\n🌸 ${res.info.titulo || busca}\n🐍 👤 ${res.info.canal || "?"}\n🌸 ⏱️ ${res.info.duracao || "?"}\n\n"${nomeBot}"` }, { quoted: msg }) } catch (_) {} }
-        if (res.buffer.length > 16 * 1024 * 1024) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n🌸 Limite: 16MB\n\n"${nomeBot}"` }, { quoted: msg }) }
         
-        // AQUI ESTÁ A CORREÇÃO: Envio direto do MP3 sem conversão
-        await sock.sendMessage(jid, { audio: res.buffer, mimetype: "audio/mpeg", ptt: false, fileName: busca.slice(0, 30) + ".mp3" }, { quoted: msg })
+        if (res.buffer.length > 16 * 1024 * 1024) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n🌸 Limite: 16MB\n\n"${nomeBot}"` }, { quoted: msg }) }
+
+        // 🔥 CORREÇÃO: SALVA NO DISCO, LÊ E ENVIA
+        const tempPath = path.join(os.tmpdir(), `play_${Date.now()}.mp3`)
+        try {
+          fs.writeFileSync(tempPath, res.buffer)
+          
+          // Envia lendo o arquivo físico do disco
+          await sock.sendMessage(jid, { 
+            audio: fs.readFileSync(tempPath), 
+            mimetype: "audio/mpeg", 
+            ptt: false, 
+            fileName: busca.slice(0, 30) + ".mp3" 
+          }, { quoted: msg })
+          
+        } catch (e) {
+          console.log("❌ Erro ao salvar/enviar áudio:", e.message)
+          await sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Falha ao enviar o áudio.\n\n"${nomeBot}"` }, { quoted: msg })
+        } finally {
+          // Apaga o arquivo após o envio
+          try { fs.unlinkSync(tempPath) } catch (_) {}
+        }
       }
     },
 
