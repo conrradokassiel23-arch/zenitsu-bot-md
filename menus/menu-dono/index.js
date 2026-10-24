@@ -1,5 +1,5 @@
 /* ============================================================
-   🐍🌸 MENU DONO - OBANAI IGURO EDITION (DORMIR + DIVULGAÇÃO)
+   🐍🌸 MENU DONO - OBANAI IGURO EDITION (DIVULGAÇÃO CORRIGIDA)
    ============================================================ */
 
 const fs = require("fs")
@@ -118,14 +118,6 @@ function parseTempo(str) {
   return 0
 }
 
-// 🆕 Função para checar se está no horário de dormir
-function ehHoraDeDormir() {
-  const agora = new Date()
-  const hora = agora.getHours()
-  // Se a hora for maior ou igual a 00:00 e menor que 06:00, está dormindo
-  return hora >= 0 && hora < 6
-}
-
 module.exports = {
   menu: "menu-dono",
   grupoOnly: false,
@@ -175,7 +167,6 @@ ${itemObanai(`${p}get <cmd> (reply)`)}
 ${itemObanai(`${p}audiomenu (reply) / ${p}rmaudio`)}
 ${itemObanai(`${p}testebv`)}
 ${itemObanai(`${p}autoentrar on/off`)}
-${itemObanai(`${p}dormir / ${p}acordar`)}
 ${itemObanai(`${p}nuke / ${p}limpargp`)}
 
 ${secaoObanai("📢 𝐃𝐈𝐕𝐔𝐋𝐆𝐀𝐂̧𝐀̃𝐎")}
@@ -221,29 +212,6 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
           } catch (e) { return sock.sendMessage(jid, { text: texto, mentions }, { quoted: msg }) }
         }
         await sock.sendMessage(jid, { text: texto, mentions }, { quoted: msg })
-      }
-    },
-
-    // ============================================================
-    // 🆕 DORMIR / ACORDAR
-    // ============================================================
-    dormir: {
-      aliases: ["sleep", "modosono"],
-      async executar({ sock, msg, db }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        await reagir(sock, msg, "🐍")
-        await sock.sendMessage(jid, { text: `🌸 • 𝐃𝐎𝐑𝐌𝐈𝐑 •\n\n🐍 O bot entrará em modo de descanso.\n🌸 Divulgações pausadas.\n🐍 Ele voltará sozinho às 06:00.\n\n💤 _"A serpente dorme..."_\n\n"${nomeBot}"` }, { quoted: msg })
-      }
-    },
-
-    acordar: {
-      aliases: ["wakeup", "acordardono"],
-      async executar({ sock, msg, db }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        await reagir(sock, msg, "🐍")
-        await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐂𝐎𝐑𝐃𝐀𝐑 •\n\n🐍 O bot acordou!\n🌸 Divulgações retomadas.\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
@@ -623,14 +591,6 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
         const executarCiclo = async () => {
           if (!global.dvRodando) return
 
-          // 🆕 CHECAGEM DE DORMIR
-          if (ehHoraDeDormir()) {
-            console.log(`\n💤 [DIVULGAÇÃO] Bot dormindo (00:00 - 06:00). Pausando envios...`)
-            await new Promise(r => setTimeout(r, 5 * 60 * 1000)) // Espera 5 min e tenta de novo
-            if (global.dvRodando) executarCiclo()
-            return
-          }
-
           const divsAtuais = dbLer("divulgacoes.json", { lista: [] })
           const ativasAgora = (divsAtuais.lista || []).filter(d => d.expiraEm > Date.now())
 
@@ -651,14 +611,6 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
 
           for (const grupo of gruposAgora) {
             if (!global.dvRodando) return
-            
-            // 🆕 CHECAGEM DE DORMIR NO MEIO DO ENVIO
-            if (ehHoraDeDormir()) {
-              console.log(`\n💤 [DIVULGAÇÃO] Deu 00:00. Pausando envios...`)
-              await new Promise(r => setTimeout(r, 5 * 60 * 1000))
-              if (global.dvRodando) executarCiclo()
-              return
-            }
 
             console.log(`\n🚀 [DIVULGAÇÃO] Enviando para o grupo: ${grupo}`)
             
@@ -719,7 +671,26 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
       }
     },
 
-    // Resto dos comandos (audiomenu, teste, etc)
+    dormir: {
+      aliases: ["sleep", "modosono"],
+      async executar({ sock, msg, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        await reagir(sock, msg, "🐍")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐃𝐎𝐑𝐌𝐈𝐑 •\n\n🐍 O bot foi pausado manualmente.\n🌸 Use +acordar para voltar.\n\n💤 _"A serpente dorme..."_\n\n"${nomeBot}"` }, { quoted: msg })
+      }
+    },
+
+    acordar: {
+      aliases: ["wakeup", "acordardono"],
+      async executar({ sock, msg, db }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        await reagir(sock, msg, "🐍")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐂𝐎𝐑𝐃𝐀𝐑 •\n\n🐍 O bot acordou!\n🌸 Divulgações retomadas.\n\n"${nomeBot}"` }, { quoted: msg })
+      }
+    },
+
     audiomenu: {
       aliases: ["addaudio", "setaudio"],
       async executar({ sock, msg, db, utils, prefixoAtivo }) {
