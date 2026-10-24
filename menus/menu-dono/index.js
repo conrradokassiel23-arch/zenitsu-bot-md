@@ -118,6 +118,37 @@ function parseTempo(str) {
   return 0
 }
 
+// 📋 LOG DETALHADO NO HOST
+function logDiv(tipo, msg) {
+  const agora = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })
+  const prefixos = {
+    inicio: "🚀 [DIVULGAÇÃO]",
+    ciclo: "🔄 [DIVULGAÇÃO]",
+    envio: "📤 [DIVULGAÇÃO]",
+    ok: "✅ [DIVULGAÇÃO]",
+    erro: "❌ [DIVULGAÇÃO]",
+    aviso: "⚠️ [DIVULGAÇÃO]",
+    fim: "🛑 [DIVULGAÇÃO]"
+  }
+  console.log(`\n${prefixos[tipo] || "ℹ️ [DIVULGAÇÃO]"} [${agora}]\n   ${msg}`)
+}
+
+function logLoopEncerrado(motivo, detalhes = {}) {
+  const agora = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })
+  console.log(`\n╔══════════════════════════════════════════════════╗`)
+  console.log(`║   🛑  LOOP DE DIVULGAÇÃO ENCERRADO               ║`)
+  console.log(`╠══════════════════════════════════════════════════╣`)
+  console.log(`║   🕐 Hora: ${agora}`)
+  console.log(`║   📋 Motivo: ${motivo}`)
+  if (detalhes.divAtivas !== undefined) console.log(`║   📸 Divulgações ativas: ${detalhes.divAtivas}`)
+  if (detalhes.divTotal !== undefined) console.log(`║   📦 Divulgações totais: ${detalhes.divTotal}`)
+  if (detalhes.grupos !== undefined) console.log(`║   👥 Grupos ativos: ${detalhes.grupos}`)
+  if (detalhes.ciclos !== undefined) console.log(`║   🔄 Ciclos completados: ${detalhes.ciclos}`)
+  if (detalhes.enviados !== undefined) console.log(`║   ✅ Envios com sucesso: ${detalhes.enviados}`)
+  if (detalhes.falhas !== undefined) console.log(`║   ❌ Falhas de envio: ${detalhes.falhas}`)
+  console.log(`╚══════════════════════════════════════════════════╝\n`)
+}
+
 module.exports = {
   menu: "menu-dono",
   grupoOnly: false,
@@ -215,15 +246,11 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
       }
     },
 
-    // ============================================================
-    // 🆕 LISTA UNIFICADA DE GRUPOS
-    // ============================================================
     grupos: {
       aliases: ["listagrupos"],
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
-        
         const todosGrupos = Object.keys(db.grupos()).filter(g => g.endsWith("@g.us"))
         const todosObj = dbLer("todosgrupos.json", { ativos: [] })
         const ativos = todosObj.ativos || []
@@ -244,15 +271,12 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
           const grupoJid = todosGrupos[i]
           let nomeG = grupoJid
           try { const meta = await sock.groupMetadata(grupoJid); nomeG = meta.subject || grupoJid } catch (_) {}
-          
           const taAtivo = ativos.includes(grupoJid)
           const emoji = taAtivo ? "👍" : "🚫"
-          
           txt += `🐍 ${i + 1}. ${nomeG} ${emoji}\n`
         }
 
         txt += `\n_"Use ${db.config().prefixoGlobal || "+"}addgp <nº> ou ${db.config().prefixoGlobal || "+"}removergp <nº>"_\n\n"${nomeBot}"`
-
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
@@ -263,7 +287,6 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
-        
         if (!args.length) {
           await reagir(sock, msg, "🧊")
           return sock.sendMessage(jid, { text: `🐍 • 𝐀𝐃𝐃𝐆𝐏 •\n\n🌸 Use: \`${p}addgp 1 2 3\`\n🐍 Veja os números com \`${p}grupos\`\n\n"${nomeBot}"` }, { quoted: msg })
@@ -272,33 +295,24 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
         const todosGrupos = Object.keys(db.grupos()).filter(g => g.endsWith("@g.us"))
         const todosObj = dbLer("todosgrupos.json", { ativos: [] })
         let ativos = todosObj.ativos || []
-        
         const adicionados = []
         const erros = []
 
         for (const arg of args) {
           const num = parseInt(arg)
-          if (!num || num < 1 || num > todosGrupos.length) {
-            erros.push(`${arg} (inválido)`)
-            continue
-          }
+          if (!num || num < 1 || num > todosGrupos.length) { erros.push(`${arg} (inválido)`); continue }
           const grupoJid = todosGrupos[num - 1]
-          if (!ativos.includes(grupoJid)) {
-            ativos.push(grupoJid)
-            adicionados.push(num)
-          }
+          if (!ativos.includes(grupoJid)) { ativos.push(grupoJid); adicionados.push(num) }
         }
 
         todosObj.ativos = ativos
         dbSalvar("todosgrupos.json", todosObj)
-
         await reagir(sock, msg, "🐍")
-        
+
         let texto = `🌸 • 𝐀𝐃𝐃𝐆𝐏 •\n\n`
         if (adicionados.length > 0) texto += `🐍 Adicionados: ${adicionados.join(", ")}\n`
         if (erros.length > 0) texto += `🧊 Erros: ${erros.join(", ")}\n`
         texto += `🌸 Total ativo: ${ativos.length}\n\n"${nomeBot}"`
-        
         await sock.sendMessage(jid, { text: texto }, { quoted: msg })
       }
     },
@@ -309,7 +323,6 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
-        
         if (!args.length) {
           await reagir(sock, msg, "🧊")
           return sock.sendMessage(jid, { text: `🐍 • 𝐑𝐄𝐌𝐎𝐕𝐄𝐑𝐆𝐏 •\n\n🌸 Use: \`${p}removergp 1 2\`\n🐍 Veja os números com \`${p}grupos\`\n\n"${nomeBot}"` }, { quoted: msg })
@@ -318,33 +331,24 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
         const todosGrupos = Object.keys(db.grupos()).filter(g => g.endsWith("@g.us"))
         const todosObj = dbLer("todosgrupos.json", { ativos: [] })
         let ativos = todosObj.ativos || []
-        
         const removidos = []
         const erros = []
 
         for (const arg of args) {
           const num = parseInt(arg)
-          if (!num || num < 1 || num > todosGrupos.length) {
-            erros.push(`${arg} (inválido)`)
-            continue
-          }
+          if (!num || num < 1 || num > todosGrupos.length) { erros.push(`${arg} (inválido)`); continue }
           const grupoJid = todosGrupos[num - 1]
-          if (ativos.includes(grupoJid)) {
-            ativos = ativos.filter(g => g !== grupoJid)
-            removidos.push(num)
-          }
+          if (ativos.includes(grupoJid)) { ativos = ativos.filter(g => g !== grupoJid); removidos.push(num) }
         }
 
         todosObj.ativos = ativos
         dbSalvar("todosgrupos.json", todosObj)
-
         await reagir(sock, msg, "🐍")
-        
+
         let texto = `🌸 • 𝐑𝐄𝐌𝐎𝐕𝐄𝐑𝐆𝐏 •\n\n`
         if (removidos.length > 0) texto += `🐍 Removidos: ${removidos.join(", ")}\n`
         if (erros.length > 0) texto += `🧊 Erros: ${erros.join(", ")}\n`
         texto += `🌸 Total ativo: ${ativos.length}\n\n"${nomeBot}"`
-        
         await sock.sendMessage(jid, { text: texto }, { quoted: msg })
       }
     },
@@ -354,13 +358,10 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
-        
         const todosGrupos = Object.keys(db.grupos()).filter(g => g.endsWith("@g.us"))
-        
         const todosObj = dbLer("todosgrupos.json", { ativos: [] })
         todosObj.ativos = todosGrupos
         dbSalvar("todosgrupos.json", todosObj)
-
         await reagir(sock, msg, "🐍")
         await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐃𝐈𝐂𝐈𝐎𝐍𝐀𝐃𝐎𝐒 •\n\n🐍 Todos os ${todosGrupos.length} grupos vão receber as divulgações.\n\n"${nomeBot}"` }, { quoted: msg })
       }
@@ -371,26 +372,20 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
-        
         const todosObj = dbLer("todosgrupos.json", { ativos: [] })
         todosObj.ativos = []
         dbSalvar("todosgrupos.json", todosObj)
-
         await reagir(sock, msg, "🐍")
         await sock.sendMessage(jid, { text: `🌸 • 𝐑𝐄𝐌𝐎𝐕𝐈𝐃𝐎𝐒 •\n\n🐍 Nenhum grupo vai receber as divulgações.\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
-    // ============================================================
-    // 🆕 SISTEMA DE DIVULGAÇÃO
-    // ============================================================
     div: {
       aliases: ["divulgar", "adddiv"],
       async executar({ sock, msg, args, db, utils, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
-
         const tempoStr = args[0]?.toLowerCase()
         if (!tempoStr || !/^\d+(s|m|h|d)$/.test(tempoStr)) {
           await reagir(sock, msg, "🧊")
@@ -413,7 +408,6 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
         try {
           const alvoMsg = Object.assign({}, msg, { message: isVideo ? { videoMessage: q.videoMessage } : { imageMessage: q.imageMessage } })
           const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
-          
           if (buffer.length > 20 * 1024 * 1024) {
             await reagir(sock, msg, "🧊")
             return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Mídia muito grande (Max 20MB).\n\n"${nomeBot}"` }, { quoted: msg })
@@ -421,10 +415,8 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
 
           const ms = parseTempo(tempoStr)
           const expiraEm = Date.now() + ms
-
           const divs = dbLer("divulgacoes.json", { lista: [] })
           divs.lista = divs.lista || []
-
           const novaDiv = {
             id: Date.now(),
             tipo: isVideo ? "video" : "image",
@@ -433,13 +425,13 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
             expiraEm: expiraEm,
             criadoEm: Date.now()
           }
-
           divs.lista.push(novaDiv)
           dbSalvar("divulgacoes.json", divs)
 
+          logDiv("ok", `Nova divulgação salva (ID: ${novaDiv.id}, tipo: ${novaDiv.tipo}, expira em ${formatarTempo(ms)})`)
           await sock.sendMessage(jid, { text: `🌸 • 𝐃𝐈𝐕𝐔𝐋𝐆𝐀𝐂̧𝐀̃𝐎 𝐒𝐀𝐋𝐕𝐀 •\n\n🐍 Adicionada!\n🌸 Tempo: ${tempoStr}\n🐍 Expira em: ${formatarTempo(ms)}\n\n"${nomeBot}"` }, { quoted: msg })
-
         } catch (e) {
+          logDiv("erro", `Falha ao salvar divulgação: ${e.message}`)
           await reagir(sock, msg, "🧊")
           await sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg })
         }
@@ -451,9 +443,7 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
       async executar({ sock, msg, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
-        const p = prefixoAtivo || "+"
         const divs = dbLer("divulgacoes.json", { lista: [] })
-        
         const ativas = (divs.lista || []).filter(d => d.expiraEm > Date.now())
 
         if (!ativas.length) {
@@ -479,7 +469,6 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
         const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
         const num = parseInt(args[0])
-
         if (!num || num < 1) {
           await reagir(sock, msg, "🧊")
           return sock.sendMessage(jid, { text: `🐍 • 𝐀𝐏𝐀𝐆𝐀𝐑 •\n\n🌸 Use: \`${p}apagardiv 1\`\n🐍 Veja a lista com \`${p}listadiv\`\n\n"${nomeBot}"` }, { quoted: msg })
@@ -487,17 +476,15 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
 
         const divs = dbLer("divulgacoes.json", { lista: [] })
         const ativas = (divs.lista || []).filter(d => d.expiraEm > Date.now())
-
         if (num > ativas.length) {
           await reagir(sock, msg, "🧊")
           return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Número inválido.\n\n"${nomeBot}"` }, { quoted: msg })
         }
 
         const divApagar = ativas[num - 1]
-        const novaLista = divs.lista.filter(d => d.id !== divApagar.id)
-        divs.lista = novaLista
+        divs.lista = divs.lista.filter(d => d.id !== divApagar.id)
         dbSalvar("divulgacoes.json", divs)
-
+        logDiv("ok", `Divulgação #${num} (ID: ${divApagar.id}) removida manualmente`)
         await reagir(sock, msg, "🐍")
         await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐏𝐀𝐆𝐀𝐃𝐀 •\n\n🐍 Divulgação #${num} removida.\n\n"${nomeBot}"` }, { quoted: msg })
       }
@@ -509,23 +496,24 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
-
         const tempoStr = args[0]?.toLowerCase()
         if (!tempoStr || !/^\d+(s|m|h|d)$/.test(tempoStr)) {
           await reagir(sock, msg, "🧊")
           return sock.sendMessage(jid, { text: `🐍 • 𝐈𝐍𝐓𝐄𝐑𝐕𝐀𝐋𝐎 •\n\n🌸 Use: \`${p}intervalo 50m\`\n🐍 Ex: 30s, 10m, 2h\n\n"${nomeBot}"` }, { quoted: msg })
         }
-
         const ms = parseTempo(tempoStr)
         const cfg = db.config()
         cfg.intervaloDiv = ms
         db.salvarConfig(cfg)
-
+        logDiv("ok", `Intervalo do ciclo alterado para ${tempoStr}`)
         await reagir(sock, msg, "🐍")
         await sock.sendMessage(jid, { text: `🌸 • 𝐈𝐍𝐓𝐄𝐑𝐕𝐀𝐋𝐎 •\n\n🐍 O ciclo de divulgação agora espera ${tempoStr} entre rodadas.\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
+    // ============================================================
+    // 🔥 INICIARDV — REESCRITO COM TIMER ROBUSTO
+    // ============================================================
     iniciardv: {
       aliases: ["startdiv", "enviardv"],
       async executar({ sock, msg, db, prefixoAtivo }) {
@@ -535,7 +523,6 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
 
         const divs = dbLer("divulgacoes.json", { lista: [] })
         const ativas = (divs.lista || []).filter(d => d.expiraEm > Date.now())
-
         if (!ativas.length) {
           await reagir(sock, msg, "🧊")
           return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Nenhuma divulgação ativa.\n\n"${nomeBot}"` }, { quoted: msg })
@@ -543,90 +530,119 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
 
         const todosObj = dbLer("todosgrupos.json", { ativos: [] })
         let grupos = todosObj.ativos || []
-
         if (grupos.length === 0) {
           await reagir(sock, msg, "🧊")
-          return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Nenhum grupo ativo para divulgação.\n🐍 Use \`${p}addtodos\` primeiro.\n\n"${nomeBot}"` }, { quoted: msg })
+          return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Nenhum grupo ativo.\n🐍 Use \`${p}addtodos\` primeiro.\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+
+        if (global.dvRodando) {
+          await reagir(sock, msg, "🐍")
+          return sock.sendMessage(jid, { text: `🐍 • 𝐀𝐕𝐈𝐒𝐎 •\n\n🌸 Já está rodando!\n\n"${nomeBot}"` }, { quoted: msg })
         }
 
         await reagir(sock, msg, "🐍")
-        await sock.sendMessage(jid, { text: `🌸 • 𝐈𝐍𝐈𝐂𝐈𝐀𝐍𝐃𝐎 •\n\n🐍 Iniciando loop de divulgação.\n🌸 Grupos: ${grupos.length}\n🐍 Intervalo: ${formatarTempo(db.config().intervaloDiv || 1800000)}\n\n_"O ciclo não para até você usar +parardv"_\n\n"${nomeBot}"` }, { quoted: msg })
-
-        if (global.dvRodando) {
-          await sock.sendMessage(jid, { text: `🐍 • 𝐀𝐕𝐈𝐒𝐎 •\n\n🌸 Já está rodando!\n\n"${nomeBot}"` }, { quoted: msg })
-          return
-        }
+        const intervalo = db.config().intervaloDiv || 1800000
+        await sock.sendMessage(jid, { text: `🌸 • 𝐈𝐍𝐈𝐂𝐈𝐀𝐍𝐃𝐎 •\n\n🐍 Iniciando loop de divulgação.\n🌸 Grupos: ${grupos.length}\n🐍 Divulgações ativas: ${ativas.length}\n🌸 Intervalo: ${formatarTempo(intervalo)}\n\n_"O ciclo não para até você usar ${p}parardv"_\n\n"${nomeBot}"` }, { quoted: msg })
 
         global.dvRodando = true
+        const stats = { ciclos: 0, enviados: 0, falhas: 0 }
 
-        const executarCiclo = async () => {
-          if (!global.dvRodando) return
+        logDiv("inicio", `Loop iniciado | Grupos: ${grupos.length} | Divs ativas: ${ativas.length} | Intervalo: ${formatarTempo(intervalo)}`)
 
-          const divsAtuais = dbLer("divulgacoes.json", { lista: [] })
-          const ativasAgora = (divsAtuais.lista || []).filter(d => d.expiraEm > Date.now())
-
-          if (!ativasAgora.length) {
-            console.log(`\n⚠️ [DIVULGAÇÃO] Nenhuma divulgação ativa. Loop finalizado.`)
-            global.dvRodando = false
+        const rodarCiclo = async () => {
+          if (!global.dvRodando) {
+            logDiv("aviso", `rodarCiclo abortado: global.dvRodando = false`)
             return
           }
 
-          const todosAgora = dbLer("todosgrupos.json", { ativos: [] })
-          const gruposAgora = todosAgora.ativos || []
+          stats.ciclos++
+          logDiv("ciclo", `▶️ CICLO #${stats.ciclos} INICIADO`)
 
-          if (!gruposAgora.length) {
-            console.log(`\n⚠️ [DIVULGAÇÃO] Nenhum grupo ativo. Loop finalizado.`)
-            global.dvRodando = false
-            return
-          }
+          try {
+            const divsAtuais = dbLer("divulgacoes.json", { lista: [] })
+            const totalLista = (divsAtuais.lista || []).length
+            const ativasAgora = (divsAtuais.lista || []).filter(d => d.expiraEm > Date.now())
+            logDiv("ciclo", `📂 Lido do disco: ${totalLista} divs totais | ${ativasAgora.length} ativas`)
 
-          for (const grupo of gruposAgora) {
-            if (!global.dvRodando) return
+            if (!ativasAgora.length) {
+              global.dvRodando = false
+              if (global.dvTimeout) { clearTimeout(global.dvTimeout); global.dvTimeout = null }
+              return logLoopEncerrado("Nenhuma divulgação ativa (todas expiraram)", { divAtivas: 0, divTotal: totalLista, ...stats })
+            }
 
-            console.log(`\n🚀 [DIVULGAÇÃO] Enviando para o grupo: ${grupo}`)
-            
-            for (const d of ativasAgora) {
-              if (!global.dvRodando) return
-              if (d.expiraEm <= Date.now()) {
-                console.log(`\n⚠️ [AVISO DONO] Divulgação (ID: ${d.id}) expirou. Pulando.`)
-                continue
+            const todosAgora = dbLer("todosgrupos.json", { ativos: [] })
+            const gruposAgora = todosAgora.ativos || []
+            logDiv("ciclo", `👥 Grupos ativos: ${gruposAgora.length}`)
+
+            if (!gruposAgora.length) {
+              global.dvRodando = false
+              if (global.dvTimeout) { clearTimeout(global.dvTimeout); global.dvTimeout = null }
+              return logLoopEncerrado("Nenhum grupo ativo (use +addtodos)", { divAtivas: ativasAgora.length, divTotal: totalLista, grupos: 0, ...stats })
+            }
+
+            for (const grupo of gruposAgora) {
+              if (!global.dvRodando) {
+                logDiv("aviso", `Loop parado no meio do envio (grupo: ${grupo})`)
+                return
               }
-
-              const buffer = Buffer.from(d.buffer, "base64")
-              const linkCanal = db.canal()?.link || ""
-              const legendaFinal = `${d.legenda || ""}\n\n${linkCanal ? `🌸 *Veja nosso canal:* ${linkCanal}` : ""}`.trim()
-
-              try {
-                if (d.tipo === "video") {
-                  await sock.sendMessage(grupo, { video: buffer, caption: legendaFinal, gifPlayback: false, mimetype: "video/mp4" })
-                } else {
-                  await sock.sendMessage(grupo, { image: buffer, caption: legendaFinal })
+              for (const d of ativasAgora) {
+                if (!global.dvRodando) return
+                if (d.expiraEm <= Date.now()) {
+                  logDiv("aviso", `Div #${d.id} expirou DURANTE o ciclo. Pulando.`)
+                  continue
                 }
-                console.log(`✅ [DIVULGAÇÃO] Enviado para ${grupo} (${d.tipo})`)
-              } catch (err) {
-                console.log(`❌ [DIVULGAÇÃO] Erro em ${grupo}:`, err.message)
+
+                const buffer = Buffer.from(d.buffer, "base64")
+                const linkCanal = db.canal()?.link || ""
+                const legendaFinal = `${d.legenda || ""}\n\n${linkCanal ? `🌸 *Veja nosso canal:* ${linkCanal}` : ""}`.trim()
+
+                try {
+                  if (d.tipo === "video") {
+                    await sock.sendMessage(grupo, { video: buffer, caption: legendaFinal, gifPlayback: false, mimetype: "video/mp4" })
+                  } else {
+                    await sock.sendMessage(grupo, { image: buffer, caption: legendaFinal })
+                  }
+                  stats.enviados++
+                  logDiv("ok", `Enviado → ${grupo} (${d.tipo}, ID: ${d.id})`)
+                } catch (err) {
+                  stats.falhas++
+                  logDiv("erro", `Falha → ${grupo} (ID: ${d.id}): ${err.message}`)
+                }
+
+                await new Promise(r => setTimeout(r, 5000))
               }
-
-              await new Promise(r => setTimeout(r, 5000))
+              logDiv("aviso", `Grupo ${grupo} concluído. Aguardando 10s...`)
+              await new Promise(r => setTimeout(r, 10000))
             }
-
-            console.log(`⏳ [DIVULGAÇÃO] Aguardando 10s para o próximo grupo...`)
-            await new Promise(r => setTimeout(r, 10000))
+          } catch (errCiclo) {
+            logDiv("erro", `Erro durante o ciclo #${stats.ciclos}: ${errCiclo.message}`)
           }
 
-          if (global.dvRodando) {
-            const cfgAtual = db.config()
-            const intervalo = cfgAtual.intervaloDiv || 1800000
-            console.log(`\n🔄 [DIVULGAÇÃO] Ciclo concluído. Aguardando ${formatarTempo(intervalo)} para recomeçar...`)
-            await new Promise(r => setTimeout(r, intervalo))
-            if (global.dvRodando) {
-              console.log(`\n▶️ [DIVULGAÇÃO] Recomeçando o ciclo...`)
-              executarCiclo()
-            }
+          if (!global.dvRodando) {
+            logDiv("aviso", `Loop parado após ciclo #${stats.ciclos}`)
+            return
           }
+
+          const cfgAtual = db.config()
+          const novoIntervalo = cfgAtual.intervaloDiv || 1800000
+          logDiv("ciclo", `⏳ Ciclo #${stats.ciclos} concluído | Enviados: ${stats.enviados} | Falhas: ${stats.falhas}`)
+          logDiv("ciclo", `💤 Próximo ciclo em ${formatarTempo(novoIntervalo)} (${new Date(Date.now() + novoIntervalo).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })})`)
+
+          if (global.dvTimeout) { clearTimeout(global.dvTimeout) }
+          global.dvTimeout = setTimeout(() => {
+            logDiv("ciclo", `⏰ Timer disparou! Iniciando ciclo #${stats.ciclos + 1}`)
+            global.dvTimeout = null
+            rodarCiclo().catch(err => {
+              logDiv("erro", `Erro fatal no rodarCiclo: ${err.message}`)
+            })
+          }, novoIntervalo)
         }
 
-        executarCiclo().catch(console.error)
+        rodarCiclo().catch(err => {
+          logDiv("erro", `Erro fatal no primeiro ciclo: ${err.message}`)
+          global.dvRodando = false
+          if (global.dvTimeout) { clearTimeout(global.dvTimeout); global.dvTimeout = null }
+        })
       }
     },
 
@@ -635,8 +651,10 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+        const estavaRodando = global.dvRodando
         global.dvRodando = false
         if (global.dvTimeout) { clearTimeout(global.dvTimeout); global.dvTimeout = null }
+        logDiv("fim", estavaRodando ? "Loop parado manualmente pelo dono" : "Comando +parardv usado (loop já não estava rodando)")
         await reagir(sock, msg, "🐍")
         await sock.sendMessage(jid, { text: `🌸 • 𝐏𝐀𝐑𝐀𝐃𝐎 •\n\n🐍 O loop de divulgação foi encerrado.\n\n"${nomeBot}"` }, { quoted: msg })
       }
@@ -868,14 +886,11 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
           await atualizarProgresso(95, "♻️ RECARREGANDO", "Recarregando menus...")
           try { if (global.__carregarMenus) global.__carregarMenus() } catch (e) {}
           await atualizarProgresso(100, "✅ CONCLUÍDO", "Tudo aplicado!")
-          
           await new Promise(r => setTimeout(r, 1000))
           const comandosNovos = extrairComandosDaMsg(commitMsg)
           let blocoComandos = ""
           if (comandosNovos.length) { blocoComandos = `\n\n🐍 Novos:\n`; comandosNovos.forEach(c => { blocoComandos += `🌸 ${c}\n` }) }
-          
           await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐃𝐎 •\n\n🐍 V${versaoAtual} → *V${versaoNova}*\n\n🌸 ${commitMsg}${blocoComandos}\n\n🐍 ${cat.emoji} ${cat.tipo}\n🌸 ${formatarDataHora(commitData)}\n\n🐍 Reiniciando em 3s...\n\n"${nomeBot}"`, edit: sent.key })
-          
           await new Promise(r => setTimeout(r, 3000))
           process.exit(0)
         } catch (e) {
@@ -932,7 +947,7 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         await reagir(sock, msg, "🐍")
-        try { 
+        try {
           if (typeof global.__carregarMenus === "function") {
             global.__carregarMenus()
             global.__nomeBotCache = null
@@ -950,7 +965,7 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         await reagir(sock, msg, "🐍")
-        try { 
+        try {
           await sock.sendMessage(jid, { text: `🌸 • 𝐑𝐄𝐈𝐍𝐈𝐂𝐈𝐀𝐍𝐃𝐎 •\n\n🐍 Reiniciando o servidor...\n🌸 Aguardem alguns segundos.\n\n"${nomeBot}"` }, { quoted: msg })
           await new Promise(r => setTimeout(r, 3000))
           process.exit(0)
@@ -979,6 +994,30 @@ ${itemObanai(`${p}banirgp / ${p}desbanirgp / ${p}listabangp`)}
         await reagir(sock, msg, "🌸")
         try { await sock.sendMessage(jid, { text: `🌸 • 𝐄𝐍𝐓𝐑𝐀𝐍𝐃𝐎 •\n\n🐍 Entrando no grupo...\n\n"${nomeBot}"` }, { quoted: msg }); const info = await sock.groupAcceptInvite(match[1]); await sock.sendMessage(jid, { text: `🌸 • 𝐄𝐍𝐓𝐑𝐄𝐈 •\n\n🐍 Mais um território.\n🌸 ${typeof info === "string" ? "`" + info + "`" : "✅ Entrada realizada"}\n\n"${nomeBot}"` }, { quoted: msg }) }
         catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🌸 • 𝐄𝐑𝐑𝐎 •\n\n🐍 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
+      }
+    },
+
+    autoentrar: {
+      aliases: ["autogroup", "autoentrada"],
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const p = prefixoAtivo || "+"
+        const opcao = (args[0] || "").toLowerCase()
+
+        if (!["on", "off"].includes(opcao)) {
+          const cfg = db.config()
+          const status = cfg.autoEntrar ? "ON ✅" : "OFF ❌"
+          await reagir(sock, msg, "🐍")
+          return sock.sendMessage(jid, { text: `🌸 • 𝐀𝐔𝐓𝐎𝐄𝐍𝐓𝐑𝐀𝐑 •\n\n🐍 Status atual: ${status}\n🌸 Use: \`${p}autoentrar on\` ou \`${p}autoentrar off\`\n\n"${nomeBot}"` }, { quoted: msg })
+        }
+
+        const cfg = db.config()
+        cfg.autoEntrar = opcao === "on"
+        db.salvarConfig(cfg)
+
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐔𝐓𝐎𝐄𝐍𝐓𝐑𝐀𝐑 •\n\n🐍 ${opcao.toUpperCase()}\n${opcao === "on" ? "🌸 O bot vai entrar sozinho em convites." : "🌸 O bot NÃO vai mais entrar sozinho."}\n\n"${nomeBot}"` }, { quoted: msg })
       }
     },
 
