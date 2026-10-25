@@ -490,7 +490,7 @@ async function processarFigCmd(sock, msg, remetente, sender, isGrupo, isDono, is
     const grupo = dbFig[remetente] || {};
     if (!Object.keys(grupo).length) return false;
 
-    const buf = await downloadMediaMessage(msg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage });
+    const buf = await downloadMediaMessage(msg, "buffer", {}, { logger: console, reuploadMessage: sock.updateMediaMessage });
     if (!buf || !buf.length) return false;
     const hash = crypto.createHash("md5").update(buf).digest("hex");
     const dados = grupo[hash];
@@ -950,8 +950,6 @@ async function iniciarBot() {
         } catch (_) {}
       }
 
-      if (aluguelAtivo() && !isDono && !isSubDono && !grupoTemAluguel(remetente)) return;
-
       if (!msg.key.fromMe) {
         const cands = [sender, msg.key && msg.key.participantPn, msg.key && msg.key.participantLid].filter(Boolean);
         if (cands.some(j => naListaNegra(remetente, j))) {
@@ -1280,6 +1278,41 @@ async function iniciarBot() {
       if (cmd.donoOnly && !isDono && !isSubDono) { return sock.sendMessage(remetente, { text: "❄️ Esse comando e so do mestre!" }, { quoted: msg }); }
       if (cmd.adminOnly && !podeAdmin) { return sock.sendMessage(remetente, { text: "❄️ Esse comando e de admin!" }, { quoted: msg }); }
       if (cmd.grupoOnly && !isGrupo) { return sock.sendMessage(remetente, { text: "❄️ So em grupo!" }, { quoted: msg }); }
+
+      // 🆕 SISTEMA DE ALUGUEL (REGRA: Dono/Subdonos sempre usam. Adm/Geral só usam se aluguel OFF ou se o grupo tiver aluguel)
+      if (aluguelAtivo() && !isDono && !isSubDono) {
+        const cmdNameAluguel = (cmdName || "").toLowerCase()
+        const bypass = ["aluguel", "menu", "menus", "ping", "prefixo"]
+        
+        if (!grupoTemAluguel(remetente) && !bypass.includes(cmdNameAluguel)) {
+          if (!isAdmin) {
+            const numDono = soNumero(Array.isArray(config.dono) ? config.dono[0] : config.dono)
+            const textoAluguel = `✦━━━━━━━━━━━━━━━━━━✦
+📢 𝔸𝕍𝕀𝕊𝕆 𝕀𝕄ℙ𝕆ℝ𝕋𝔸ℕ𝕋𝔼 📢
+✦━━━━━━━━━━━━━━━━━━✦
+
+🚫 Neste grupo não se aluga nada.
+❌ Este grupo não possui aluguel.
+
+━━━━━━━━━━━━━━━━━━━━
+
+📞 Contato oficial do dono:
+🌟 +55 22 98826-3574 🌟
+
+━━━━━━━━━━━━━━━━━━━━
+
+📌 Este é o único número oficial do dono.
+🔒 Os demais não são nossos.
+
+🚫 Obrigado pela atenção! 🚫
+
+_"${db.config().nomeBot || "Rimuru Bot"}"_`
+            
+            await sock.sendMessage(remetente, { text: textoAluguel, mentions: [numDono + "@s.whatsapp.net"] }, { quoted: msg })
+            return
+          }
+        }
+      }
 
       if (cmdName.toLowerCase().startsWith("menu")) {
         const cfgAudio = db.config();
