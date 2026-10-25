@@ -1,5 +1,5 @@
 /* ============================================================
-   🐍🌸 MENU VIP - OBANAI EDITION (PLAY CORRIGIDO - DISCO)
+   🐍🌸 MENU VIP - OBANAI EDITION (RESTAURADO + NOVOS)
    ============================================================ */
 
 const fs = require("fs")
@@ -35,6 +35,8 @@ function checarVip(db, sJ, isD, isS) {
 }
 
 function nomeBotDb(db) { try { return db.config().nomeBot || "Rimuru Bot" } catch { return "Rimuru Bot" } }
+function obanaiToken() { try { return require("../../config").obanaiToken || "rj8SpI" } catch (_) { return "rj8SpI" } }
+function obanaiBase() { try { return require("../../config").obanaiApiBase || "https://obanai-apis.eu.cc" } catch (_) { return "https://obanai-apis.eu.cc" } }
 
 function cardPerfil({ nomeBot, nomeUsuario, cargo, dono }) {
   return `╭━━━〔 🐍 𝐎𝐁𝐀𝐍𝐀𝐈 𝐈𝐆𝐔𝐑𝐎 🐍 〕━━━╮
@@ -71,6 +73,81 @@ function getCargoETexto(ctx) {
   return { pushName, nomeDono, cargo, nomeBot }
 }
 
+async function enviarFigTexto(sock, jid, buf, texto, quoted) {
+  try {
+    const sharp = require("sharp")
+    const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    const t = texto.toUpperCase()
+    const T = 512
+    const F = t.length > 30 ? 36 : t.length > 15 ? 48 : 60
+    const svg = `<svg width="${T}" height="${T}" xmlns="http://www.w3.org/2000/svg"><text x="${T/2}" y="${F+10}" font-family="Arial, sans-serif" font-size="${F}" font-weight="900" fill="#FFFFFF" stroke="#000000" stroke-width="4" text-anchor="middle" paint-order="stroke fill">${esc(t)}</text></svg>`
+    const ov = await sharp(Buffer.from(svg)).png().toBuffer()
+    const out = await sharp(buf, { animated: false }).resize(T, T, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).composite([{ input: ov, top: 0, left: 0 }]).webp({ quality: 90 }).toBuffer()
+    await sock.sendMessage(jid, { sticker: out }, { quoted })
+  } catch (e) { await sock.sendMessage(jid, { text: "🐍💢 " + e.message }, { quoted }) }
+}
+
+const cepCache = new Map()
+const CEP_CACHE_TTL = 24 * 60 * 60 * 1000
+
+async function buscarCep(cep) {
+  if (cepCache.has(cep)) {
+    const c = cepCache.get(cep)
+    if (Date.now() - c.ts < CEP_CACHE_TTL) return c.data
+    cepCache.delete(cep)
+  }
+  try {
+    const r = await fetch(`${obanaiBase()}/api/outros/cep?cep=${cep}&apitoken=${obanaiToken()}`)
+    const data = await r.json()
+    if (data?.success && data?.data?.cep) {
+      cepCache.set(cep, { data: data.data, ts: Date.now() })
+      return data.data
+    }
+  } catch (_) {}
+  try {
+    const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+    const v = await r.json()
+    if (!v.erro) {
+      const data = { cep: v.cep, logradouro: v.logradouro, complemento: v.complemento, bairro: v.bairro, localidade: v.localidade, uf: v.uf, estado: v.estado || "", regiao: v.regiao || "", ddd: v.ddd, ibge: v.ibge }
+      cepCache.set(cep, { data, ts: Date.now() })
+      return data
+    }
+  } catch (_) {}
+  return null
+}
+
+async function baixarMusica(busca, qualidade = 64) {
+  try {
+    const apiRes = await fetch(`${obanaiBase()}/api/dl/play?q=${encodeURIComponent(busca)}&apitoken=${obanaiToken()}`)
+    const apiData = await apiRes.json()
+    if (apiData.success && apiData.data?.url?.mp3) {
+      const audioRes = await fetch(apiData.data.url.mp3)
+      const buffer = Buffer.from(await audioRes.arrayBuffer())
+      if (buffer.length > 0 && buffer.length < 16 * 1024 * 1024) return { ok: true, buffer, titulo: apiData.data.titulo || busca, info: apiData.data }
+      if (buffer.length >= 16 * 1024 * 1024) return { ok: false, erro: "Música muito grande (limite 16MB)" }
+    }
+  } catch (e) {}
+  try {
+    const youtubeDl = require("youtube-dl-exec")
+    const tmpDir = os.tmpdir()
+    const id = Date.now() + "_" + Math.floor(Math.random() * 9999)
+    const outTpl = path.join(tmpDir, "rimuru_mus_" + id + ".%(ext)s")
+    const ehUrl = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|music\.youtube\.com)/i.test(busca)
+    const alvo = ehUrl ? busca : "ytsearch1:" + busca
+    await youtubeDl(alvo, { extractAudio: true, audioFormat: "mp3", audioQuality: qualidade + "K", output: outTpl, noPlaylist: true, maxFilesize: "16M", noWarnings: true, noCheckCertificates: true, extractorArgs: "youtube:player_client=web,web_safari,web_embedded", noCacheDir: true })
+    const prefixo = "rimuru_mus_" + id
+    const arquivos = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefixo) && (f.endsWith(".mp3") || f.endsWith(".m4a") || f.endsWith(".webm") || f.endsWith(".opus")))
+    if (arquivos.length > 0) {
+      const caminho = path.join(tmpDir, arquivos[0])
+      const buffer = fs.readFileSync(caminho)
+      try { fs.unlinkSync(caminho) } catch (_) {}
+      if (buffer.length < 16 * 1024 * 1024) return { ok: true, buffer, titulo: busca }
+      return { ok: false, erro: "Música muito grande (limite 16MB)" }
+    }
+  } catch (e) {}
+  return { ok: false, erro: "Todas as tentativas falharam. Tente outra música." }
+}
+
 async function baixarInstagram(link) {
   try {
     const youtubeDl = require("youtube-dl-exec")
@@ -100,20 +177,6 @@ async function baixarTikTok(u) {
   } catch (e) { throw new Error("Falha no TikTok: " + e.message) }
 }
 
-async function enviarFigTexto(sock, jid, buf, texto, quoted) {
-  try {
-    const sharp = require("sharp")
-    const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    const t = texto.toUpperCase()
-    const T = 512
-    const F = t.length > 30 ? 36 : t.length > 15 ? 48 : 60
-    const svg = `<svg width="${T}" height="${T}" xmlns="http://www.w3.org/2000/svg"><text x="${T/2}" y="${F+10}" font-family="Arial, sans-serif" font-size="${F}" font-weight="900" fill="#FFFFFF" stroke="#000000" stroke-width="4" text-anchor="middle" paint-order="stroke fill">${esc(t)}</text></svg>`
-    const ov = await sharp(Buffer.from(svg)).png().toBuffer()
-    const out = await sharp(buf, { animated: false }).resize(T, T, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).composite([{ input: ov, top: 0, left: 0 }]).webp({ quality: 90 }).toBuffer()
-    await sock.sendMessage(jid, { sticker: out }, { quoted })
-  } catch (e) { await sock.sendMessage(jid, { text: "🐍💢 " + e.message }, { quoted }) }
-}
-
 module.exports = {
   menu: "menu-vip",
   grupoOnly: false,
@@ -129,17 +192,17 @@ module.exports = {
         const p = prefixoAtivo || "+"
         const cfg = db.config()
         const { pushName, nomeDono, cargo, nomeBot } = getCargoETexto({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin, msg })
-        
+
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
         const ehVipUser = checarVip(db, sJ, isDono, isSubDono)
-        
+
         if (!ehVipUser) {
           await reagir(sock, msg, "❄️")
           return sock.sendMessage(jid, { text: `🐍 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n🌸 Você não é um aliado nobre.\n\n_"O Grande Sábio não te reconhece."_\n\n"${nomeBot}"` }, { quoted: msg })
         }
 
         await reagir(sock, msg, "🐍")
-        
+
         const texto = `${cardPerfil({ nomeBot, nomeUsuario: pushName, cargo, dono: nomeDono })}
 
 ${secao("🌸 𝐌𝐔́𝐒𝐈𝐂𝐀")}
@@ -200,103 +263,18 @@ ${item(`${p}autottk on/off`)}
     play: {
       aliases: ["tocar", "musica", "music"],
       async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        const p = prefixoAtivo || "+"
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
-        
-        if (!checarVip(db, sJ, isDono, isSubDono)) {
-          await reagir(sock, msg, "🧊")
-          return sock.sendMessage(jid, { text: `🐍 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n🌸 Música é privilégio dos nobres.\n\n"${nomeBot}"` }, { quoted: msg })
-        }
-
+        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n🌸 Música é privilégio dos nobres.\n\n"${nomeBot}"` }, { quoted: msg }) }
         const busca = args.join(" ").trim()
-        if (!busca) {
-          await reagir(sock, msg, "❄️")
-          return sock.sendMessage(jid, { text: `🐍 • 𝐏𝐋𝐀𝐘 •\n\n🌸 Me diga o que quer ouvir.\n🐍 \`${p}play <nome ou artista>\`\n\n"${nomeBot}"` }, { quoted: msg })
-        }
-
+        if (!busca) { await reagir(sock, msg, "❄️"); return sock.sendMessage(jid, { text: `🐍 • 𝐏𝐋𝐀𝐘 •\n\n🌸 Me diga o que quer ouvir.\n🐍 \`${p}play <nome>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
         await reagir(sock, msg, "🐍")
         await sock.sendMessage(jid, { text: `🌸 • 𝐁𝐔𝐒𝐂𝐀𝐍𝐃𝐎 •\n\n🐍 Procurando a música...\n\n"${nomeBot}"` }, { quoted: msg })
-
-        const tempPath = path.join(os.tmpdir(), `play_${Date.now()}.mp3`)
-
-        try {
-          let audioBuffer = null
-          let infoMsg = null
-
-          // 1️⃣ TENTA PELA API PRINCIPAL (OBANAI)
-          try {
-            const apiRes = await fetch(`https://obanai-apis.eu.cc/api/dl/play?q=${encodeURIComponent(busca)}&apitoken=rj8SpI`)
-            const apiData = await apiRes.json()
-
-            if (apiData.success && apiData.data?.url?.mp3) {
-              infoMsg = apiData.data
-              const audioUrl = apiData.data.url.mp3
-              const audioReq = await fetch(audioUrl)
-              audioBuffer = Buffer.from(await audioReq.arrayBuffer())
-            }
-          } catch (err) {
-            console.log("⚠️ Falha na API Principal, tentando ytdl...", err.message)
-          }
-
-          // 2️⃣ FALLBACK: SE A API FALHAR OU VIER VAZIA, USA O IGUKO-YTDL
-          if (!audioBuffer || audioBuffer.length < 10240) {
-            try {
-              const { ytplay } = require("iguro-ytdl")
-              const resultado = await ytplay(busca)
-              if (resultado.status && resultado.result?.download?.mp3) {
-                const dlUrl = resultado.result.download.mp3
-                const dlReq = await fetch(dlUrl)
-                audioBuffer = Buffer.from(await dlReq.arrayBuffer())
-                
-                infoMsg = {
-                  titulo: resultado.result.title,
-                  canal: resultado.result.channel,
-                  duracao: resultado.result.duration,
-                  views: resultado.result.views,
-                  thumb: resultado.result.thumbnail
-                }
-              }
-            } catch (err) {
-              console.log("⚠️ Falha no fallback iguro-ytdl:", err.message)
-            }
-          }
-
-          if (!audioBuffer || audioBuffer.length < 10240) {
-            await reagir(sock, msg, "🧊")
-            return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Não consegui encontrar ou baixar a música.\n\n"${nomeBot}"` }, { quoted: msg })
-          }
-
-          // 🖼️ ENVIA A FOTO COM AS INFORMAÇÕES
-          if (infoMsg && infoMsg.thumb) {
-            try {
-              const viewsFmt = infoMsg.views >= 1000000 ? `${(infoMsg.views/1000000).toFixed(1)}M` : infoMsg.views >= 1000 ? `${(infoMsg.views/1000).toFixed(1)}K` : infoMsg.views
-              await sock.sendMessage(jid, {
-                image: { url: infoMsg.thumb },
-                caption: `🌸 • 𝐏𝐋𝐀𝐘 •\n\n🐍 *Título:* ${infoMsg.titulo || busca}\n🌸 *Canal:* ${infoMsg.canal || "Desconhecido"}\n🐍 *Duração:* ${infoMsg.duracao || "?"}\n🌸 *Views:* ${viewsFmt || "?"}\n\n"${nomeBot}"`
-              }, { quoted: msg })
-            } catch (_) {}
-          }
-
-          // 🎵 SALVA NO DISCO, LÊ E ENVIA
-          fs.writeFileSync(tempPath, audioBuffer)
-          
-          await sock.sendMessage(jid, { 
-            audio: fs.readFileSync(tempPath), 
-            mimetype: "audio/mpeg", 
-            ptt: false, 
-            fileName: busca.slice(0, 30) + ".mp3" 
-          }, { quoted: msg })
-
-        } catch (e) {
-          console.log("❌ Erro geral no play:", e)
-          await reagir(sock, msg, "🧊")
-          await sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Ocorreu um erro ao processar a música.\n\n"${nomeBot}"` }, { quoted: msg })
-        } finally {
-          // Apaga o arquivo após o envio
-          try { if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath) } catch (_) {}
-        }
+        const res = await baixarMusica(busca, 32)
+        if (!res.ok) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 ${res.erro}\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (res.info && res.info.thumb) { try { await sock.sendMessage(jid, { image: { url: res.info.thumb }, caption: `🌸 • 𝐏𝐋𝐀𝐘 •\n\n🐍 Tocando agora\n🌸 ${res.info.titulo || busca}\n🐍 👤 ${res.info.canal || "?"}\n🌸 ⏱️ ${res.info.duracao || "?"}\n\n"${nomeBot}"` }, { quoted: msg }) } catch (_) {} }
+        if (res.buffer.length > 16 * 1024 * 1024) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐌𝐔𝐈𝐓𝐎 𝐆𝐑𝐀𝐍𝐃𝐄 •\n\n🌸 Limite: 16MB\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await sock.sendMessage(jid, { audio: res.buffer, mimetype: "audio/mpeg", ptt: false, fileName: busca.slice(0, 30) + ".mp3" }, { quoted: msg })
       }
     },
 
@@ -342,14 +320,14 @@ ${item(`${p}autottk on/off`)}
         await reagir(sock, msg, "🐍")
         await sock.sendMessage(jid, { text: `🌸 • 𝐒𝐎𝐔𝐍𝐃𝐂𝐋𝐎𝐔𝐃 •\n\n🐍 Procurando...\n\n"${nomeBot}"` }, { quoted: msg })
         try {
-          const sR = await fetch(`https://obanai-apis.eu.cc/api/search/soundcloud?q=${encodeURIComponent(busca)}&apitoken=rj8SpI`)
+          const sR = await fetch(`${obanaiBase()}/api/search/soundcloud?q=${encodeURIComponent(busca)}&apitoken=${obanaiToken()}`)
           const sD = await sR.json()
           if (!sD.success || !sD.data?.data?.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐄𝐈 •\n\n🌸 Nada encontrado.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const m = sD.data.data[0]
           const segs = parseInt(m.duration)
           const durFmt = `${Math.floor(segs / 60)}:${(segs % 60).toString().padStart(2, "0")}`
           await sock.sendMessage(jid, { image: { url: m.thumbnail }, caption: `🌸 • 𝐒𝐎𝐔𝐍𝐃𝐂𝐋𝐎𝐔𝐃 •\n\n🐍 ${m.title}\n🌸 🎤 ${m.artist}\n🐍 ⏱️ ${durFmt}\n\n"${nomeBot}"` }, { quoted: msg })
-          const dlR = await fetch(`https://obanai-apis.eu.cc/api/dl/soundcloud?url=${encodeURIComponent(m.url)}&apitoken=rj8SpI`)
+          const dlR = await fetch(`${obanaiBase()}/api/dl/soundcloud?url=${encodeURIComponent(m.url)}&apitoken=${obanaiToken()}`)
           const dlD = await dlR.json()
           if (!dlD.success || !dlD.data?.download_url) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Falha ao baixar.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const aR = await fetch(dlD.data.download_url)
@@ -371,7 +349,7 @@ ${item(`${p}autottk on/off`)}
         await reagir(sock, msg, "🐍")
         await sock.sendMessage(jid, { text: `🌸 • 𝐏𝐈𝐍𝐓𝐄𝐑𝐄𝐒𝐓 •\n\n🐍 Procurando "${busca}"...\n\n"${nomeBot}"` }, { quoted: msg })
         try {
-          const r = await fetch(`https://obanai-apis.eu.cc/api/dl/pinterest?q=${encodeURIComponent(busca)}&apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/dl/pinterest?q=${encodeURIComponent(busca)}&apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data.success || !data.data || !data.data.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐄𝐈 •\n\n🌸 Nenhuma imagem.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const items = data.data.slice(0, 5)
@@ -391,7 +369,7 @@ ${item(`${p}autottk on/off`)}
         await reagir(sock, msg, "🐍")
         await sock.sendMessage(jid, { text: `🌸 • 𝐓𝐈𝐊𝐓𝐎𝐊 𝐓𝐀𝐆 •\n\n🐍 Analisando #${busca}...\n\n"${nomeBot}"` }, { quoted: msg })
         try {
-          const r = await fetch(`https://obanai-apis.eu.cc/api/search/tiktok-tag?q=${encodeURIComponent(busca)}&apitoken=rj8SpI`, { headers: { "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36" } })
+          const r = await fetch(`${obanaiBase()}/api/search/tiktok-tag?q=${encodeURIComponent(busca)}&apitoken=${obanaiToken()}`, { headers: { "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36" } })
           const data = await r.json()
           if (!data.success) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Não consegui obter estatísticas.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const res = data.data
@@ -415,7 +393,7 @@ ${item(`${p}autottk on/off`)}
         try {
           await sock.sendPresenceUpdate("composing", jid)
           await sock.sendMessage(jid, { text: `🌸 • 𝐀𝐗𝐈𝐒 •\n\n🐍 Consultando o Grande Sábio...\n🌸 ${pergunta}\n\n"${nomeBot}"` }, { quoted: msg })
-          const r = await fetch(`https://obanai-apis.eu.cc/api/ias/axis?q=${encodeURIComponent(pergunta)}&apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/ias/axis?q=${encodeURIComponent(pergunta)}&apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data?.success) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 IA indisponível.\n\n"${nomeBot}"` }, { quoted: msg }) }
           await sock.sendMessage(jid, { text: data.data.texto }, { quoted: msg })
@@ -429,7 +407,7 @@ ${item(`${p}autottk on/off`)}
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         await reagir(sock, msg, "🐍")
         try {
-          const r = await fetch(`https://obanai-apis.eu.cc/api/noticias/g1?apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/noticias/g1?apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data?.status || !data.data?.resultado?.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐆𝟏 •\n\n🌸 Erro.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const n = data.data.resultado[Math.floor(Math.random() * data.data.resultado.length)]
@@ -444,7 +422,7 @@ ${item(`${p}autottk on/off`)}
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         await reagir(sock, msg, "🐍")
         try {
-          const r = await fetch(`https://obanai-apis.eu.cc/api/noticias/uol?apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/noticias/uol?apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data?.status || !data.data?.resultado?.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐔𝐎𝐋 •\n\n🌸 Erro.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const n = data.data.resultado[Math.floor(Math.random() * data.data.resultado.length)]
@@ -459,7 +437,7 @@ ${item(`${p}autottk on/off`)}
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         await reagir(sock, msg, "🐍")
         try {
-          const r = await fetch(`https://obanai-apis.eu.cc/api/noticias/jovempan?apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/noticias/jovempan?apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data?.status || !data.data?.resultado?.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐉𝐎𝐕𝐄𝐌 𝐏𝐀𝐍 •\n\n🌸 Erro.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const n = data.data.resultado[Math.floor(Math.random() * data.data.resultado.length)]
@@ -474,7 +452,7 @@ ${item(`${p}autottk on/off`)}
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         await reagir(sock, msg, "🐍")
         try {
-          const r = await fetch(`https://obanai-apis.eu.cc/api/noticias/vasco?apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/noticias/vasco?apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data?.status || !data.data?.resultado?.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐕𝐀𝐒𝐂𝐎 •\n\n🌸 Erro.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const n = data.data.resultado[Math.floor(Math.random() * data.data.resultado.length)]
@@ -494,7 +472,7 @@ ${item(`${p}autottk on/off`)}
         await reagir(sock, msg, "🐍")
         try {
           const textoLimpo = texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-          const r = await fetch(`https://obanai-apis.eu.cc/api/tools/gerarnick?texto=${encodeURIComponent(textoLimpo)}&apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/tools/gerarnick?texto=${encodeURIComponent(textoLimpo)}&apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data?.success || !data.data?.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Não consegui gerar.\n\n"${nomeBot}"` }, { quoted: msg }) }
           let txt = `🌸 • 𝐍𝐈𝐂𝐊𝐒 •\n\n🐍 Estilos para "${textoLimpo}":\n\n`
@@ -511,7 +489,7 @@ ${item(`${p}autottk on/off`)}
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const ano = (args[0] && /^\d{4}$/.test(args[0].trim())) ? args[0].trim() : new Date().getFullYear()
         await reagir(sock, msg, "🐍")
         try {
-          const r = await fetch(`https://obanai-apis.eu.cc/api/outros/feriados?ano=${ano}&apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/outros/feriados?ano=${ano}&apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data?.success || !data.data?.total) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐅𝐄𝐑𝐈𝐀𝐃𝐎𝐒 •\n\n🌸 Nenhum feriado.\n\n"${nomeBot}"` }, { quoted: msg }) }
           const lista = data.data.feriados.map(f => `🐍 ${f.date} — ${f.name} (${f.weekday})`).join("\n")
@@ -528,7 +506,7 @@ ${item(`${p}autottk on/off`)}
         await reagir(sock, msg, "🐍")
         try {
           await sock.sendPresenceUpdate("composing", jid)
-          const r = await fetch(`https://obanai-apis.eu.cc/api/ias/unliai?q=${encodeURIComponent(pergunta)}&apitoken=rj8SpI`)
+          const r = await fetch(`${obanaiBase()}/api/ias/unliai?q=${encodeURIComponent(pergunta)}&apitoken=${obanaiToken()}`)
           const data = await r.json()
           if (!data?.success || !data?.response) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 IA indisponível.\n\n"${nomeBot}"` }, { quoted: msg }) }
           await sock.sendMessage(jid, { text: data.response }, { quoted: msg })
@@ -822,6 +800,202 @@ ${item(`${p}autottk on/off`)}
           await sock.sendMessage(jid, { sticker: outBuf, packname: t, author: t }, { quoted: msg })
         } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n"${nomeBot}"` }, { quoted: msg }) }
       }
+    },
+
+    meuvip: {
+      aliases: ["vipinfo"],
+      async executar({ sock, msg, db, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        const vips = (db.vips() || {}).vips || {}
+        let info = null
+        for (const j of sJ) {
+          const num = String(j).split("@")[0].split(":")[0].replace(/\D/g, "")
+          for (const [jV, i] of Object.entries(vips)) { if (String(jV).split("@")[0].split(":")[0].replace(/\D/g, "") === num) { if (i.expira === "inf" || i.expira > Date.now()) { info = i; break } } }
+          if (info) break
+        }
+        if (isDono || isSubDono) { await reagir(sock, msg, "🐍"); return sock.sendMessage(jid, { text: `🐍 • 𝐌𝐄𝐔 𝐕𝐈𝐏 •\n\n🌸 Você é o mestre.\n🐍 ${isDono ? "GRANDE SÁBIO" : "LUA SUPERIOR"}\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!info) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐌𝐄𝐔 𝐕𝐈𝐏 •\n\n🌸 Você não é nobre.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🐍")
+        await sock.sendMessage(jid, { text: `🐍 • 𝐌𝐄𝐔 𝐕𝐈𝐏 •\n\n🌸 Status: ${info.expira === "inf" ? "INFINITO ♾️" : "Expira em " + new Date(info.expira).toLocaleString("pt-BR")}\n\n"${nomeBot}"` }, { quoted: msg })
+      }
+    },
+
+    waifu: {
+      aliases: ["waifus", "anime"],
+      async executar({ sock, msg, db, isDono, isSubDono }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n🌸 Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🐍")
+        try {
+          const images = []
+          for (let i = 0; i < 5; i++) {
+            try {
+              const r = await fetch("https://nekos.best/api/v2/waifu")
+              const data = await r.json()
+              if (data?.results?.[0]?.url) images.push(data.results[0].url)
+              await new Promise(res => setTimeout(res, 300))
+            } catch (_) {}
+          }
+          if (!images.length) { for (let i = 0; i < 5; i++) images.push(`https://picsum.photos/id/${100 + i}/400/400`) }
+          await sock.sendMessage(jid, { text: `🌸 • 𝐖𝐀𝐈𝐅𝐔 •\n\n🐍 5 imagens aleatórias\n\n_"A serpente aprecia a beleza."_\n\n"${nomeBot}"` }, { quoted: msg })
+          for (const url of images) {
+            try { await sock.sendMessage(jid, { image: { url }, caption: `🐍 • 𝐖𝐀𝐈𝐅𝐔 •\n\n"${nomeBot}"` }, { quoted: msg }); await new Promise(res => setTimeout(res, 500)) } catch (_) {}
+          }
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Não consegui buscar imagens.\n\n"${nomeBot}"` }, { quoted: msg }) }
+      }
+    },
+
+    toprompt: {
+      aliases: ["prompt", "img2prompt"],
+      async executar({ sock, msg, db, utils, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n🌸 Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
+        const ctx = msg.message?.extendedTextMessage?.contextInfo || {}
+        const qm = ctx.quotedMessage
+        if (!qm || !qm.imageMessage) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐓𝐎𝐏𝐑𝐎𝐌𝐏𝐓 •\n\n🌸 Responda uma imagem com:\n🐍 \`${prefixoAtivo || "+"}toprompt\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🐍")
+        try {
+          const alvoMsg = Object.assign({}, msg, { message: { imageMessage: qm.imageMessage } })
+          const buffer = await utils.downloadMediaMessage(alvoMsg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage })
+          const r = await fetch(`${obanaiBase()}/api/ias/toprompt?url=${encodeURIComponent("data:image/jpeg;base64," + buffer.toString("base64"))}&apitoken=${obanaiToken()}`)
+          const data = await r.json()
+          if (!data?.status || !data.data?.prompt) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Não foi possível gerar o prompt.\n\n"${nomeBot}"` }, { quoted: msg }) }
+          await sock.sendMessage(jid, { text: `🌸 • 𝐏𝐑𝐎𝐌𝐏𝐓 •\n\n🐍 ${data.data.prompt}\n\n"${nomeBot}"` }, { quoted: msg })
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
+      }
+    },
+
+    upimage: {
+      aliases: ["upimagem", "gerarimg"],
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n🌸 Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
+        const q = args.join(" ").trim()
+        if (!q) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐔𝐏𝐈𝐌𝐀𝐆𝐄 •\n\n🌸 Use: \`${p}upimage <descrição>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🐍")
+        try {
+          await sock.sendMessage(jid, { text: `🌸 • 𝐆𝐄𝐑𝐀𝐍𝐃𝐎 •\n\n🐍 Criando imagem...\n\n"${nomeBot}"` }, { quoted: msg })
+          const r = await fetch(`${obanaiBase()}/api/ias/upimage?q=${encodeURIComponent(q)}&apitoken=${obanaiToken()}`)
+          const data = await r.json()
+          if (!data?.success || !data?.image_url) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Não foi possível gerar.\n\n"${nomeBot}"` }, { quoted: msg }) }
+          await sock.sendMessage(jid, { image: { url: data.image_url }, caption: `🌸 • 𝐔𝐏𝐈𝐌𝐀𝐆𝐄 •\n\n🐍 ${q}\n\n"${nomeBot}"` }, { quoted: msg })
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
+      }
+    },
+
+    deepimage: {
+      aliases: ["deepimg", "gerarimg2"],
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n🌸 Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
+        const q = args.join(" ").trim()
+        if (!q) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐃𝐄𝐄𝐏𝐈𝐌𝐀𝐆𝐄 •\n\n🌸 Use: \`${p}deepimage <descrição>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🐍")
+        try {
+          await sock.sendMessage(jid, { text: `🌸 • 𝐆𝐄𝐑𝐀𝐍𝐃𝐎 •\n\n🐍 Criando imagem...\n\n"${nomeBot}"` }, { quoted: msg })
+          const r = await fetch(`${obanaiBase()}/api/ias/deepimage?q=${encodeURIComponent(q)}&apitoken=${obanaiToken()}`)
+          const data = await r.json()
+          if (!data?.success || !data?.image_url) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Não foi possível gerar.\n\n"${nomeBot}"` }, { quoted: msg }) }
+          await sock.sendMessage(jid, { image: { url: data.image_url }, caption: `🌸 • 𝐃𝐄𝐄𝐏𝐈𝐌𝐀𝐆𝐄 •\n\n🐍 ${q}\n\n"${nomeBot}"` }, { quoted: msg })
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
+      }
+    },
+
+    moedas: {
+      aliases: ["cotacao", "cambio"],
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n🌸 Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
+        const pares = args.join("").trim().toUpperCase().replace(/\s+/g, "") || "USD-BRL,EUR-BRL,BTC-BRL"
+        await reagir(sock, msg, "🐍")
+        try {
+          const r = await fetch(`${obanaiBase()}/api/outros/moedas?pares=${encodeURIComponent(pares)}&apitoken=${obanaiToken()}`)
+          const data = await r.json()
+          if (!data?.success || !data.data?.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 Par inválido ou não encontrado.\n\n"${nomeBot}"` }, { quoted: msg }) }
+          const lista = data.data.map(m => `🐍 • ${m.nome}\n🌸 💰 ${m.cotacao} | 📈 ${m.maximo} | 📉 ${m.minimo} | ${m.variacao_pct}%`).join("\n\n")
+          await sock.sendMessage(jid, { text: `🌸 • 𝐂𝐎𝐓𝐀𝐂̧𝐎̃𝐄𝐒 •\n\n${lista}\n\n"${nomeBot}"` }, { quoted: msg })
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
+      }
+    },
+
+    conversor: {
+      aliases: ["converter"],
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n🌸 Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (args.length < 3) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐂𝐎𝐍𝐕𝐄𝐑𝐒𝐎𝐑 •\n\n🌸 Use: \`${p}conversor 10 km mi\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        const [valor, de, para] = args
+        await reagir(sock, msg, "🐍")
+        try {
+          const r = await fetch(`${obanaiBase()}/api/outros/conversor?de=${encodeURIComponent(de)}&para=${encodeURIComponent(para)}&valor=${encodeURIComponent(valor)}&apitoken=${obanaiToken()}`)
+          const data = await r.json()
+          if (!data?.success) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 ${data?.message || "Conversão inválida."}\n\n"${nomeBot}"` }, { quoted: msg }) }
+          await sock.sendMessage(jid, { text: `🌸 • 𝐂𝐎𝐍𝐕𝐄𝐑𝐒𝐎𝐑 •\n\n🐍 ${data.data.expressao}\n🌸 Categoria: ${data.data.categoria}\n\n"${nomeBot}"` }, { quoted: msg })
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
+      }
+    },
+
+    qrcode: {
+      aliases: ["qr"],
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n🌸 Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
+        const q = args.join(" ").trim()
+        if (!q) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐐𝐑𝐂𝐎𝐃𝐄 •\n\n🌸 Use: \`${p}qrcode <texto>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🐍")
+        try {
+          const r = await fetch(`${obanaiBase()}/api/tools/qrcode?texto=${encodeURIComponent(q)}&apitoken=${obanaiToken()}`)
+          if (!r.ok) throw new Error("Falha ao gerar QR")
+          const buffer = Buffer.from(await r.arrayBuffer())
+          await sock.sendMessage(jid, { image: buffer, caption: `🌸 • 𝐐𝐑𝐂𝐎𝐃𝐄 •\n\n🐍 Gerado\n\n"${nomeBot}"` }, { quoted: msg })
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
+      }
+    },
+
+    printsite: {
+      aliases: ["ss", "print"],
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n🌸 Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
+        const url = args[0]
+        if (!url || !/^https?:\/\//.test(url)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐏𝐑𝐈𝐍𝐓𝐒𝐈𝐓𝐄 •\n\n🌸 Use: \`${p}printsite <url>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🐍")
+        try {
+          await sock.sendMessage(jid, { text: `🌸 • 𝐏𝐑𝐈𝐍𝐓𝐀𝐍𝐃𝐎 •\n\n🐍 Tirando print...\n\n"${nomeBot}"` }, { quoted: msg })
+          const r = await fetch(`${obanaiBase()}/api/tools/printsite?url=${encodeURIComponent(url)}&apitoken=${obanaiToken()}`)
+          if (!r.ok) throw new Error("Falha ao gerar print")
+          const buffer = Buffer.from(await r.arrayBuffer())
+          await sock.sendMessage(jid, { image: buffer, caption: `🌸 • 𝐏𝐑𝐈𝐍𝐓 •\n\n🐍 ${url}\n\n"${nomeBot}"` }, { quoted: msg })
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
+      }
+    },
+
+    cep: {
+      aliases: ["buscacep", "consultarcep"],
+      async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
+        const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
+        const sJ = [msg.key.participant, msg.key.remoteJid, msg.participant].filter(Boolean)
+        if (!checarVip(db, sJ, isDono, isSubDono)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐒𝐎́ 𝐕𝐈𝐏 •\n\n🌸 Só nobres!\n\n"${nomeBot}"` }, { quoted: msg }) }
+        const cep = args.join("").replace(/\D/g, "")
+        if (cep.length !== 8) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐂𝐄𝐏 •\n\n🌸 Use: \`${p}cep 01310930\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        await reagir(sock, msg, "🐍")
+        try {
+          const d = await buscarCep(cep)
+          if (!d) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `🐍 • 𝐂𝐄𝐏 •\n\n🌸 CEP *${cep}* não encontrado.\n\n"${nomeBot}"` }, { quoted: msg }) }
+          const texto = `🐍 • 𝐂𝐄𝐏 • 🌸\n\n❄️ *${d.cep || cep}*\n\n🐍 𝐑𝐔𝐀:\n🌸 ${d.logradouro || "—"}${d.complemento ? ` (${d.complemento})` : ""}\n\n🐍 𝐁𝐀𝐈𝐑𝐑𝐎:\n🌸 ${d.bairro || "—"}\n\n🐍 𝐂𝐈𝐃𝐀𝐃𝐄:\n🌸 ${d.localidade || "—"} - ${d.uf || "—"}\n\n🐍 𝐄𝐒𝐓𝐀𝐃𝐎:\n🌸 ${d.estado || "—"} (${d.regiao || "—"})\n\n🐍 𝐃𝐃𝐃:\n🌸 ${d.ddd || "—"}\n\n🐍 𝐈𝐁𝐆𝐄:\n🌸 ${d.ibge || "—"}\n\n"${nomeBot}"`
+          await sock.sendMessage(jid, { text: texto }, { quoted: msg })
+        } catch (e) { await reagir(sock, msg, "🧊"); await sock.sendMessage(jid, { text: `🐍 • 𝐄𝐑𝐑𝐎 •\n\n🌸 ${e.message}\n\n"${nomeBot}"` }, { quoted: msg }) }
+      }
     }
+
   }
 }
