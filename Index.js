@@ -1,5 +1,5 @@
 /* ============================================================
-   🔥 RIMURU BOT MD - INDEX COMPLETO (CORRIGIDO)
+   🔥 RIMURU BOT MD - INDEX COMPLETO (CORRIGIDO + INTEGRADO)
    ============================================================ */
 
 const {
@@ -74,6 +74,10 @@ function bootstrap() {
   if (!fs.existsSync(arquivoCidadeJson)) {
     try { fs.writeFileSync(arquivoCidadeJson, JSON.stringify({ usuarios: {}, casas: {}, predios: {} }, null, 2)); } catch (e) {}
   }
+  const arquivoRpgJson = path.join(DATA_DIR, "rpg.json");
+  if (!fs.existsSync(arquivoRpgJson)) {
+    try { fs.writeFileSync(arquivoRpgJson, JSON.stringify({ usuarios: {} }, null, 2)); } catch (e) {}
+  }
 }
 bootstrap();
 
@@ -101,7 +105,8 @@ const db = {
   vips: () => dbLer("vips.json", { vips: {} }), salvarVips: (d) => dbSalvar("vips.json", d),
   bangp: () => dbLer("bangp.json", { grupos: {} }), salvarBangp: (d) => dbSalvar("bangp.json", d),
   rpg: () => dbLer("rpg.json", { usuarios: {} }), salvarRpg: (d) => dbSalvar("rpg.json", d),
-  autocfg: () => dbLer("autocfg.json", { grupos: {} }), salvarAutocfg: (d) => dbSalvar("autocfg.json", d)
+  autocfg: () => dbLer("autocfg.json", { grupos: {} }), salvarAutocfg: (d) => dbSalvar("autocfg.json", d),
+  figcmd: () => dbLer("figcmd.json", {}), salvarFigcmd: (d) => dbSalvar("figcmd.json", d)
 };
 
 // ============================================================
@@ -405,20 +410,18 @@ async function processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo,
       const numUser = soNumero(sender);
       const nomeExibicao = db.config().nomeBot || "Rimuru";
 
-      const textoMenu = `${emoji} *${saud}, @${numUser}!* 🌸
+      const textoMenu = `${emoji} *${saud}, @${numUser}!* 🩵
 
-🐍 Sou o *${nomeExibicao}*.
+🦋 Sou o *${nomeExibicao}*.
 
-╭━━━〔 🐍 𝐎 𝐐𝐔𝐄 𝐃𝐄𝐒𝐄𝐉𝐀? 🐍 〕━━━╮
-┃
-┃ *1* — 🌸 Menu Principal
-┃ *2* — 🐍 Comandos de Admin
-┃ *3* — 🌸 Comandos de Dono
-┃ *4* — 🐍 Comandos VIP
-┃ *5* — 🌸 Jogos (RPG/Fazenda/Cidade/FNAF)
-┃ *6* — 🐍 Meu Prefixo
-┃
-╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯
+╭━〔 🧊 𝐎 𝐐𝐔𝐄 𝐃𝐄𝐒𝐄𝐉𝐀? 🧊 〕━╮
+┃ 🩵 *1* — Menu Principal
+┃ 🤍 *2* — Comandos de Admin
+┃ 🧊 *3* — Comandos de Dono
+┃ ☁️ *4* — Comandos VIP
+┃ 🦋 *5* — Jogos (RPG/Fazenda/Cidade/FNAF)
+┃ 🩵 *6* — Meu Prefixo
+╰━━━━━━━━━━━━━━━━━━━━━╯
 
 💡 *Toque no botão* ou responda com o número.
 
@@ -430,9 +433,9 @@ _"A serpente observa."_ 🐍`;
           footer: nomeExibicao,
           mentions: [sender],
           buttons: [
-            { buttonId: "1", buttonText: { displayText: "🌸 Menu Principal" }, type: 1 },
-            { buttonId: "2", buttonText: { displayText: "🐍 Admin" }, type: 1 },
-            { buttonId: "3", buttonText: { displayText: "🌸 Dono" }, type: 1 }
+            { buttonId: "1", buttonText: { displayText: "🩵 Menu Principal" }, type: 1 },
+            { buttonId: "2", buttonText: { displayText: "🧊 Admin" }, type: 1 },
+            { buttonId: "3", buttonText: { displayText: "🤍 Dono" }, type: 1 }
           ],
           headerType: 1
         }, { quoted: msg });
@@ -483,11 +486,11 @@ async function processarFigCmd(sock, msg, remetente, sender, isGrupo, isDono, is
   if (!msg.message || !msg.message.stickerMessage) return false;
 
   try {
-    const dbFig = dbLer("figcmd.json", {});
+    const dbFig = db.figcmd();
     const grupo = dbFig[remetente] || {};
     if (!Object.keys(grupo).length) return false;
 
-    const buf = await downloadMediaMessage(msg, "buffer", {}, { logger: console, reuploadMessage: sock.updateMediaMessage });
+    const buf = await downloadMediaMessage(msg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage });
     if (!buf || !buf.length) return false;
     const hash = crypto.createHash("md5").update(buf).digest("hex");
     const dados = grupo[hash];
@@ -576,14 +579,18 @@ function iniciarAgendamentos() {
 }
 
 // ============================================================
-// 🆕 RENDAS AUTOMÁTICAS
+// 🆕 RENDAS AUTOMÁTICAS (com throttle)
 // ============================================================
 function iniciarRendasAutomaticas() {
+  let rodando = false;
   setInterval(async () => {
     if (!global.sockGlobal) return;
+    if (rodando) return;
+    rodando = true;
     for (const fn of global.rendasAutomaticas) {
       try { await fn(global.sockGlobal, db); } catch (e) {}
     }
+    rodando = false;
   }, 60 * 1000);
 }
 
@@ -622,7 +629,7 @@ async function iniciarBot() {
   iniciarVerificadorDivs();
 
   const { state, saveCreds } = await useMultiFileAuthState("auth");
-  
+
   let version;
   try {
     const versionInfo = await fetchLatestWaWebVersion({});
@@ -675,8 +682,7 @@ async function iniciarBot() {
     defaultQueryTimeoutMs: 60000,
     keepAliveIntervalMs: 30000,
     syncFullHistory: false,
-    shouldSyncHistoryMessage: (msg) => (msg && msg.syncType) !== 2,
-    cachedGroupMetadata: async (jid) => groupCache.get(jid)
+    cachedGroupMetadata: async (jid) => groupCache.get(jid) || null
   });
 
   global.sockGlobal = sock;
@@ -838,6 +844,38 @@ async function iniciarBot() {
         if (b.grupos && b.grupos[remetente]) return;
       }
 
+      // ============================================================
+      // 🤖 IA (mencionar bot)
+      // ============================================================
+      if (!msg.key.fromMe) {
+        const respondeuIA = await processarIA(sock, msg, remetente, sender, isGrupo, db);
+        if (respondeuIA) return;
+      }
+
+      // ============================================================
+      // 🎴 FIGCMD (figurinha com comando)
+      // ============================================================
+      if (!msg.key.fromMe && isGrupo) {
+        const respondeuFig = await processarFigCmd(sock, msg, remetente, sender, isGrupo, isDono, isSubDono);
+        if (respondeuFig) return;
+      }
+
+      // ============================================================
+      // 🖼️ AUTOFiG / 🎵 AUTOTTK
+      // ============================================================
+      if (!msg.key.fromMe && isGrupo) {
+        await processarAutoFig(sock, msg, remetente, isGrupo);
+        await processarAutoTtk(sock, msg, remetente, isGrupo);
+      }
+
+      // ============================================================
+      // 📝 COMANDOS SEM PREFIXO (nome do bot)
+      // ============================================================
+      if (!msg.key.fromMe && isGrupo) {
+        const respondeuSemPrefixo = await processarComandoSemPrefixo(sock, msg, remetente, sender, isGrupo, isDono, isSubDono);
+        if (respondeuSemPrefixo) return;
+      }
+
       const grupos = db.grupos();
       const confGrupo = grupos[remetente] || {};
       const cfgGlobal = db.config();
@@ -909,7 +947,7 @@ async function iniciarBot() {
 🚫 Obrigado pela atenção! 🚫
 
 _"${db.config().nomeBot || "Rimuru Bot"}"_`;
-        
+
         await sock.sendMessage(remetente, { text: textoAluguel, mentions: [numDono + "@s.whatsapp.net"] }, { quoted: msg });
         return;
       }
@@ -920,7 +958,7 @@ _"${db.config().nomeBot || "Rimuru Bot"}"_`;
         const numUser = soNumero(sender);
         const nomeBot = db.config().nomeBot || "Rimuru Bot";
         const mencoes = sender ? [sender] : [];
-        const textoBase = `💜 • 𝐂𝐎𝐍𝐅𝐈𝐆𝐔𝐑𝐀𝐂̧𝐀̃𝐎 •\n\n╭─〔 🦄 𝐒𝐈𝐒𝐓𝐄𝐌𝐀 〕\n│ Olá @${numUser}, este é o meu prefixo.\n╰──────────────\n\n🫟 𝐏𝐫𝐞𝐟𝐢𝐱𝐨 𝐀𝐭𝐮𝐚𝐥:\n╰➜ 『 ${p} 』\n\n💡 Para usar meus comandos, digite:\n╰➜ ${p}menu\n\n💜 _"Use com sabedoria."_\n\n"${nomeBot}"`;
+        const textoBase = `🧊 • 𝐂𝐎𝐍𝐅𝐈𝐆𝐔𝐑𝐀𝐂̧𝐀̃𝐎 •\n\n╭─〔 🩵 𝐒𝐈𝐒𝐓𝐄𝐌𝐀 〕\n│ Olá @${numUser}, este é o meu prefixo.\n╰──────────────\n\n🤍 𝐏𝐫𝐞𝐟𝐢𝐱𝐨 𝐀𝐭𝐮𝐚𝐥:\n╰➜ 『 ${p} 』\n\n🦋 Para usar meus comandos, digite:\n╰➜ ${p}menu\n\n🧊 _"Use com sabedoria."_\n\n"${nomeBot}"`;
         await sock.sendMessage(remetente, { text: textoBase, mentions: mencoes, ignorarCanal: true }, { quoted: msg });
         return;
       }
