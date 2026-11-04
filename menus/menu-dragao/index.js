@@ -1,5 +1,5 @@
 /* ============================================================
-   🐉 MENU DRAGÃO - RIMURU BOT MD (DESIGN PREMIUM)
+   🐉 MENU DRAGÃO - RIMURU BOT MD (COMPLETO E PREMIUM)
    ============================================================ */
 
 const fs = require("fs")
@@ -328,7 +328,7 @@ async function rendaAutomatica(sock, db) {
 
         if (!isDono && !isSubDono && !isAdmin) {
           await reagir(sock, msg, "❌")
-          return sock.sendMessage(jid, { text: msgErro("𝐀𝐕𝐈𝐒𝐎", "Apenas admins podem ativar.", `Use \`${p}menuadm\` para ver os comandos de admin.`, null, nomeBot) }, { quoted: msg })
+          return sock.sendMessage(jid, { text: msgErro("𝐀𝐕𝐈𝐒𝐎", "Apenas admins podem ativar.", `Use o comando \`${p}menuadm\` para ver os comandos de administração.`, null, nomeBot) }, { quoted: msg })
         }
 
         const cfg = dbLer("dragaocfg.json", { grupos: {} })
