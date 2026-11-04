@@ -1,5 +1,5 @@
 /* ============================================================
-   🐉 MENU DRAGÃO - RIMURU BOT MD (COMPLETO E PREMIUM)
+   🐉 MENU DRAGÃO - RIMURU BOT MD (BLOQUEIO ON/OFF + KEYS)
    ============================================================ */
 
 const fs = require("fs")
@@ -28,6 +28,12 @@ function getAlvo(msg) {
   return null;
 }
 
+// 🔥 FUNÇÃO QUE VERIFICA SE O SISTEMA TÁ ATIVO NO GRUPO 🔥
+function sistemaAtivo(db, jid) {
+  const cfg = dbLer("dragaocfg.json", { grupos: {} })
+  return cfg.grupos[jid]?.ativo === true
+}
+
 function gerarKeyAleatoria() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let key = 'KEY-';
@@ -37,7 +43,7 @@ function gerarKeyAleatoria() {
   return key;
 }
 
-// 🍏 FUNÇÕES DE RESPOSTA PREMIUM
+// FUNÇÕES DE RESPOSTA PREMIUM
 function msgSucesso(titulo, aviso, detalhes, rodape, nomeBot) {
   return `╭━━━━━━━━━━━━━━━━━━━━━━╮
 ┃ 🍏 𝐒𝐔𝐂𝐄𝐒𝐒𝐎 🍏
@@ -352,6 +358,12 @@ async function rendaAutomatica(sock, db) {
       async executar({ sock, msg, args, db, sender }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const op = (args[0] || "").toLowerCase()
         const { user, idReal } = buscarUsuario(db, sender, msg)
 
@@ -376,6 +388,12 @@ async function rendaAutomatica(sock, db) {
       async executar({ sock, msg, db, sender }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const { user } = buscarUsuario(db, sender, msg) 
         
         const xpNec = user.nivelTreinador * 200
@@ -400,6 +418,12 @@ async function rendaAutomatica(sock, db) {
       async executar({ sock, msg, db, sender }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const { user, idReal } = buscarUsuario(db, sender, msg)
 
         if (user.nivelVila >= 6) {
@@ -430,6 +454,12 @@ async function rendaAutomatica(sock, db) {
       async executar({ sock, msg, db, sender }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const { user } = buscarUsuario(db, sender, msg)
         const dragoes = Object.values(user.dragoes)
 
@@ -465,8 +495,13 @@ async function rendaAutomatica(sock, db) {
       async executar({ sock, msg, db, utils }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         let alvo = utils.getAlvo(msg)
-        
         if (!alvo) {
           const txt = msg.message?.conversation || msg.message?.extendedTextMessage?.text || ""
           const args = txt.split(" ").slice(1)
@@ -508,6 +543,12 @@ async function rendaAutomatica(sock, db) {
       async executar({ sock, msg, args, db, sender }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const nomeDragao = args.join(" ").trim()
         const sessao = getSessao(jid)
 
@@ -568,6 +609,12 @@ async function rendaAutomatica(sock, db) {
         const jid = msg.key.remoteJid
         const p = prefixoAtivo || "+"
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const { user, idReal } = buscarUsuario(db, sender, msg)
         
         const chaveLobby = `lobby_${jid}`
@@ -643,8 +690,13 @@ async function rendaAutomatica(sock, db) {
       async executar({ sock, msg, args, db, sender }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const numEscolha = parseInt(args[0])
-        
         if (!numEscolha || numEscolha < 1) {
           await reagir(sock, msg, "❌")
           return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Número inválido.", `Use o número do dragão.\n🐍 Exemplo: \`+escolherdg 1\``, null, nomeBot) }, { quoted: msg })
@@ -706,6 +758,12 @@ async function rendaAutomatica(sock, db) {
         const jid = msg.key.remoteJid
         const p = prefixoAtivo || "+"
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const numAtaque = parseInt(args[0])
         const { idReal: userId } = buscarUsuario(db, sender, msg)
 
@@ -787,6 +845,12 @@ async function rendaAutomatica(sock, db) {
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const p = prefixoAtivo || "+"
         const { user } = buscarUsuario(db, sender, msg)
 
@@ -808,6 +872,12 @@ async function rendaAutomatica(sock, db) {
       async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const p = prefixoAtivo || "+"
         const item = args.join(" ").trim().toLowerCase()
         const { user, idReal } = buscarUsuario(db, sender, msg)
@@ -848,6 +918,12 @@ async function rendaAutomatica(sock, db) {
       async executar({ sock, msg, db, sender }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const { user } = buscarUsuario(db, sender, msg)
         
         await reagir(sock, msg, "🪙")
@@ -862,6 +938,12 @@ async function rendaAutomatica(sock, db) {
       async executar({ sock, msg, db, sender }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const { user } = buscarUsuario(db, sender, msg)
 
         let ovosTxt = ""
@@ -893,6 +975,12 @@ ${ovosTxt}╰━━━━━━━━━━━━━━━━━━━━━━�
       async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const p = prefixoAtivo || "+"
         const nomeDragao = args.join(" ").trim()
         const { user, idReal } = buscarUsuario(db, sender, msg)
@@ -928,6 +1016,12 @@ ${ovosTxt}╰━━━━━━━━━━━━━━━━━━━━━━�
       async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const p = prefixoAtivo || "+"
         const nomeDragao = args.join(" ").trim()
         const { user, idReal } = buscarUsuario(db, sender, msg)
@@ -992,6 +1086,12 @@ ${ovosTxt}╰━━━━━━━━━━━━━━━━━━━━━━�
       async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const p = prefixoAtivo || "+"
         const nomeOvo = args.join(" ").trim()
         const { user, idReal } = buscarUsuario(db, sender, msg)
@@ -1053,6 +1153,12 @@ ${ovosTxt}╰━━━━━━━━━━━━━━━━━━━━━━�
       async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         let txt = `╭━━━━━━━━━━━━━━━━━━━━━━╮
 ┃ 📖 𝐋𝐈𝐕𝐑𝐎 𝐃𝐄 𝐃𝐑𝐀𝐆𝐎̃𝐄𝐒 📖
 ┣━━━━━━━━━━━━━━━━━━━━━━┫\n`
@@ -1072,6 +1178,12 @@ ${ovosTxt}╰━━━━━━━━━━━━━━━━━━━━━━�
       async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const p = prefixoAtivo || "+"
         const nomeDragao = args.join(" ").trim()
         const { user, idReal } = buscarUsuario(db, sender, msg)
@@ -1158,6 +1270,12 @@ ${ovosTxt}╰━━━━━━━━━━━━━━━━━━━━━━�
       async executar({ sock, msg, args, db, sender }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const nomeDragao = args.join(" ").trim()
         const { user, idReal } = buscarUsuario(db, sender, msg)
 
@@ -1183,6 +1301,12 @@ ${ovosTxt}╰━━━━━━━━━━━━━━━━━━━━━━�
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid;
         const nomeBot = nomeBotDb(db);
+
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
         const p = prefixoAtivo || "+";
         const { user, idReal } = buscarUsuario(db, sender, msg);
 
@@ -1268,8 +1392,13 @@ ${ovosTxt}╰━━━━━━━━━━━━━━━━━━━━━━�
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
-        const { user, idReal } = buscarUsuario(db, sender, msg)
 
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
+        const { user, idReal } = buscarUsuario(db, sender, msg)
         const agora = Date.now()
         const cooldown = 30 * 60 * 1000 
         const ultimoBoss = user.ultimoBoss || 0
@@ -1289,7 +1418,6 @@ ${ovosTxt}╰━━━━━━━━━━━━━━━━━━━━━━�
         }
 
         await reagir(sock, msg, "👹")
-        
         await new Promise(r => setTimeout(r, 1500))
         
         const bossNomes = Object.keys(BOSSES)
@@ -1341,8 +1469,13 @@ ${ovosTxt}╰━━━━━━━━━━━━━━━━━━━━━━�
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         const nomeBot = nomeBotDb(db)
-        const { user, idReal } = buscarUsuario(db, sender, msg)
 
+        if (!sistemaAtivo(db, jid)) {
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\` para ativar.`, null, nomeBot) }, { quoted: msg })
+        }
+
+        const { user, idReal } = buscarUsuario(db, sender, msg)
         const agora = Date.now()
         const cooldown = 20 * 60 * 1000 
         const ultimaRuina = user.ultimaRuina || 0
@@ -1362,7 +1495,6 @@ ${ovosTxt}╰━━━━━━━━━━━━━━━━━━━━━━�
         }
 
         await reagir(sock, msg, "🏛️")
-        
         await new Promise(r => setTimeout(r, 1500))
         
         dragoes.sort((a, b) => b.hp - a.hp)
@@ -1408,6 +1540,8 @@ ${ovosTxt}╰━━━━━━━━━━━━━━━━━━━━━━�
       }
     },
 
+    // ========== 🔥 COMANDOS DE KEY (NÃO SÃO BLOQUEADOS PELO SISTEMA OFF) 🔥 ==========
+
     gerarkeyxp: {
       aliases: ["gerarkey", "criarxp"],
       async executar({ sock, msg, args, db, isDono, isSubDono }) {
@@ -1451,12 +1585,19 @@ ${ovosTxt}╰━━━━━━━━━━━━━━━━━━━━━━�
         }
 
         const dbKeys = dbLer("keysxp.json", { keys: {} })
-        const dataKey = dbKeys.keys[keyInserida]
+        
+        // 🔥 PROCURA A KEY SEM DIFERENCIAR MAIÚSCULA DE MINÚSCULA
+        let keyReal = null;
+        for (const k in dbKeys.keys) {
+            if (k.toUpperCase() === keyInserida) { keyReal = k; break; }
+        }
 
-        if (!dataKey) {
+        if (!keyReal || !dbKeys.keys[keyReal]) {
           await reagir(sock, msg, "❌")
           return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Key inválida.", "A key digitada não existe ou está errada.", null, nomeBot) }, { quoted: msg })
         }
+
+        const dataKey = dbKeys.keys[keyReal]
 
         if (dataKey.usado) {
           await reagir(sock, msg, "❌")
@@ -1534,12 +1675,19 @@ ${ovosTxt}╰━━━━━━━━━━━━━━━━━━━━━━�
         }
 
         const dbKeys = dbLer("keysgold.json", { keys: {} })
-        const dataKey = dbKeys.keys[keyInserida]
+        
+        // 🔥 PROCURA A KEY SEM DIFERENCIAR MAIÚSCULA DE MINÚSCULA
+        let keyReal = null;
+        for (const k in dbKeys.keys) {
+            if (k.toUpperCase() === keyInserida) { keyReal = k; break; }
+        }
 
-        if (!dataKey) {
+        if (!keyReal || !dbKeys.keys[keyReal]) {
           await reagir(sock, msg, "❌")
           return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Key inválida.", "A key digitada não existe ou está errada.", null, nomeBot) }, { quoted: msg })
         }
+
+        const dataKey = dbKeys.keys[keyReal]
 
         if (dataKey.usado) {
           await reagir(sock, msg, "❌")
@@ -1566,6 +1714,8 @@ ${ovosTxt}╰━━━━━━━━━━━━━━━━━━━━━━�
         await sock.sendMessage(jid, { text: msgTexto }, { quoted: msg })
       }
     },
+
+    // ========== 🔥 COMANDOS DE ADMIN (NÃO SÃO BLOQUEADOS) 🔥 ==========
 
     addxp: {
       aliases: ["darxp", "addxp"],
