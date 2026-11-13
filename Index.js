@@ -130,35 +130,35 @@ function boxFim(nomeBot, frase = "Concluído com sucesso.") {
 function msgAviso(titulo, aviso, detalhes, rodape, nomeBot) {
   return `${boxTop(titulo)}
 
-╭┈┈┈┈୨୧┈┈┈┈╮
+╭┈┈┈┈୨┈┈┈┈╮
 𓆩 𝐀𝐕𝐈𝐒𝐎 𓆪
 ↳ ${aviso}
-╰┈┈┈┈୨୧┈┈┈┈╯
+╰┈┈┈┈୨┈┈┈┈╯
 
-╭┈┈┈┈୨୧┈┈┈┈╮
+╭┈┈┈┈୨┈┈┈┈╮
 𓆩 𝐃𝐄𝐓𝐀𝐋𝐇𝐄𝐒 𓆪
 ↳ ${detalhes}
-╰┈┈┈┈୨୧┈┈┈┈╯
+╰┈┈┈┈୨┈┈┈┈╯
 
-${rodape ? `╭┈┈┈┈୨୧┈┈┈┈╮
+${rodape ? `╭┈┈┈┈୨┈┈┈┈╮
 𓆩 𝐍𝐎𝐓𝐀 𓆪
 ↳ ${rodape}
-╰┈┈┈┈୨୧┈┈┈┈╯
+╰┈┈┈┈୨┈┈┈┈╯
 
 ` : ""}${boxFim(nomeBot, "Verifique e tente novamente.")}`
 }
 function msgSucesso(titulo, aviso, detalhes, rodape, nomeBot) {
   return `${boxTop(titulo)}
 
-╭┈┈┈┈୨୧┈┈┈┈╮
+╭┈┈┈┈୨┈┈┈┈╮
 𓆩 𝐒𝐓𝐀𝐓𝐔𝐒 𓆪
 ↳ ${aviso}
-╰┈┈┈┈୨୧┈┈┈┈╯
+╰┈┈┈┈୨┈┈┈┈╯
 
-╭┈┈┈┈୨୧┈┈┈┈╮
+╭┈┈┈┈୨┈┈┈┈╮
 𓆩 𝐃𝐄𝐓𝐀𝐋𝐇𝐄𝐒 𓆪
 ↳ ${detalhes}
-╰┈┈┈┈୨୧┈┈┈┈╯
+╰┈┈┈┈୨┈┈┈┈╯
 
 ${rodape ? `╭┈┈┈┈୨┈┈┈┈╮
 𓆩 𝐍𝐎𝐓𝐀 𓆪
@@ -178,12 +178,11 @@ function levenshtein(a, b) { const matrix = []; for (let i = 0; i <= b.length; i
 function buscarComandoParecido(comandoErrado) { let melhor = null; let menorDistancia = 999; const todos = [...comandos.keys(), ...aliases.keys()]; for (const cmd of todos) { const dist = levenshtein(comandoErrado, cmd); if (dist < menorDistancia) { menorDistancia = dist; melhor = cmd; } } if (menorDistancia <= 3 && melhor) return melhor; return null; }
 
 /* ============================================================
-   🧠 IA DA OBANAI (CORRIGIDA)
+   🧠 IA DA OBANAI (CORRIGIDA + DEBUG)
    ============================================================ */
 async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
   if (!isGrupo) return false;
   
-  // Verifica se a IA está ativada no grupo
   const conf = db.grupos()[remetente] || {};
   if (!conf.iaAtiva) return false;
 
@@ -195,14 +194,12 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
   const ctx = msg.message?.extendedTextMessage?.contextInfo || {}; 
   const mentionedJid = ctx.mentionedJid || [];
   
-  // Verifica se o bot foi marcado, se respondeu a msg do bot, ou se digitou o nome do bot
   const mencionadoPorId = mentionedJid.some(j => soNumero(j) === botNum);
   const respondendoBot = ctx.participant && soNumero(ctx.participant) === botNum;
   const digitouNome = texto.toLowerCase().trim().startsWith(botNome) || texto.toLowerCase().includes(" " + botNome);
 
   if (!mencionadoPorId && !respondendoBot && !digitouNome) return false;
 
-  // Limpa o texto tirando as menções e o nome do bot
   let pergunta = texto
     .replace(/@\d+/g, "")
     .replace(new RegExp("@" + botNome, "gi"), "")
@@ -216,12 +213,14 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
   try {
     await sock.sendPresenceUpdate("composing", remetente);
     
-    // === API DA OBANAI ===
     const obanaiToken = require('./config').obanaiToken || "rj8SpI";
     const obanaiBase = require('./config').obanaiApiBase || "https://obanai-apis.eu.cc";
     
     const r = await fetch(`${obanaiBase}/api/ias/unliai?q=${encodeURIComponent(pergunta)}&apitoken=${obanaiToken}`, { signal: AbortSignal.timeout(30000) });
     const data = await r.json();
+    
+    // 🔍 LOG PARA DEBUG
+    console.log("🔍 RESPOSTA DA API OBANAI:", data);
     
     if (data?.success && data?.response) {
       await sock.sendMessage(remetente, { text: data.response }, { quoted: msg });
