@@ -19,8 +19,8 @@ async function reagir(sock, msg, emoji) {
   try { await sock.sendMessage(msg.key.remoteJid, { react: { text: emoji, key: msg.key } }) } catch (_) {}
 }
 
-function nomeBotDb(db) { try { return db.config?.()?.nomeBot || "Bot" } catch { return "Bot" } }
-function getCfg(db) { try { return db.config?.() || {} } catch { return {} } }
+function nomeBotDb(db) { try { return db.config().nomeBot || "Bot" } catch { return "Bot" } }
+function getCfg(db) { try { return db.config() || {} } catch { return {} } }
 
 /* ---------- TEMPLATES FLORAIS ---------- */
 function boxTop(titulo) {
@@ -28,7 +28,12 @@ function boxTop(titulo) {
 𓆩 ${titulo} 𓆪
 ╚═══ஓ๑♡๑ஓ═══╝`
 }
-
+function boxFim(nomeBot, frase = "Concluído com sucesso.") {
+  return `╔═══ஓ๑♡๑ஓ═══╗
+𓆩 ${String(nomeBot).toUpperCase()} 𓆪
+❝ ${frase} ❞
+╚═══ஓ๑♡๑ஓ═══╝`
+}
 function msgSucesso(titulo, aviso, detalhes, rodape, nomeBot) {
   return `${boxTop(titulo)}
 
@@ -47,12 +52,8 @@ ${rodape ? `╭┈┈┈┈୨୧┈┈┈┈╮
 ↳ ${rodape}
 ╰┈┈┈┈୨୧┈┈┈┈╯
 
-` : ""}╔═══ஓ๑♡๑ஓ═══╗
-𓆩 ${String(nomeBot).toUpperCase()} 𓆪
-❝ Concluído com sucesso. ❞
-╚═══ஓ๑♡๑ஓ═══╝`
+` : ""}${boxFim(nomeBot, "Concluído com sucesso.")}`
 }
-
 function msgAviso(titulo, aviso, detalhes, rodape, nomeBot) {
   return `${boxTop(titulo)}
 
@@ -71,12 +72,8 @@ ${rodape ? `╭┈┈┈┈୨୧┈┈┈┈╮
 ↳ ${rodape}
 ╰┈┈┈┈୨୧┈┈┈┈╯
 
-` : ""}╔═══ஓ๑♡๑ஓ═══╗
-𓆩 ${String(nomeBot).toUpperCase()} 𓆪
-❝ Verifique e tente novamente. ❞
-╚═══ஓ๑♡๑ஓ═══╝`
+` : ""}${boxFim(nomeBot, "Verifique e tente novamente.")}`
 }
-
 function msgErro(titulo, aviso, detalhes, rodape, nomeBot) {
   return `${boxTop(titulo)}
 
@@ -95,11 +92,11 @@ ${rodape ? `╭┈┈┈┈୨୧┈┈┈┈╮
 ↳ ${rodape}
 ╰┈┈┈┈୨୧┈┈┈┈╯
 
-` : ""}╔═══ஓ๑♡๑ஓ═══╗
-𓆩 ${String(nomeBot).toUpperCase()} 𓆪
-❝ Algo deu errado. ❞
-╚═══ஓ๑♡๑ஓ═══╝`
+` : ""}${boxFim(nomeBot, "Algo deu errado.")}`
 }
+function secao(t) { return `╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 ${t} 𓆪` }
+function item(c) { return `↳ \`${c}\`` }
+function fimSecao() { return `╰┈┈┈┈୨୧┈┈┈┈╯` }
 
 function cabecalhoMenu(nomeBot, p) {
   return `╔═══ஓ๑♡๑ஓ═══╗
@@ -112,10 +109,6 @@ function cabecalhoMenu(nomeBot, p) {
 𖤐 Status » 𝐎𝐍𝐋𝐈𝐍𝐄
 ┗━━━━━━━━━━━━━━━━━━┛`
 }
-function secao(t) { return `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 ${t} 𓆪` }
-function item(c) { return `↳ \`${c}\`` }
-function fimSecao() { return `╰┈┈┈┈୨୧┈┈┈┈╯` }
 
 module.exports = {
   menu: "menu-adm",
@@ -161,10 +154,17 @@ ${item(`${p}antivideo`)}
 ${item(`${p}antifoto`)}
 ${item(`${p}antifig`)}
 ${item(`${p}anticall`)}
+${item(`${p}anti on/off`)}
 ${item(`${p}palavrao on/off`)}
 ${item(`${p}addpalavra`)}
 ${item(`${p}rmpalavra`)}
 ${item(`${p}listapalavra`)}
+${fimSecao()}
+
+${secao("𝐈𝐀 & 𝐀𝐔𝐓𝐎")}
+${item(`${p}ia on/off`)}
+${item(`${p}autofig on/off`)}
+${item(`${p}autottk on/off`)}
 ${fimSecao()}
 
 ${secao("𝐒𝐔𝐁-𝐀𝐃𝐌𝐈𝐍𝐒")}
@@ -194,7 +194,7 @@ ${item(`${p}textobv`)}
 ${item(`${p}fundobv`)}
 ${item(`${p}legendasaiu`)}
 ${item(`${p}fundosaiu`)}
-${item(`${p}verbv (testar)`)}
+${item(`${p}verbv`)}
 ${item(`${p}limparfotos`)}
 ${fimSecao()}
 
@@ -225,10 +225,7 @@ ${fimSecao()}
 ↳ \`${p}\`
 ╚═══ஓ๑♡๑ஓ═══╝
 
-╔═══ஓ๑♡๑ஓ═══╗
-𓆩 ${nomeBot.toUpperCase()} 𓆪
-❝ Sistema de moderação. ❞
-╚═══ஓ๑♡๑ஓ═══╝`
+${boxFim(nomeBot, "Sistema de moderação.")}`
 
         const cfg = getCfg(db)
         if (cfg.fotoMenu) {
@@ -245,6 +242,42 @@ ${fimSecao()}
           }
         }
         await sock.sendMessage(jid, { text: texto }, { quoted: msg })
+      }
+    },
+
+    ia: {
+      aliases: ["iaon", "iaoff", "chatia", "modoia"],
+      adminOnly: true,
+      grupoOnly: true,
+      async executar({ sock, msg, args, db, prefixoAtivo, isDono, isAdmin }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const p = prefixoAtivo || "+"
+        const opcao = (args[0] || "").toLowerCase()
+
+        if (!isAdmin && !isDono) {
+          await reagir(sock, msg, "💨")
+          return sock.sendMessage(jid, { text: msgErro("𝐈𝐀", "Apenas administradores.", "—", null, nomeBot) }, { quoted: msg })
+        }
+
+        const g = db.grupos()
+        g[jid] = g[jid] || {}
+
+        if (!["on", "off"].includes(opcao)) {
+          const status = g[jid].iaAtiva ? "ON ✅" : "OFF ❌"
+          await reagir(sock, msg, "🌸")
+          return sock.sendMessage(jid, { text: msgAviso("𝐈𝐀", `Status atual: ${status}`, `Use \`${p}ia on\` ou \`${p}ia off\``, null, nomeBot) }, { quoted: msg })
+        }
+
+        g[jid].iaAtiva = opcao === "on"
+        db.salvarGrupos(g)
+
+        await reagir(sock, msg, "🌸")
+        if (opcao === "on") {
+          await sock.sendMessage(jid, { text: msgSucesso("𝐈𝐀 𝐀𝐓𝐈𝐕𝐀𝐃𝐀", "A inteligência artificial está online.", "Marque o bot ou responda uma mensagem dele para conversar.", "A serpente aprendeu a falar.", nomeBot) }, { quoted: msg })
+        } else {
+          await sock.sendMessage(jid, { text: msgAviso("𝐈𝐀 𝐃𝐄𝐒𝐀𝐓𝐈𝐕𝐀𝐃𝐀", "A inteligência artificial foi desligada.", "O bot não responderá mais como IA neste grupo.", null, nomeBot) }, { quoted: msg })
+        }
       }
     },
 
@@ -281,7 +314,7 @@ ${fimSecao()}
       }
     },
 
-    namegp: {
+    nomegp: {
       aliases: ["setnomegp", "nomegrupo"], adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, prefixoAtivo, groupMetadata, utils, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const nome = args.join(" ").trim()
@@ -371,9 +404,7 @@ ${fimSecao()}
         if (!part) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgErro("𝐍𝐀̃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎", "Usuário fora do grupo.", `@${n}`, null, nomeBot) }, { quoted: msg }) }
         try { await sock.groupParticipantsUpdate(jid, [part.id], "remove"); await reagir(sock, msg, "🌸"); await sock.sendMessage(jid, { text: msgSucesso("𝐄𝐗𝐏𝐔𝐋𝐒𝐎", "Usuário removido.", `@${n}`, null, nomeBot), mentions: [part.id] }, { quoted: msg }) } catch (e) { await reagir(sock, msg, "💨"); await sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Falha ao remover.", e.message, null, nomeBot) }, { quoted: msg }) }
       }
-    },
-
-    adv: {
+    },    adv: {
       adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db, utils, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"; const alvo = utils.getAlvo(msg)
@@ -412,19 +443,9 @@ ${fimSecao()}
         const entradas = Object.entries(db.advs()[jid] || {})
         if (!entradas.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐋𝐈𝐒𝐓𝐀 𝐕𝐀𝐙𝐈𝐀", "Sem advertências.", "Use o comando adv", null, nomeBot) }, { quoted: msg }) }
         entradas.sort((a, b) => b[1] - a[1])
-        let t = `${boxTop("𝐀𝐃𝐕𝐄𝐑𝐓𝐄̂𝐍𝐂𝐈𝐀𝐒")}
-
-`
-        entradas.forEach(([j, q], i) => { t += `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 #${i + 1} 𓆪
-↳ @${utils.soNumero(j)} — ${q}/3
-╰┈┈┈┈୨୧┈┈┈┈╯
-` })
-        t += `
-╔═══ஓ๑♡๑ஓ═══╗
-𓆩 𝐓𝐎𝐓𝐀𝐋 𓆪
-↳ ${entradas.length}
-╚═══ஓ๑♡๑ஓ═══╝`
+        let t = `${boxTop("𝐀𝐃𝐕𝐄𝐑𝐓𝐄̂𝐍𝐂𝐈𝐀𝐒")}\n\n`
+        entradas.forEach(([j, q], i) => { t += `╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 #${i + 1} 𓆪\n↳ @${utils.soNumero(j)} — ${q}/3\n╰┈┈┈┈୨୧┈┈┈┈╯\n` })
+        t += `\n╔═══ஓ๑♡๑ஓ═══╗\n𓆩 𝐓𝐎𝐓𝐀𝐋 𓆪\n↳ ${entradas.length}\n╚═══ஓ๑♡๑ஓ═══╝`
         await reagir(sock, msg, "🌸")
         await sock.sendMessage(jid, { text: t, mentions: entradas.map(e => e[0]) }, { quoted: msg })
       }
@@ -486,9 +507,7 @@ ${fimSecao()}
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const lista = dbLer("palavroes.json", {})[jid] || []
         if (!lista.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐋𝐈𝐒𝐓𝐀 𝐕𝐀𝐙𝐈𝐀", "Nenhuma palavra.", `Use \`${p}addpalavra\``, null, nomeBot) }, { quoted: msg }) }
-        let t = `${boxTop("𝐏𝐀𝐋𝐀𝐕𝐑𝐀𝐒")}
-
-`
+        let t = `${boxTop("𝐏𝐀𝐋𝐀𝐕𝐑𝐀𝐒")}\n\n`
         lista.forEach((pal, i) => { t += `╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 #${i + 1} 𓆪\n↳ \`${pal}\`\n╰┈┈┈┈୨୧┈┈┈┈╯\n` })
         t += `\n╔═══ஓ๑♡๑ஓ═══╗\n𓆩 𝐓𝐎𝐓𝐀𝐋 𓆪\n↳ ${lista.length}\n╚═══ஓ๑♡๑ஓ═══╝`
         await reagir(sock, msg, "🌸"); await sock.sendMessage(jid, { text: t }, { quoted: msg })
@@ -552,6 +571,39 @@ ${fimSecao()}
         if (!["on", "off"].includes(opcao)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐀𝐍𝐓𝐈𝐂𝐀𝐋𝐋", "Use on/off.", `\`${p}anticall on/off\``, null, nomeBot) }, { quoted: msg }) }
         const cfg = dbLer("admsettings.json", {}); cfg[jid] = cfg[jid] || {}; cfg[jid].anticall = opcao === "on"; dbSalvar("admsettings.json", cfg)
         await reagir(sock, msg, "🌸"); await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐍𝐓𝐈𝐂𝐀𝐋𝐋", "Proteção atualizada.", opcao.toUpperCase(), null, nomeBot) }, { quoted: msg })
+      }
+    },
+
+    anti: {
+      aliases: ["antiporn", "anti18", "antiporno"],
+      adminOnly: true,
+      grupoOnly: true,
+      async executar({ sock, msg, args, db, isDono, isAdmin, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        const nomeBot = nomeBotDb(db)
+        const p = prefixoAtivo || "+"
+
+        if (!isAdmin && !isDono) {
+          await reagir(sock, msg, "💨")
+          return sock.sendMessage(jid, { text: msgErro("𝐀𝐍𝐓𝐈-𝐏𝐎𝐑𝐍", "Apenas admins.", "—", null, nomeBot) }, { quoted: msg })
+        }
+
+        const dbAnti = dbLer("antiporn.json", {})
+        dbAnti[jid] = dbAnti[jid] || {}
+        const sub = (args[0] || "").toLowerCase()
+
+        if (sub === "on") dbAnti[jid].ativo = true
+        else if (sub === "off") dbAnti[jid].ativo = false
+        else dbAnti[jid].ativo = !dbAnti[jid].ativo
+
+        dbSalvar("antiporn.json", dbAnti)
+
+        await reagir(sock, msg, "🌸")
+        if (dbAnti[jid].ativo) {
+          await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐍𝐓𝐈-𝐏𝐎𝐑𝐍", "Proteção ATIVADA.", "Legendas com termos +18 serão deletadas.", null, nomeBot) }, { quoted: msg })
+        } else {
+          await sock.sendMessage(jid, { text: msgAviso("𝐀𝐍𝐓𝐈-𝐏𝐎𝐑𝐍", "Proteção DESATIVADA.", "Mensagens +18 não serão mais filtradas.", null, nomeBot) }, { quoted: msg })
+        }
       }
     },
 
