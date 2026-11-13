@@ -177,27 +177,58 @@ function contemTermo18(texto) {
 function levenshtein(a, b) { const matrix = []; for (let i = 0; i <= b.length; i++) matrix[i] = [i]; for (let j = 0; j <= a.length; j++) matrix[0][j] = j; for (let i = 1; i <= b.length; i++) { for (let j = 1; j <= a.length; j++) { if (b.charAt(i - 1) === a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1]; else matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)); } } return matrix[b.length][a.length]; }
 function buscarComandoParecido(comandoErrado) { let melhor = null; let menorDistancia = 999; const todos = [...comandos.keys(), ...aliases.keys()]; for (const cmd of todos) { const dist = levenshtein(comandoErrado, cmd); if (dist < menorDistancia) { menorDistancia = dist; melhor = cmd; } } if (menorDistancia <= 3 && melhor) return melhor; return null; }
 
+/* ============================================================
+   🧠 IA DA OBANAI (ATIVADA POR GRUPO)
+   ============================================================ */
 async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
-  if (isGrupo) { const conf = db.grupos()[remetente] || {}; if (!conf.iaAtiva) return false; }
-  const texto = getTexto(msg); if (!texto) return false;
-  const botNum = soNumero(sock.user?.id); const botNome = (db.config().nomeBot || "Rimuru").toLowerCase();
-  const ctx = msg.message?.extendedTextMessage?.contextInfo || {}; const mentionedJid = ctx.mentionedJid || [];
+  if (!isGrupo) return false;
+  
+  // Verifica se a IA está ativada no grupo
+  const conf = db.grupos()[remetente] || {};
+  if (!conf.iaAtiva) return false;
+
+  const texto = getTexto(msg); 
+  if (!texto) return false;
+
+  const botNum = soNumero(sock.user?.id); 
+  const botNome = (db.config().nomeBot || "Rimuru").toLowerCase();
+  const ctx = msg.message?.extendedTextMessage?.contextInfo || {}; 
+  const mentionedJid = ctx.mentionedJid || [];
+  
+  // Verifica se o bot foi marcado OU se a pessoa respondeu a uma mensagem do bot
   const mencionadoPorId = mentionedJid.some(j => soNumero(j) === botNum);
-  const mencionadoPorTexto = texto.toLowerCase().includes("@" + botNome) || texto.toLowerCase().includes("@" + botNome.replace(/\s+/g, ""));
   const respondendoBot = ctx.participant && soNumero(ctx.participant) === botNum;
+  
+  // Verifica se digitou o nome do bot no texto (ex: "@rimuru")
+  const mencionadoPorTexto = texto.toLowerCase().includes("@" + botNome) || texto.toLowerCase().includes(botNome);
+
   if (!mencionadoPorId && !respondendoBot && !mencionadoPorTexto) return false;
+
+  // Limpa o texto tirando as menções
   let pergunta = texto.replace(/@\d+/g, "").replace(new RegExp("@" + botNome, "gi"), "").replace(new RegExp(botNome, "gi"), "").trim();
   if (!pergunta) pergunta = "Oi";
+
   try {
     await sock.sendPresenceUpdate("composing", remetente);
-    const promptSistema = encodeURIComponent(`Você é o ${db.config().nomeBot || "Rimuru"}, um bot de WhatsApp estilo anime/inspirado em Tensei Shitara Slime. Responda de forma curta, direta e com personalidade. Use emojis às vezes (💧❄️🧊). Não seja muito formal. O usuário disse: ${pergunta}`);
-    const response = await fetch(`https://text.pollinations.ai/${promptSistema}`, { method: 'GET', headers: { 'Content-Type': 'text/plain' }, signal: AbortSignal.timeout(30000) });
-    if (!response.ok) throw new Error("Erro na API da IA");
-    const resposta = await response.text();
-    if (resposta && resposta.trim()) await sock.sendMessage(remetente, { text: resposta.trim() }, { quoted: msg });
-    else await sock.sendMessage(remetente, { text: "🌸 Não consegui pensar em nada..." }, { quoted: msg });
+    
+    // === AQUI ENTRA A API DA OBANAI ===
+    const obanaiToken = require('./config').obanaiToken || "rj8SpI";
+    const obanaiBase = require('./config').obanaiApiBase || "https://obanai-apis.eu.cc";
+    
+    // Usando a rota "unliai" da API da Obanai
+    const r = await fetch(`${obanaiBase}/api/ias/unliai?q=${encodeURIComponent(pergunta)}&apitoken=${obanaiToken}`, { signal: AbortSignal.timeout(30000) });
+    const data = await r.json();
+    
+    if (data?.success && data?.response) {
+      await sock.sendMessage(remetente, { text: data.response }, { quoted: msg });
+    } else {
+      await sock.sendMessage(remetente, { text: "🌸 Não consegui pensar em uma resposta agora." }, { quoted: msg });
+    }
     return true;
-  } catch (e) { console.log("❌ Erro IA:", e.message); return true; }
+  } catch (e) { 
+    console.log("❌ Erro IA Obanai:", e.message); 
+    return true; 
+  }
 }
 
 async function processarAutoFig(sock, msg, remetente, isGrupo) {
