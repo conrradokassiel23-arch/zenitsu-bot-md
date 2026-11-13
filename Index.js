@@ -178,7 +178,7 @@ function levenshtein(a, b) { const matrix = []; for (let i = 0; i <= b.length; i
 function buscarComandoParecido(comandoErrado) { let melhor = null; let menorDistancia = 999; const todos = [...comandos.keys(), ...aliases.keys()]; for (const cmd of todos) { const dist = levenshtein(comandoErrado, cmd); if (dist < menorDistancia) { menorDistancia = dist; melhor = cmd; } } if (menorDistancia <= 3 && melhor) return melhor; return null; }
 
 /* ============================================================
-   🧠 IA DA OBANAI (CORRIGIDA + DEBUG)
+   🧠 IA DA OBANAI (CORRIGIDA COM A RESPOSTA EXATA)
    ============================================================ */
 async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
   if (!isGrupo) return false;
@@ -219,13 +219,11 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
     const r = await fetch(`${obanaiBase}/api/ias/unliai?q=${encodeURIComponent(pergunta)}&apitoken=${obanaiToken}`, { signal: AbortSignal.timeout(30000) });
     const data = await r.json();
     
-    // 🔍 LOG PARA DEBUG
-    console.log("🔍 RESPOSTA DA API OBANAI:", data);
-    
-    if (data?.success && data?.response) {
-      await sock.sendMessage(remetente, { text: data.response }, { quoted: msg });
+    // Correção: Pega a resposta no lugar certo
+    if (data?.success && data?.data?.response) {
+      await sock.sendMessage(remetente, { text: data.data.response }, { quoted: msg });
     } else {
-      await sock.sendMessage(remetente, { text: "🌸 O Grande Sábio está meditando... tente novamente mais tarde." }, { quoted: msg });
+      await sock.sendMessage(remetente, { text: "🌸 Minhas conexões com o além falharam... Tente novamente em instantes." }, { quoted: msg });
     }
     return true;
   } catch (e) { 
