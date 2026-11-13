@@ -178,7 +178,7 @@ function levenshtein(a, b) { const matrix = []; for (let i = 0; i <= b.length; i
 function buscarComandoParecido(comandoErrado) { let melhor = null; let menorDistancia = 999; const todos = [...comandos.keys(), ...aliases.keys()]; for (const cmd of todos) { const dist = levenshtein(comandoErrado, cmd); if (dist < menorDistancia) { menorDistancia = dist; melhor = cmd; } } if (menorDistancia <= 3 && melhor) return melhor; return null; }
 
 /* ============================================================
-   🧠 IA DA OBANAI (RESPOSTA LIMPA E BLINDADA)
+   🧠 IA DA OBANAI (BLINDADA CONTRA BUGS DO WHATSAPP)
    ============================================================ */
 async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
   if (!isGrupo) return false;
@@ -192,18 +192,32 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
   const botNum = soNumero(sock.user?.id); 
   const botNome = (db.config().nomeBot || "Rimuru").toLowerCase();
   
-  // Pega o contexto (para saber se respondeu a msg do bot)
-  const ctx = msg.message?.extendedTextMessage?.contextInfo || msg.message?.imageMessage?.contextInfo || msg.message?.videoMessage?.contextInfo || {}; 
+  // 🔍 BUSCA O CONTEXTO EM TODOS OS LUGARES POSSÍVEIS (CORREÇÃO DO REPLY)
+  let ctx = {};
+  if (msg.message?.extendedTextMessage?.contextInfo) ctx = msg.message.extendedTextMessage.contextInfo;
+  else if (msg.message?.imageMessage?.contextInfo) ctx = msg.message.imageMessage.contextInfo;
+  else if (msg.message?.videoMessage?.contextInfo) ctx = msg.message.videoMessage.contextInfo;
+  else if (msg.message?.audioMessage?.contextInfo) ctx = msg.message.audioMessage.contextInfo;
+  
+  // Junta todas as menções possíveis
   const mentionedJid = ctx.mentionedJid || [];
   
-  // Verifica de várias formas se o bot foi chamado
+  // Verifica se o bot foi marcado de todas as formas
   const mencionadoPorId = mentionedJid.some(j => soNumero(j) === botNum);
-  const respondendoBot = ctx.participant && soNumero(ctx.participant) === botNum;
-  const digitouNome = texto.toLowerCase().trim().startsWith(botNome) || texto.toLowerCase().includes(" " + botNome) || texto.toLowerCase().includes("@" + botNome);
+  const mencionadoPorTexto = texto.toLowerCase().includes("@" + botNome);
+  
+  // Verifica se respondeu a mensagem do bot
+  let respondendoBot = false;
+  if (ctx.participant && soNumero(ctx.participant) === botNum) respondendoBot = true;
+  if (ctx.remoteJid && soNumero(ctx.remoteJid) === botNum) respondendoBot = true;
+  if (sender === botNum) respondendoBot = true;
 
-  if (!mencionadoPorId && !respondendoBot && !digitouNome) return false;
+  // Verifica se digitou o nome do bot no começo
+  const digitouNome = texto.toLowerCase().trim().startsWith(botNome) || texto.toLowerCase().trim().startsWith("@" + botNome);
 
-  // Limpa a pergunta
+  if (!mencionadoPorId && !mencionadoPorTexto && !respondendoBot && !digitouNome) return false;
+
+  // Limpa a pergunta tirando @ e o nome do bot
   let pergunta = texto
     .replace(/@\d+/g, "")
     .replace(new RegExp("@" + botNome, "gi"), "")
@@ -211,7 +225,7 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
     .trim();
 
   if (!pergunta || pergunta.length < 2) {
-    pergunta = "Oi, quem é você?";
+    pergunta = "Oi, tudo bem?";
   }
 
   try {
@@ -220,20 +234,29 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
     const obanaiToken = require('./config').obanaiToken || "rj8SpI";
     const obanaiBase = require('./config').obanaiApiBase || "https://obanai-apis.eu.cc";
     
-    const r = await fetch(`${obanaiBase}/api/ias/unliai?q=${encodeURIComponent(pergunta)}&apitoken=${obanaiToken}`, { signal: AbortSignal.timeout(30000) });
+    // Usando a rota "axis" que é mais limpa
+    const r = await fetch(`${obanaiBase}/api/ias/axis?q=${encodeURIComponent(pergunta)}&apitoken=${obanaiToken}`, { signal: AbortSignal.timeout(30000) });
     const data = await r.json();
     
-    if (data?.success && data?.data?.response) {
-      // 🔥 FILTRO PARA TIRAR A INTRODUÇÃO DA API
-      let respostaLimpa = data.data.response;
-      
-      // Remove o texto padrão da UnlimitedAI
-      respostaLimpa = respostaLimpa.replace(/Olá! Eu sou o UnlimitedAI\.Chat, criado pela equipe do UnlimitedAI\.Chat\./gi, "").trim();
-      // Remove variações ou saudações iniciais padronizadas (se houver)
-      respostaLimpa = respostaLimpa.replace(/Olá! Eu sou o .*?, criado pela equipe do .*?\./gi, "").trim();
+    let respostaLimpa = "";
+    
+    // Verifica as duas formas que a API pode responder
+    if (data?.success && data?.data?.texto) respostaLimpa = data.data.texto;
+    else if (data?.success && data?.data?.response) respostaLimpa = data.data.response;
+    else if (data?.success && data?.response) respostaLimpa = data.response;
 
-      // Se depois de limpar a resposta ficar vazia, manda um fallback
-      if (!respostaLimpa) respostaLimpa = "Aqui está a resposta para a sua pergunta!";
+    if (respostaLimpa) {
+      // 🔥 FILTRO BRUTAL PARA TIRAR TEXTOS INDESEJADOS DA API
+      respostaLimpa = respostaLimpa
+        .replace(/Olá! Eu sou o UnlimitedAI\.Chat, criado pela equipe do UnlimitedAI\.Chat\./gi, "")
+        .replace(/Olá! Eu sou o .*?, criado pela equipe do .*?\./gi, "")
+        .replace(/Eu sou o .*?, criado pela equipe do .*?\./gi, "")
+        .replace(/Como posso ajudar você hoje\?/gi, "")
+        .replace(/Como posso ajudar você com a sua escrita hoje\?/gi, "")
+        .replace(/Como posso ajudar você/gi, "")
+        .trim();
+
+      if (!respostaLimpa) respostaLimpa = "A serpente observa... e responde.";
       
       await sock.sendMessage(remetente, { text: respostaLimpa }, { quoted: msg });
     } else {
