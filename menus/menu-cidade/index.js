@@ -1,5 +1,5 @@
 /* ============================================================
-   💧❄️🧊 MENU CIDADE - RIMURU BOT MD (PREFIXO DINÂMICO)
+   🌸 MENU CIDADE - TEMA FLORAL
    ============================================================ */
 
 const fs = require("fs")
@@ -18,31 +18,116 @@ async function reagir(sock, msg, emoji) {
   try { await sock.sendMessage(msg.key.remoteJid, { react: { text: emoji, key: msg.key } }) } catch (_) {}
 }
 
-function nomeBotDb(db) { try { return db.config().nomeBot || "Rimuru Bot" } catch { return "Rimuru Bot" } }
-function lineEmoji(emoji, label, valor) { return `${emoji} ${label}:\n╰➜ ${valor}` }
+function nomeBotDb(db) { try { return db.config?.()?.nomeBot || "Rimuru" } catch { return "Rimuru" } }
+function getCfg(db) { try { return db.config?.() || {} } catch { return {} } }
 function normalizar(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() }
 
-function cardPerfil({ nomeBot, nomeUsuario, cargo, dono }) {
-  return `┏┉━─━┈━──━┈━──━┈━─━┉┉⟐
-┃╭┈ׅ᳝𑂳໋֕𔓕᳝┉۪࣮᪲۟۫─ׅ͚᷂࠭━⵿໋݊┅᮫ׅ᳝۫💧࣭࣪࣪┅⵿᳝۟━໋ׅ࣪࣪─໋͚ׅ۪֘┉᳝ׅ᪲𔓕໋۪࣪┈᩿࣪╮
-┃࣪│᨞⁞🔹️⃞⃞⟡ ʙᴏᴛ: ${nomeBot || "ʀɪᴍᴜʀᴜ - ʙᴏᴛ"}
-┃࣪│᨞⁞🔹️⃞⃞⟡ ᴜsᴜᴀʀɪᴏ: ${nomeUsuario || "ᴜsᴜᴀʀɪᴏ"}
-┃࣪│᨞⁞🔹️⃞⃞⟡ ᴄᴀʀɢᴏ: ${cargo || "👤 𝐒𝐋𝐈𝐌𝐄 𝐂𝐎𝐌𝐔𝐌"}
-┃࣪│᨞⁞🔹️⃞⃞⟡ ᴅᴏɴᴏ: ${dono || "𝐀𝐧֟፝𝐨̷𝐧𝐢𝐦𝐨̷.𝐣𝐬"}
-┃╰┈ׅ᳝𑂳໋֕𔓕᳝┉۪࣮᪲۟۫─ׅ͚᷂࠭━⵿໋݊┅᮫ׅ᳝۫💧࣭࣪࣪┅⵿᳝۟━໋ׅ࣪࣪─໋͚ׅ۪֘┉᳝ׅ᪲𔓕໋۪࣪┈᩿࣪╯
-┗┉━─━┈━──━┈━──━┈━─━┉┉⟐`
+/* ---------- TEMPLATES FLORAIS ---------- */
+function boxTop(titulo) {
+  return `╔═══ஓ๑♡๑ஓ═══╗
+𓆩 ${titulo} 𓆪
+╚═══ஓ๑♡๑ஓ═══╝`
 }
-function secao(t) { return `┏✰ *${t}*ׅ\n┗┉━─━┈━──━┈━──━┈━─━┉┉⟐` }
-function item(c) { return `🧊 ${c}` }
+function boxFim(nomeBot, frase = "Concluído com sucesso.") {
+  return `╔═══ஓ๑♡๑ஓ═══╗
+𓆩 ${String(nomeBot).toUpperCase()} 𓆪
+❝ ${frase} ❞
+╚═══ஓ๑♡๑ஓ═══╝`
+}
+function msgSucesso(titulo, aviso, detalhes, rodape, nomeBot) {
+  return `${boxTop(titulo)}
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐒𝐓𝐀𝐓𝐔𝐒 𓆪
+↳ ${aviso}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐃𝐄𝐓𝐀𝐋𝐇𝐄𝐒 𓆪
+↳ ${detalhes}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+${rodape ? `╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐍𝐎𝐓𝐀 𓆪
+↳ ${rodape}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+` : ""}${boxFim(nomeBot, "Concluído com sucesso.")}`
+}
+function msgAviso(titulo, aviso, detalhes, rodape, nomeBot) {
+  return `${boxTop(titulo)}
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐀𝐕𝐈𝐒𝐎 𓆪
+↳ ${aviso}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐃𝐄𝐓𝐀𝐋𝐇𝐄𝐒 𓆪
+↳ ${detalhes}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+${rodape ? `╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐍𝐎𝐓𝐀 𓆪
+↳ ${rodape}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+` : ""}${boxFim(nomeBot, "Verifique e tente novamente.")}`
+}
+function msgErro(titulo, aviso, detalhes, rodape, nomeBot) {
+  return `${boxTop(titulo)}
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐄𝐑𝐑𝐎 𓆪
+↳ ${aviso}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐃𝐄𝐓𝐀𝐋𝐇𝐄𝐒 𓆪
+↳ ${detalhes}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+${rodape ? `╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐍𝐎𝐓𝐀 𓆪
+↳ ${rodape}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+` : ""}${boxFim(nomeBot, "Algo deu errado.")}`
+}
+function secao(t) { return `╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 ${t} 𓆪` }
+function item(c) { return `↳ \`${c}\`` }
+function fimSecao() { return `╰┈┈┈┈୨୧┈┈┈┈╯` }
+
+function cardPerfil({ nomeBot, nomeUsuario, cargo, dono }) {
+  return `╔═══ஓ๑♡๑ஓ═══╗
+𓆩 𝐂 𝐈 𝐃 𝐀 𝐃 𝐄 𓆪
+╚═══ஓ๑♡๑ஓ═══╝
+
+┏━━━〔 𝐏𝐑𝐎𝐅𝐈𝐋𝐄 〕━━━┓
+𖤐 Bot » ${nomeBot}
+𖤐 Usuário » ${nomeUsuario}
+𖤐 Cargo » ${cargo}
+𖤐 Dono » ${dono}
+┗━━━━━━━━━━━━━━━━━━┛`
+}
 
 function detectarCargo({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin }) {
   const num = String(sender || "").split("@")[0].split(":")[0].replace(/\D/g, "")
   const donos = (Array.isArray(config?.dono) ? config.dono : [config?.dono]).map(n => String(n).split("@")[0].split(":")[0].replace(/\D/g, "")).filter(Boolean)
   if (isDono || donos.includes(num)) return "👑 𝐆𝐑𝐀𝐍𝐃𝐄 𝐒𝐀́𝐁𝐈𝐎"
   try { const subs = (db.config?.().subdonos || []).map(n => String(n).split("@")[0].split(":")[0].replace(/\D/g, "")); if (isSubDono || subs.includes(num)) return "💠 𝐋𝐔𝐀 𝐒𝐔𝐏𝐄𝐑𝐈𝐎𝐑" } catch (_) {}
-  try { const vips = (db.vips?.() || {}).vips || {}; for (const [j, info] of Object.entries(vips)) { const jn = String(j).split("@")[0].split(":")[0].replace(/\D/g, ""); if (jn === num && (info.expira === "inf" || info.expira > Date.now())) return "❄️ 𝐍𝐎𝐁𝐑𝐄 𝐀𝐋𝐈𝐀𝐃𝐎" } } catch (_) {}
+  try {
+    const vips = (db.vips?.() || {}).vips || {}
+    for (const [j, info] of Object.entries(vips)) {
+      const jn = String(j).split("@")[0].split(":")[0].replace(/\D/g, "")
+      if (jn === num && (info.expira === "inf" || info.expira > Date.now())) return "❄️ 𝐍𝐎𝐁𝐑𝐄 𝐀𝐋𝐈𝐀𝐃𝐎"
+    }
+  } catch (_) {}
   if (isAdmin) return "⚔️ 𝐂𝐎𝐌𝐀𝐍𝐃𝐀𝐍𝐓𝐄"
-  try { const subsAdm = (db.subadmins?.() || {})[groupMetadata?.id] || []; if (subsAdm.some(s => String(s).split("@")[0].split(":")[0].replace(/\D/g, "") === num)) return "🛡️ 𝐆𝐔𝐀𝐑𝐃𝐀 𝐑𝐄𝐀𝐋" } catch (_) {}
+  try {
+    const subsAdm = (db.subadmins?.() || {})[groupMetadata?.id] || []
+    if (subsAdm.some(s => String(s).split("@")[0].split(":")[0].replace(/\D/g, "") === num)) return "🛡️ 𝐆𝐔𝐀𝐑𝐃𝐀 𝐑𝐄𝐀𝐋"
+  } catch (_) {}
   return "👤 𝐒𝐋𝐈𝐌𝐄 𝐂𝐎𝐌𝐔𝐌"
 }
 
@@ -56,6 +141,7 @@ function getCargoETexto(ctx) {
   return { pushName, nomeDono, cargo, nomeBot }
 }
 
+/* ---------- CONSTANTES DO JOGO ---------- */
 const CASAS = [
   { id: "barraco", nome: "Barraco", emoji: "🏚️", preco: 500, renda: 30, desc: "Um teto simples" },
   { id: "kitnet", nome: "Kitnet", emoji: "🏠", preco: 1500, renda: 80, desc: "Espaço pequeno" },
@@ -112,8 +198,17 @@ function sortearGif(lista) { return lista[Math.floor(Math.random() * lista.lengt
 function sortearFrase(lista, numA, numB) { const f = lista[Math.floor(Math.random() * lista.length)]; return f.replace(/@A/g, "@" + numA).replace(/@B/g, "@" + numB) }
 
 async function enviarGif(sock, jid, url, frase, mentions, quoted) {
-  try { const r = await fetch(url); if (!r.ok) throw new Error("HTTP " + r.status); const buffer = Buffer.from(await r.arrayBuffer()); await sock.sendMessage(jid, { video: buffer, mimetype: "video/mp4", gifPlayback: true, caption: frase, mentions }, { quoted }); return true }
-  catch (e) { console.log("Erro enviarGif:", e.message); await sock.sendMessage(jid, { text: frase, mentions }, { quoted }); return false }
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(15000) })
+    if (!r.ok) throw new Error("HTTP " + r.status)
+    const buffer = Buffer.from(await r.arrayBuffer())
+    await sock.sendMessage(jid, { video: buffer, mimetype: "video/mp4", gifPlayback: true, caption: frase, mentions }, { quoted })
+    return true
+  } catch (e) {
+    console.log("Erro enviarGif:", e.message)
+    await sock.sendMessage(jid, { text: frase, mentions }, { quoted })
+    return false
+  }
 }
 
 function acharCasa(id) { return CASAS.find(c => c.id === id) || CASAS.find(c => normalizar(c.nome) === normalizar(id)) || CASAS.find(c => normalizar(c.nome).includes(normalizar(id))) }
@@ -127,7 +222,10 @@ function getUser(c, num) {
 }
 function formatarTempo(ms) { const s = Math.floor(ms / 1000), m = Math.floor(s / 60), h = Math.floor(m / 60), d = Math.floor(h / 24); if (d > 0) return d + "d " + (h % 24) + "h"; if (h > 0) return h + "h " + (m % 60) + "min"; if (m > 0) return m + "min " + (s % 60) + "s"; return s + "s" }
 function barraHP(v, max = 100) { const c = Math.max(0, Math.min(10, Math.round((v / max) * 10))); return "💧".repeat(c) + "⬛".repeat(10 - c) }
-function fmtGold(v) { if (typeof v !== "number" || isNaN(v)) return "0"; return Math.floor(v).toLocaleString("pt-BR") }
+function fmtGold(v) {
+  if (typeof v !== "number" || isNaN(v) || !isFinite(v)) return "0"
+  return Math.floor(v).toLocaleString("pt-BR")
+}
 
 module.exports = {
   menu: "menu-cidade",
@@ -137,7 +235,12 @@ module.exports = {
 
   async rendaAutomatica(sock, db) {
     const c = getCidade(); const agora = Date.now(); const INTERVALO_JUROS = 24 * 60 * 60 * 1000; let alterou = false
-    for (const [num, u] of Object.entries(c.usuarios)) { if ((u.banco || 0) > 0 && (agora - (u.ultimoJuros || 0)) >= INTERVALO_JUROS) { const juros = Math.floor(u.banco * BANCO.taxaJuros); u.banco += juros; u.ultimoJuros = agora; alterou = true } }
+    for (const [num, u] of Object.entries(c.usuarios)) {
+      if ((u.banco || 0) > 0 && (agora - (u.ultimoJuros || 0)) >= INTERVALO_JUROS) {
+        const juros = Math.floor(u.banco * BANCO.taxaJuros)
+        u.banco += juros; u.ultimoJuros = agora; alterou = true
+      }
+    }
     if (alterou) dbSalvar("cidade.json", c)
   },
 
@@ -146,46 +249,87 @@ module.exports = {
     menucidade: {
       aliases: ["cidade", "menuc", "comandoscidade"],
       async executar({ sock, msg, prefixoAtivo, db, sender, config, isDono, isSubDono, isAdmin, groupMetadata }) {
-        const jid = msg.key.remoteJid; const p = prefixoAtivo || "+"; const cfg = db.config()
+        const jid = msg.key.remoteJid; const p = prefixoAtivo || "+"
+        const cfg = getCfg(db)
         const { pushName, nomeDono, cargo, nomeBot } = getCargoETexto({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin, msg })
-        await reagir(sock, msg, "💧")
+        await reagir(sock, msg, "🌸")
+
         const texto = `${cardPerfil({ nomeBot, nomeUsuario: pushName, cargo, dono: nomeDono })}
 
-${secao("🏠 ᴄᴀsᴀs")}
-${item(`${p}lojacasa / ${p}comprarcasa <nome>`)}
-${item(`${p}vendercasa / ${p}minhacasa / ${p}lavarcasa`)}
+${secao("𝐂𝐀𝐒𝐀𝐒")}
+${item(`${p}lojacasa`)}
+${item(`${p}comprarcasa <nome>`)}
+${item(`${p}vendercasa`)}
+${item(`${p}minhacasa`)}
+${item(`${p}lavarcasa`)}
+${fimSecao()}
 
-${secao("🏢 ᴘʀᴇ́ᴅɪᴏs")}
-${item(`${p}lojapredio / ${p}comprarpredio <nome>`)}
-${item(`${p}venderpredio / ${p}meupredio / ${p}lavarpredio`)}
+${secao("𝐏𝐑𝐄́𝐃𝐈𝐎𝐒")}
+${item(`${p}lojapredio`)}
+${item(`${p}comprarpredio <nome>`)}
+${item(`${p}venderpredio`)}
+${item(`${p}meupredio`)}
+${item(`${p}lavarpredio`)}
+${fimSecao()}
 
-${secao("🏦 ʙᴀɴᴄᴏ")}
-${item(`${p}banco / ${p}depositar <valor>`)}
-${item(`${p}sacar <valor> / ${p}transferir @user <valor>`)}
+${secao("𝐁𝐀𝐍𝐂𝐎")}
+${item(`${p}banco`)}
+${item(`${p}depositar <valor>`)}
+${item(`${p}sacar <valor>`)}
+${item(`${p}transferir @user <valor>`)}
 ${item(`${p}extrato`)}
+${fimSecao()}
 
-${secao("🛒 ᴍᴇʀᴄᴀᴅᴏ")}
-${item(`${p}mercado / ${p}compraritem <nome> <qtd>`)}
-${item(`${p}mochila / ${p}consumir <nome>`)}
+${secao("𝐌𝐄𝐑𝐂𝐀𝐃𝐎")}
+${item(`${p}mercado`)}
+${item(`${p}compraritem <nome> <qtd>`)}
+${item(`${p}mochila`)}
+${item(`${p}consumir <nome>`)}
+${fimSecao()}
 
-${secao("🚔 ᴘᴏʟɪ́ᴄɪᴀ")}
-${item(`${p}crimeurbano / ${p}statuspreso`)}
-${item(`${p}pagar fianca / ${p}fugircadeia`)}
+${secao("𝐏𝐎𝐋𝐈́𝐂𝐈𝐀")}
+${item(`${p}crimeurbano`)}
+${item(`${p}statuspreso`)}
+${item(`${p}pagar fianca`)}
+${item(`${p}fugircadeia`)}
+${fimSecao()}
 
-${secao("💞 ɪɴᴛᴇʀᴀᴄ̧ᴏ̃ᴇs")}
-${item(`${p}matar @user / ${p}beijar @user`)}
-${item(`${p}abraçar @user / ${p}chutar @user`)}
+${secao("𝐈𝐍𝐓𝐄𝐑𝐀𝐂̧𝐎̃𝐄𝐒")}
+${item(`${p}matar @user`)}
+${item(`${p}beijar @user`)}
+${item(`${p}abraçar @user`)}
+${item(`${p}chutar @user`)}
 ${item(`${p}louça @user`)}
+${fimSecao()}
 
-${secao("👤 ᴘᴇʀғɪʟ")}
-${item(`${p}cidadeperfil / ${p}ranking`)}
+${secao("𝐏𝐄𝐑𝐅𝐈𝐋")}
+${item(`${p}cidadeperfil`)}
+${item(`${p}ranking`)}
+${fimSecao()}
 
-💧 Prefixo: \`${p}\`
+╔═══ஓ๑♡๑ஓ═══╗
+𓆩 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 𓆪
+↳ \`${p}\`
+╚═══ஓ๑♡๑ஓ═══╝
 
-_"Uma cidade forte, um império forte."_
+╔═══ஓ๑♡๑ஓ═══╗
+𓆩 ${nomeBot.toUpperCase()} 𓆪
+❝ Uma cidade forte, um império forte. ❞
+╚═══ஓ๑♡๑ஓ═══╝`
 
-"${nomeBot}"`
-        if (cfg.fotoMenu) { const buf = Buffer.from(cfg.fotoMenu, "base64"); if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "rimuru.mp4", gifPlayback: true, caption: texto }, { quoted: msg }); return sock.sendMessage(jid, { image: buf, caption: texto }, { quoted: msg }) }
+        if (cfg.fotoMenu) {
+          let buf = null
+          try {
+            const limpo = String(cfg.fotoMenu).replace(/^data:[^;]+;base64,/, "")
+            buf = Buffer.from(limpo, "base64")
+          } catch { buf = null }
+          if (buf && buf.length) {
+            try {
+              if (cfg.tipoMenu === "video") return sock.sendMessage(jid, { video: buf, mimetype: "video/mp4", fileName: "rimuru.mp4", gifPlayback: true, caption: texto }, { quoted: msg })
+              return sock.sendMessage(jid, { image: buf, caption: texto }, { quoted: msg })
+            } catch (e) { return sock.sendMessage(jid, { text: texto }, { quoted: msg }) }
+          }
+        }
         await sock.sendMessage(jid, { text: texto }, { quoted: msg })
       }
     },
@@ -194,10 +338,12 @@ _"Uma cidade forte, um império forte."_
       aliases: ["casas", "lojacasas"],
       async executar({ sock, msg, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
-        await reagir(sock, msg, "💧")
-        let txt = `💧 • 𝐋𝐎𝐉𝐀 𝐂𝐀𝐒𝐀𝐒 •\n\n❄️ Lista:\n\n`
-        CASAS.forEach((c, i) => { txt += `🧊 ${i + 1}. ${c.emoji} ${c.nome} — 💰 ${fmtGold(c.preco)} | 📈 +${c.renda}/h\n🧊 ${c.desc}\n` })
-        txt += `\n💡 \`${p}comprarcasa <nome>\`\n\n"${nomeBot}"`
+        await reagir(sock, msg, "🌸")
+        let txt = `${boxTop("𝐋𝐎𝐉𝐀 𝐂𝐀𝐒𝐀𝐒")}\n\n`
+        CASAS.forEach((c, i) => {
+          txt += `${secao(`#${i + 1}`)}\n↳ ${c.emoji} ${c.nome}\n↳ 💰 ${fmtGold(c.preco)} | 📈 +${c.renda}/h\n↳ ${c.desc}\n${fimSecao()}\n`
+        })
+        txt += `\n╔═══ஓ๑♡๑ஓ═══╗\n𓆩 𝐂𝐎𝐌𝐏𝐑𝐀𝐑 𓆪\n↳ \`${p}comprarcasa <nome>\`\n╚═══ஓ๑♡๑ஓ═══╝\n\n${boxFim(nomeBot)}`
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
@@ -207,15 +353,19 @@ _"Uma cidade forte, um império forte."_
       async executar({ sock, msg, args, db, utils, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const num = utils.soNumero(sender); const c = getCidade(); const u = getUser(c, num)
-        if (u.casa) { const atual = acharCasa(u.casa); await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐎𝐌𝐏𝐑𝐀𝐑 •\n\n❄️ Você já tem ${atual?.nome || u.casa}.\n🧊 Venda primeiro com \`${p}vendercasa\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (u.casa) {
+          const atual = acharCasa(u.casa)
+          await reagir(sock, msg, "🧊")
+          return sock.sendMessage(jid, { text: msgAviso("𝐂𝐎𝐌𝐏𝐑𝐀𝐑", "Você já tem uma casa.", `${atual?.nome || u.casa}`, `\`${p}vendercasa\` primeiro`, nomeBot) }, { quoted: msg })
+        }
         const casa = acharCasa(args.join(" "))
-        if (!casa) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐎𝐌𝐏𝐑𝐀𝐑 •\n\n❄️ Casa não encontrada.\n🧊 Veja \`${p}lojacasa\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!casa) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐂𝐎𝐌𝐏𝐑𝐀𝐑", "Casa não encontrada.", args.join(" ") || "—", `\`${p}lojacasa\``, nomeBot) }, { quoted: msg }) }
         const rpg = db.rpg(); rpg.usuarios = rpg.usuarios || {}; rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
-        if ((rpg.usuarios[num].moedas || 0) < casa.preco) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐎𝐌𝐏𝐑𝐀𝐑 •\n\n❄️ Faltam ${fmtGold(casa.preco - (rpg.usuarios[num].moedas || 0))} gold.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if ((rpg.usuarios[num].moedas || 0) < casa.preco) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐂𝐎𝐌𝐏𝐑𝐀𝐑", "Gold insuficiente.", `Faltam ${fmtGold(casa.preco - (rpg.usuarios[num].moedas || 0))}`, null, nomeBot) }, { quoted: msg }) }
         rpg.usuarios[num].moedas -= casa.preco; u.casa = casa.id; u.sujeiraCasa = 0
         db.salvarRpg(rpg); dbSalvar("cidade.json", c)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐂𝐀𝐒𝐀 •\n\n❄️ Comprada\n🧊 ${casa.emoji} ${casa.nome}\n🧊 +${casa.renda}/h\n🧊 -${fmtGold(casa.preco)} gold\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐂𝐀𝐒𝐀", "Comprada.", `${casa.emoji} ${casa.nome} • +${casa.renda}/h`, `-${fmtGold(casa.preco)} gold`, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -224,12 +374,12 @@ _"Uma cidade forte, um império forte."_
       async executar({ sock, msg, db, utils, sender }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender); const c = getCidade(); const u = getUser(c, num)
-        if (!u.casa) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐕𝐄𝐍𝐃𝐄𝐑 •\n\n❄️ Você não tem casa.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!u.casa) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐕𝐄𝐍𝐃𝐄𝐑", "Você não tem casa.", "—", null, nomeBot) }, { quoted: msg }) }
         const casa = acharCasa(u.casa); const valorVenda = Math.floor(casa.preco * 0.7)
         const rpg = db.rpg(); rpg.usuarios = rpg.usuarios || {}; rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }; rpg.usuarios[num].moedas = (rpg.usuarios[num].moedas || 0) + valorVenda
         u.casa = null; u.sujeiraCasa = 0; db.salvarRpg(rpg); dbSalvar("cidade.json", c)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐕𝐄𝐍𝐃𝐈𝐃𝐀 •\n\n❄️ ${casa.emoji} ${casa.nome}\n🧊 +${fmtGold(valorVenda)} gold (70%)\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐕𝐄𝐍𝐃𝐈𝐃𝐀", "Casa vendida.", `${casa.emoji} ${casa.nome}`, `+${fmtGold(valorVenda)} gold (70%)`, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -238,12 +388,37 @@ _"Uma cidade forte, um império forte."_
       async executar({ sock, msg, utils, sender, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const num = utils.soNumero(sender); const c = getCidade(); const u = getUser(c, num)
-        if (!u.casa) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐌𝐈𝐍𝐇𝐀 𝐂𝐀𝐒𝐀 •\n\n❄️ Você não tem casa.\n🧊 Use \`${p}lojacasa\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!u.casa) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐌𝐈𝐍𝐇𝐀 𝐂𝐀𝐒𝐀", "Você não tem casa.", "—", `\`${p}lojacasa\``, nomeBot) }, { quoted: msg }) }
         const casa = acharCasa(u.casa); const sujeira = u.sujeiraCasa || 0
         const statusSujeira = sujeira > 70 ? "🚨" : sujeira > 40 ? "❄️" : "✅"
         const rendaAtual = Math.max(0, casa.renda - Math.floor(casa.renda * (sujeira / 100)))
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐌𝐈𝐍𝐇𝐀 𝐂𝐀𝐒𝐀 •\n\n❄️ ${casa.emoji} ${casa.nome}\n🧊 @${num}\n\n🧊 Renda base: +${casa.renda}/h\n🧊 Renda atual: +${rendaAtual}/h\n🧊 Sujeira: ${sujeira}% ${statusSujeira}\n${barraHP(100 - sujeira, 100)}\n\n${sujeira > 50 ? `❄️ _Suja! Use ${p}lavarcasa_` : "✅ _Limpa._"}\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        const texto = `${boxTop("𝐌𝐈𝐍𝐇𝐀 𝐂𝐀𝐒𝐀")}
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐃𝐎𝐍𝐎 𓆪
+↳ @${num}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐂𝐀𝐒𝐀 𓆪
+↳ ${casa.emoji} ${casa.nome}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐑𝐄𝐍𝐃𝐀 𓆪
+↳ Base: +${casa.renda}/h
+↳ Atual: +${rendaAtual}/h
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐒𝐔𝐉𝐄𝐈𝐑𝐀 𓆪
+↳ ${sujeira}% ${statusSujeira}
+↳ ${barraHP(100 - sujeira, 100)}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+${sujeira > 50 ? `╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 𝐀𝐕𝐈𝐒𝐎 𓆪\n↳ Use \`${p}lavarcasa\`\n╰┈┈┈┈୨୧┈┈┈┈╯\n\n` : ""}${boxFim(nomeBot, sujeira > 50 ? "Suja! Lave a casa." : "Tudo em ordem.")}`
+        await sock.sendMessage(jid, { text: texto, mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -252,15 +427,15 @@ _"Uma cidade forte, um império forte."_
       async executar({ sock, msg, db, utils, sender }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender); const c = getCidade(); const u = getUser(c, num)
-        if (!u.casa) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐋𝐀𝐕𝐀𝐑 •\n\n❄️ Você não tem casa.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!u.casa) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐋𝐀𝐕𝐀𝐑", "Você não tem casa.", "—", null, nomeBot) }, { quoted: msg }) }
         const sujeira = u.sujeiraCasa || 0
-        if (sujeira === 0) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐋𝐀𝐕𝐀𝐑 •\n\n❄️ Já tá limpa!\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (sujeira === 0) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐋𝐀𝐕𝐀𝐑", "Já está limpa!", "0% sujeira", null, nomeBot) }, { quoted: msg }) }
         const custo = Math.floor(sujeira * 5)
         const rpg = db.rpg(); rpg.usuarios = rpg.usuarios || {}; rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
-        if ((rpg.usuarios[num].moedas || 0) < custo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐋𝐀𝐕𝐀𝐑 •\n\n❄️ Precisa ${fmtGold(custo)} gold.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if ((rpg.usuarios[num].moedas || 0) < custo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐋𝐀𝐕𝐀𝐑", "Gold insuficiente.", `Precisa ${fmtGold(custo)}`, null, nomeBot) }, { quoted: msg }) }
         rpg.usuarios[num].moedas -= custo; u.sujeiraCasa = 0; db.salvarRpg(rpg); dbSalvar("cidade.json", c)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐋𝐈𝐌𝐏𝐀 •\n\n❄️ Sujeira removida\n🧊 -${fmtGold(custo)} gold\n🧊 0% sujeira\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐈𝐌𝐏𝐀", "Sujeira removida.", "0% sujeira", `-${fmtGold(custo)} gold`, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -268,10 +443,12 @@ _"Uma cidade forte, um império forte."_
       aliases: ["predios", "lojapredios"],
       async executar({ sock, msg, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
-        await reagir(sock, msg, "💧")
-        let txt = `💧 • 𝐋𝐎𝐉𝐀 𝐏𝐑𝐄́𝐃𝐈𝐎𝐒 •\n\n❄️ Lista:\n\n`
-        PREDIOS.forEach((pr, i) => { txt += `🧊 ${i + 1}. ${pr.emoji} ${pr.nome} — 💰 ${fmtGold(pr.preco)} | 📈 +${pr.renda}/h\n🧊 ${pr.desc}\n` })
-        txt += `\n💡 \`${p}comprarpredio <nome>\`\n\n"${nomeBot}"`
+        await reagir(sock, msg, "🌸")
+        let txt = `${boxTop("𝐋𝐎𝐉𝐀 𝐏𝐑𝐄́𝐃𝐈𝐎𝐒")}\n\n`
+        PREDIOS.forEach((pr, i) => {
+          txt += `${secao(`#${i + 1}`)}\n↳ ${pr.emoji} ${pr.nome}\n↳ 💰 ${fmtGold(pr.preco)} | 📈 +${pr.renda}/h\n↳ ${pr.desc}\n${fimSecao()}\n`
+        })
+        txt += `\n╔═══ஓ๑♡๑ஓ═══╗\n𓆩 𝐂𝐎𝐌𝐏𝐑𝐀𝐑 𓆪\n↳ \`${p}comprarpredio <nome>\`\n╚═══ஓ๑♡๑ஓ═══╝\n\n${boxFim(nomeBot)}`
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
@@ -281,15 +458,19 @@ _"Uma cidade forte, um império forte."_
       async executar({ sock, msg, args, db, utils, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const num = utils.soNumero(sender); const c = getCidade(); const u = getUser(c, num)
-        if (u.predio) { const atual = acharPredio(u.predio); await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐎𝐌𝐏𝐑𝐀𝐑 •\n\n❄️ Você já tem ${atual?.nome || u.predio}.\n🧊 Venda com \`${p}venderpredio\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (u.predio) {
+          const atual = acharPredio(u.predio)
+          await reagir(sock, msg, "🧊")
+          return sock.sendMessage(jid, { text: msgAviso("𝐂𝐎𝐌𝐏𝐑𝐀𝐑", "Você já tem um prédio.", `${atual?.nome || u.predio}`, `\`${p}venderpredio\` primeiro`, nomeBot) }, { quoted: msg })
+        }
         const predio = acharPredio(args.join(" "))
-        if (!predio) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐎𝐌𝐏𝐑𝐀𝐑 •\n\n❄️ Prédio não encontrado.\n🧊 Veja \`${p}lojapredio\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!predio) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐂𝐎𝐌𝐏𝐑𝐀𝐑", "Prédio não encontrado.", args.join(" ") || "—", `\`${p}lojapredio\``, nomeBot) }, { quoted: msg }) }
         const rpg = db.rpg(); rpg.usuarios = rpg.usuarios || {}; rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
-        if ((rpg.usuarios[num].moedas || 0) < predio.preco) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐎𝐌𝐏𝐑𝐀𝐑 •\n\n❄️ Faltam ${fmtGold(predio.preco - (rpg.usuarios[num].moedas || 0))} gold.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if ((rpg.usuarios[num].moedas || 0) < predio.preco) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐂𝐎𝐌𝐏𝐑𝐀𝐑", "Gold insuficiente.", `Faltam ${fmtGold(predio.preco - (rpg.usuarios[num].moedas || 0))}`, null, nomeBot) }, { quoted: msg }) }
         rpg.usuarios[num].moedas -= predio.preco; u.predio = predio.id; u.sujeiraPredio = 0
         db.salvarRpg(rpg); dbSalvar("cidade.json", c)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐏𝐑𝐄́𝐃𝐈𝐎 •\n\n❄️ Comprado\n🧊 ${predio.emoji} ${predio.nome}\n🧊 +${predio.renda}/h\n🧊 -${fmtGold(predio.preco)} gold\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐑𝐄́𝐃𝐈𝐎", "Comprado.", `${predio.emoji} ${predio.nome} • +${predio.renda}/h`, `-${fmtGold(predio.preco)} gold`, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -298,12 +479,12 @@ _"Uma cidade forte, um império forte."_
       async executar({ sock, msg, db, utils, sender }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender); const c = getCidade(); const u = getUser(c, num)
-        if (!u.predio) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐕𝐄𝐍𝐃𝐄𝐑 •\n\n❄️ Você não tem prédio.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!u.predio) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐕𝐄𝐍𝐃𝐄𝐑", "Você não tem prédio.", "—", null, nomeBot) }, { quoted: msg }) }
         const predio = acharPredio(u.predio); const valorVenda = Math.floor(predio.preco * 0.7)
         const rpg = db.rpg(); rpg.usuarios = rpg.usuarios || {}; rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }; rpg.usuarios[num].moedas = (rpg.usuarios[num].moedas || 0) + valorVenda
         u.predio = null; u.sujeiraPredio = 0; db.salvarRpg(rpg); dbSalvar("cidade.json", c)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐕𝐄𝐍𝐃𝐈𝐃𝐎 •\n\n❄️ ${predio.emoji} ${predio.nome}\n🧊 +${fmtGold(valorVenda)} gold (70%)\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐕𝐄𝐍𝐃𝐈𝐃𝐎", "Prédio vendido.", `${predio.emoji} ${predio.nome}`, `+${fmtGold(valorVenda)} gold (70%)`, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -312,12 +493,37 @@ _"Uma cidade forte, um império forte."_
       async executar({ sock, msg, utils, sender, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender); const c = getCidade(); const u = getUser(c, num)
-        if (!u.predio) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐌𝐄𝐔 𝐏𝐑𝐄́𝐃𝐈𝐎 •\n\n❄️ Você não tem prédio.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!u.predio) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐌𝐄𝐔 𝐏𝐑𝐄́𝐃𝐈𝐎", "Você não tem prédio.", "—", null, nomeBot) }, { quoted: msg }) }
         const predio = acharPredio(u.predio); const sujeira = u.sujeiraPredio || 0
         const statusSujeira = sujeira > 70 ? "🚨" : sujeira > 40 ? "❄️" : "✅"
         const rendaAtual = Math.max(0, predio.renda - Math.floor(predio.renda * (sujeira / 100)))
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐌𝐄𝐔 𝐏𝐑𝐄́𝐃𝐈𝐎 •\n\n❄️ ${predio.emoji} ${predio.nome}\n🧊 @${num}\n\n🧊 Renda base: +${predio.renda}/h\n🧊 Renda atual: +${rendaAtual}/h\n🧊 Sujeira: ${sujeira}% ${statusSujeira}\n${barraHP(100 - sujeira, 100)}\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        const texto = `${boxTop("𝐌𝐄𝐔 𝐏𝐑𝐄́𝐃𝐈𝐎")}
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐃𝐎𝐍𝐎 𓆪
+↳ @${num}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐏𝐑𝐄́𝐃𝐈𝐎 𓆪
+↳ ${predio.emoji} ${predio.nome}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐑𝐄𝐍𝐃𝐀 𓆪
+↳ Base: +${predio.renda}/h
+↳ Atual: +${rendaAtual}/h
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐒𝐔𝐉𝐄𝐈𝐑𝐀 𓆪
+↳ ${sujeira}% ${statusSujeira}
+↳ ${barraHP(100 - sujeira, 100)}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+${boxFim(nomeBot, sujeira > 50 ? "Sujo! Lave o prédio." : "Tudo em ordem.")}`
+        await sock.sendMessage(jid, { text: texto, mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -326,15 +532,15 @@ _"Uma cidade forte, um império forte."_
       async executar({ sock, msg, db, utils, sender }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender); const c = getCidade(); const u = getUser(c, num)
-        if (!u.predio) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐋𝐀𝐕𝐀𝐑 •\n\n❄️ Você não tem prédio.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!u.predio) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐋𝐀𝐕𝐀𝐑", "Você não tem prédio.", "—", null, nomeBot) }, { quoted: msg }) }
         const sujeira = u.sujeiraPredio || 0
-        if (sujeira === 0) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐋𝐀𝐕𝐀𝐑 •\n\n❄️ Já tá limpo!\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (sujeira === 0) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐋𝐀𝐕𝐀𝐑", "Já está limpo!", "0% sujeira", null, nomeBot) }, { quoted: msg }) }
         const custo = Math.floor(sujeira * 10)
         const rpg = db.rpg(); rpg.usuarios = rpg.usuarios || {}; rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
-        if ((rpg.usuarios[num].moedas || 0) < custo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐋𝐀𝐕𝐀𝐑 •\n\n❄️ Precisa ${fmtGold(custo)} gold.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if ((rpg.usuarios[num].moedas || 0) < custo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐋𝐀𝐕𝐀𝐑", "Gold insuficiente.", `Precisa ${fmtGold(custo)}`, null, nomeBot) }, { quoted: msg }) }
         rpg.usuarios[num].moedas -= custo; u.sujeiraPredio = 0; db.salvarRpg(rpg); dbSalvar("cidade.json", c)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐋𝐈𝐌𝐏𝐎 •\n\n❄️ Sujeira removida\n🧊 -${fmtGold(custo)} gold\n🧊 0% sujeira\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐈𝐌𝐏𝐎", "Sujeira removida.", "0% sujeira", `-${fmtGold(custo)} gold`, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -344,8 +550,31 @@ _"Uma cidade forte, um império forte."_
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const num = utils.soNumero(sender); const c = getCidade(); const u = getUser(c, num)
         const rpg = db.rpg(); rpg.usuarios = rpg.usuarios || {}; const gold = (rpg.usuarios[num]?.moedas) || 0
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐁𝐀𝐍𝐂𝐎 •\n\n❄️ Sua conta\n🧊 @${num}\n\n🧊 Carteira: ${fmtGold(gold)}\n🧊 Banco: ${fmtGold(u.banco || 0)}\n🧊 Juros: ${(BANCO.taxaJuros * 100).toFixed(0)}%/dia\n🧊 Total: ${fmtGold(gold + (u.banco || 0))}\n\n💡 \`${p}depositar\` / \`${p}sacar\`\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        const texto = `${boxTop("𝐁𝐀𝐍𝐂𝐎")}
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐂𝐎𝐍𝐓𝐀 𓆪
+↳ @${num}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐒𝐀𝐋𝐃𝐎𝐒 𓆪
+↳ Carteira: ${fmtGold(gold)}
+↳ Banco: ${fmtGold(u.banco || 0)}
+↳ Juros: ${(BANCO.taxaJuros * 100).toFixed(0)}%/dia
+↳ Total: ${fmtGold(gold + (u.banco || 0))}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐂𝐎𝐌𝐀𝐍𝐃𝐎𝐒 𓆪
+↳ \`${p}depositar\`
+↳ \`${p}sacar\`
+↳ \`${p}transferir\`
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+${boxFim(nomeBot)}`
+        await sock.sendMessage(jid, { text: texto, mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -357,12 +586,12 @@ _"Uma cidade forte, um império forte."_
         const rpg = db.rpg(); rpg.usuarios = rpg.usuarios || {}; rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
         const gold = Math.floor(rpg.usuarios[num].moedas || 0)
         let valor = args[0] === "tudo" ? gold : Math.floor(parseInt(args[0]) || 0)
-        if (!valor || valor <= 0) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐃𝐄𝐏𝐎𝐒𝐈𝐓𝐀𝐑 •\n\n❄️ Informe valor.\n🧊 \`${p}depositar <valor>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
-        if (valor > gold) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐃𝐄𝐏𝐎𝐒𝐈𝐓𝐀𝐑 •\n\n❄️ Você só tem ${fmtGold(gold)}.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!valor || valor <= 0) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐃𝐄𝐏𝐎𝐒𝐈𝐓𝐀𝐑", "Informe valor.", "—", `\`${p}depositar <valor>\``, nomeBot) }, { quoted: msg }) }
+        if (valor > gold) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐃𝐄𝐏𝐎𝐒𝐈𝐓𝐀𝐑", "Gold insuficiente.", `Você tem ${fmtGold(gold)}`, null, nomeBot) }, { quoted: msg }) }
         rpg.usuarios[num].moedas = gold - valor; u.banco = Math.floor((u.banco || 0) + valor)
         db.salvarRpg(rpg); dbSalvar("cidade.json", c)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐃𝐄𝐏𝐎́𝐒𝐈𝐓𝐎 •\n\n❄️ Depositado\n🧊 -${fmtGold(valor)} gold\n🧊 Banco: ${fmtGold(u.banco)}\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐃𝐄𝐏𝐎́𝐒𝐈𝐓𝐎", "Depositado.", `-${fmtGold(valor)} gold`, `Banco: ${fmtGold(u.banco)}`, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -373,14 +602,14 @@ _"Uma cidade forte, um império forte."_
         const num = utils.soNumero(sender); const c = getCidade(); const u = getUser(c, num)
         const rpg = db.rpg(); rpg.usuarios = rpg.usuarios || {}; rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
         let valor = args[0] === "tudo" ? Math.floor(u.banco || 0) : Math.floor(parseInt(args[0]) || 0)
-        if (!valor || valor <= 0) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐀𝐂𝐀𝐑 •\n\n❄️ Informe valor.\n🧊 \`${p}sacar <valor>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
-        if (valor > (u.banco || 0)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐀𝐂𝐀𝐑 •\n\n❄️ Você só tem ${fmtGold(u.banco)} no banco.\n\n"${nomeBot}"` }, { quoted: msg }) }
-        if (valor > BANCO.limiteSaque) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐀𝐂𝐀𝐑 •\n\n❄️ Limite: ${fmtGold(BANCO.limiteSaque)}\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!valor || valor <= 0) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐒𝐀𝐂𝐀𝐑", "Informe valor.", "—", `\`${p}sacar <valor>\``, nomeBot) }, { quoted: msg }) }
+        if (valor > (u.banco || 0)) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐀𝐂𝐀𝐑", "Saldo insuficiente.", `Banco: ${fmtGold(u.banco)}`, null, nomeBot) }, { quoted: msg }) }
+        if (valor > BANCO.limiteSaque) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐀𝐂𝐀𝐑", "Limite excedido.", `Máx: ${fmtGold(BANCO.limiteSaque)}`, null, nomeBot) }, { quoted: msg }) }
         const taxa = Math.floor(valor * BANCO.taxaSaque); const recebido = valor - taxa
         u.banco = Math.floor((u.banco || 0) - valor); rpg.usuarios[num].moedas = Math.floor((rpg.usuarios[num].moedas || 0) + recebido)
         db.salvarRpg(rpg); dbSalvar("cidade.json", c)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐒𝐀𝐐𝐔𝐄 •\n\n❄️ Retirado\n🧊 -${fmtGold(valor)} gold\n🧊 Taxa (1%): -${fmtGold(taxa)}\n🧊 +${fmtGold(recebido)} recebido\n🧊 Banco: ${fmtGold(u.banco)}\n🧊 Carteira: ${fmtGold(rpg.usuarios[num].moedas)}\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐒𝐀𝐐𝐔𝐄", "Retirado.", `-${fmtGold(valor)} gold • +${fmtGold(recebido)}`, `Taxa (1%): -${fmtGold(taxa)} • Banco: ${fmtGold(u.banco)}`, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -389,16 +618,16 @@ _"Uma cidade forte, um império forte."_
       async executar({ sock, msg, args, db, utils, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const num = utils.soNumero(sender); const alvo = utils.getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐓𝐑𝐀𝐍𝐒𝐅𝐄𝐑𝐈𝐑 •\n\n❄️ Marque um usuário.\n🧊 \`${p}transferir @user <valor>\`\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!alvo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐓𝐑𝐀𝐍𝐒𝐅𝐄𝐑𝐈𝐑", "Marque um usuário.", "—", `\`${p}transferir @user <valor>\``, nomeBot) }, { quoted: msg }) }
         const numAlvo = utils.soNumero(alvo)
-        if (num === numAlvo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐓𝐑𝐀𝐍𝐒𝐅𝐄𝐑𝐈𝐑 •\n\n❄️ Não pode pra você.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (num === numAlvo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐓𝐑𝐀𝐍𝐒𝐅𝐄𝐑𝐈𝐑", "Não pode pra você mesmo.", "—", null, nomeBot) }, { quoted: msg }) }
         const valor = Math.floor(parseInt(args.filter(a => !a.startsWith("@"))[0]) || 0)
-        if (!valor || valor <= 0) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐓𝐑𝐀𝐍𝐒𝐅𝐄𝐑𝐈𝐑 •\n\n❄️ Valor inválido.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!valor || valor <= 0) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐓𝐑𝐀𝐍𝐒𝐅𝐄𝐑𝐈𝐑", "Valor inválido.", "—", null, nomeBot) }, { quoted: msg }) }
         const rpg = db.rpg(); rpg.usuarios = rpg.usuarios || {}; rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }; rpg.usuarios[numAlvo] = rpg.usuarios[numAlvo] || { moedas: 0 }
-        if ((rpg.usuarios[num].moedas || 0) < valor) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐓𝐑𝐀𝐍𝐒𝐅𝐄𝐑𝐈𝐑 •\n\n❄️ Sem gold suficiente.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if ((rpg.usuarios[num].moedas || 0) < valor) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐓𝐑𝐀𝐍𝐒𝐅𝐄𝐑𝐈𝐑", "Gold insuficiente.", `Você tem ${fmtGold(rpg.usuarios[num].moedas || 0)}`, null, nomeBot) }, { quoted: msg }) }
         rpg.usuarios[num].moedas -= valor; rpg.usuarios[numAlvo].moedas = (rpg.usuarios[numAlvo].moedas || 0) + valor; db.salvarRpg(rpg)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐓𝐑𝐀𝐍𝐒𝐅𝐄𝐑𝐄̂𝐍𝐂𝐈𝐀 •\n\n❄️ Ouro passou\n🧊 De: @${num}\n🧊 Para: @${numAlvo}\n🧊 ${fmtGold(valor)} gold\n\n"${nomeBot}"`, mentions: [sender, alvo] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐓𝐑𝐀𝐍𝐒𝐅𝐄𝐑𝐄̂𝐍𝐂𝐈𝐀", "Ouro passou.", `De: @${num} • Para: @${numAlvo}`, `${fmtGold(valor)} gold`, nomeBot), mentions: [sender, alvo] }, { quoted: msg })
       }
     },
 
@@ -410,8 +639,29 @@ _"Uma cidade forte, um império forte."_
         const rpg = db.rpg(); rpg.usuarios = rpg.usuarios || {}; const gold = (rpg.usuarios[num]?.moedas) || 0
         const casa = u.casa ? acharCasa(u.casa) : null; const predio = u.predio ? acharPredio(u.predio) : null
         const patrimonio = gold + (u.banco || 0) + (casa ? casa.preco : 0) + (predio ? predio.preco : 0)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐄𝐗𝐓𝐑𝐀𝐓𝐎 •\n\n❄️ Patrimônio\n🧊 @${num}\n\n🧊 Carteira: ${fmtGold(gold)}\n🧊 Banco: ${fmtGold(u.banco || 0)}\n🧊 Casa: ${casa ? casa.nome : "Nenhuma"}\n🧊 Prédio: ${predio ? predio.nome : "Nenhum"}\n🧊 Total: ${fmtGold(patrimonio)}\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        const texto = `${boxTop("𝐄𝐗𝐓𝐑𝐀𝐓𝐎")}
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐔𝐒𝐔𝐀́𝐑𝐈𝐎 𓆪
+↳ @${num}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐁𝐄𝐍𝐒 𓆪
+↳ Carteira: ${fmtGold(gold)}
+↳ Banco: ${fmtGold(u.banco || 0)}
+↳ Casa: ${casa ? casa.nome : "Nenhuma"}
+↳ Prédio: ${predio ? predio.nome : "Nenhum"}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐏𝐀𝐓𝐑𝐈𝐌𝐎̂𝐍𝐈𝐎 𓆪
+↳ ${fmtGold(patrimonio)} gold
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+${boxFim(nomeBot)}`
+        await sock.sendMessage(jid, { text: texto, mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -419,10 +669,12 @@ _"Uma cidade forte, um império forte."_
       aliases: ["loja", "mercadoitens"],
       async executar({ sock, msg, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
-        await reagir(sock, msg, "💧")
-        let txt = `💧 • 𝐌𝐄𝐑𝐂𝐀𝐃𝐎 •\n\n❄️ Lista:\n\n`
-        MERCADO.forEach((i, idx) => { txt += `🧊 ${idx + 1}. ${i.emoji} ${i.nome} — 💰 ${i.preco} | ${i.desc}\n` })
-        txt += `\n💡 \`${p}compraritem <nome> <qtd>\`\n🍽️ \`${p}consumir <nome>\`\n\n"${nomeBot}"`
+        await reagir(sock, msg, "🌸")
+        let txt = `${boxTop("𝐌𝐄𝐑𝐂𝐀𝐃𝐎")}\n\n`
+        MERCADO.forEach((i, idx) => {
+          txt += `${secao(`#${idx + 1}`)}\n↳ ${i.emoji} ${i.nome}\n↳ 💰 ${fmtGold(i.preco)} • ${i.desc}\n${fimSecao()}\n`
+        })
+        txt += `\n╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 𝐂𝐎𝐌𝐏𝐑𝐀𝐑 𓆪\n↳ \`${p}compraritem <nome> <qtd>\`\n╰┈┈┈┈୨୧┈┈┈┈╯\n\n╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 𝐂𝐎𝐍𝐒𝐔𝐌𝐈𝐑 𓆪\n↳ \`${p}consumir <nome>\`\n╰┈┈┈┈୨୧┈┈┈┈╯\n\n${boxFim(nomeBot)}`
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
@@ -434,18 +686,18 @@ _"Uma cidade forte, um império forte."_
         const num = utils.soNumero(sender); const c = getCidade(); const u = getUser(c, num)
         let qtd = 1; if (/^\d+$/.test(args[args.length - 1])) qtd = parseInt(args.pop())
         const item = acharItem(args.join(" "))
-        if (!item) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐎𝐌𝐏𝐑𝐀𝐑 •\n\n❄️ Item não encontrado.\n🧊 Veja \`${p}mercado\`\n\n"${nomeBot}"` }, { quoted: msg }) }
-        if (qtd < 1 || qtd > 100) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐎𝐌𝐏𝐑𝐀𝐑 •\n\n❄️ Qtd: 1-100\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!item) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐂𝐎𝐌𝐏𝐑𝐀𝐑", "Item não encontrado.", args.join(" ") || "—", `\`${p}mercado\``, nomeBot) }, { quoted: msg }) }
+        if (qtd < 1 || qtd > 100) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐂𝐎𝐌𝐏𝐑𝐀𝐑", "Quantidade inválida.", "Use 1 a 100", null, nomeBot) }, { quoted: msg }) }
         const total = item.preco * qtd
         const rpg = db.rpg(); rpg.usuarios = rpg.usuarios || {}; rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
-        if ((rpg.usuarios[num].moedas || 0) < total) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐎𝐌𝐏𝐑𝐀𝐑 •\n\n❄️ Faltam ${fmtGold(total - (rpg.usuarios[num].moedas || 0))} gold.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if ((rpg.usuarios[num].moedas || 0) < total) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐂𝐎𝐌𝐏𝐑𝐀𝐑", "Gold insuficiente.", `Faltam ${fmtGold(total - (rpg.usuarios[num].moedas || 0))}`, null, nomeBot) }, { quoted: msg }) }
         rpg.usuarios[num].moedas -= total
         const existente = u.itens.find(i => i.id === item.id)
         if (existente) existente.qtd += qtd
         else u.itens.push({ id: item.id, nome: item.nome, emoji: item.emoji, qtd, cura: item.cura })
         db.salvarRpg(rpg); dbSalvar("cidade.json", c)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐂𝐎𝐌𝐏𝐑𝐀𝐃𝐎 •\n\n❄️ ${item.emoji} ${item.nome} x${qtd}\n🧊 -${fmtGold(total)} gold\n\n📦 \`${p}mochila\`\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐂𝐎𝐌𝐏𝐑𝐀𝐃𝐎", "Item comprado.", `${item.emoji} ${item.nome} x${qtd}`, `-${fmtGold(total)} gold`, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -454,11 +706,11 @@ _"Uma cidade forte, um império forte."_
       async executar({ sock, msg, utils, sender, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const num = utils.soNumero(sender); const c = getCidade(); const u = getUser(c, num)
-        if (!u.itens.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐌𝐎𝐂𝐇𝐈𝐋𝐀 •\n\n❄️ Vazia\n🧊 \`${p}mercado\`\n\n"${nomeBot}"` }, { quoted: msg }) }
-        let txt = `💧 • 𝐌𝐎𝐂𝐇𝐈𝐋𝐀 •\n\n❄️ @${num}\n\n`
-        u.itens.forEach(i => { txt += `🧊 ${i.emoji} ${i.nome} x${i.qtd}\n` })
-        txt += `\n🍽️ \`${p}consumir <nome>\`\n\n"${nomeBot}"`
-        await reagir(sock, msg, "💧")
+        if (!u.itens.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐌𝐎𝐂𝐇𝐈𝐋𝐀", "Vazia.", "—", `\`${p}mercado\``, nomeBot) }, { quoted: msg }) }
+        let txt = `${boxTop("𝐌𝐎𝐂𝐇𝐈𝐋𝐀")}\n\n`
+        u.itens.forEach(i => { txt += `╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 𝐈𝐓𝐄𝐌 𓆪\n↳ ${i.emoji} ${i.nome} x${i.qtd}\n╰┈┈┈┈୨୧┈┈┈┈╯\n` })
+        txt += `\n╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 𝐔𝐒𝐀𝐑 𓆪\n↳ \`${p}consumir <nome>\`\n╰┈┈┈┈୨୧┈┈┈┈╯\n\n${boxFim(nomeBot)}`
+        await reagir(sock, msg, "🌸")
         await sock.sendMessage(jid, { text: txt, mentions: [sender] }, { quoted: msg })
       }
     },
@@ -469,15 +721,16 @@ _"Uma cidade forte, um império forte."_
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender); const c = getCidade(); const u = getUser(c, num)
         const item = acharItem(args.join(" "))
-        if (!item) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐎𝐍𝐒𝐔𝐌𝐈𝐑 •\n\n❄️ Item não encontrado.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!item) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐂𝐎𝐍𝐒𝐔𝐌𝐈𝐑", "Item não encontrado.", args.join(" ") || "—", null, nomeBot) }, { quoted: msg }) }
         const idx = u.itens.findIndex(i => i.id === item.id)
-        if (idx === -1 || u.itens[idx].qtd <= 0) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐎𝐍𝐒𝐔𝐌𝐈𝐑 •\n\n❄️ Você não tem ${item.nome}.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (idx === -1 || u.itens[idx].qtd <= 0) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐂𝐎𝐍𝐒𝐔𝐌𝐈𝐑", "Você não tem esse item.", item.nome, null, nomeBot) }, { quoted: msg }) }
         u.itens[idx].qtd--; if (u.itens[idx].qtd <= 0) u.itens.splice(idx, 1)
-        if (item.id === "agua" || item.id === "cerveja" || item.id === "cafe" || item.id === "suco" || item.id === "energetico") u.sede = Math.min(100, (u.sede || 100) + item.cura)
+        const bebidas = ["agua", "cerveja", "cafe", "suco", "energetico"]
+        if (bebidas.includes(item.id)) u.sede = Math.min(100, (u.sede || 100) + item.cura)
         else if (item.cura > 0) u.fome = Math.min(100, (u.fome || 100) + item.cura)
         dbSalvar("cidade.json", c)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐂𝐎𝐍𝐒𝐔𝐌𝐈𝐃𝐎 •\n\n❄️ ${item.emoji} ${item.nome}\n🧊 Fome: ${u.fome}%\n🧊 Sede: ${u.sede}%\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐂𝐎𝐍𝐒𝐔𝐌𝐈𝐃𝐎", `${item.emoji} ${item.nome}`, `Fome: ${u.fome}% • Sede: ${u.sede}%`, null, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -487,19 +740,31 @@ _"Uma cidade forte, um império forte."_
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const num = utils.soNumero(sender); const c = getCidade(); const u = getUser(c, num)
         const rpg = db.rpg(); rpg.usuarios = rpg.usuarios || {}; rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
-        if (u.preso && u.preso > Date.now()) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐑𝐈𝐌𝐄 •\n\n❄️ Você já tá preso.\n\n"${nomeBot}"` }, { quoted: msg }) }
-        if (u.ultimoCrimeUrbano && (Date.now() - u.ultimoCrimeUrbano) < 30 * 60 * 1000) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐂𝐑𝐈𝐌𝐄 •\n\n❄️ Espere ${formatarTempo(30 * 60 * 1000 - (Date.now() - u.ultimoCrimeUrbano))}\n\n"${nomeBot}"` }, { quoted: msg }) }
-        const alvos = [{ nome: "Padaria", valor: 200, risco: 0.20 }, { nome: "Farmácia", valor: 500, risco: 0.30 }, { nome: "Joalheria", valor: 2000, risco: 0.50 }, { nome: "Banco Central", valor: 10000, risco: 0.75 }, { nome: "Residência", valor: 300, risco: 0.15 }]
+        if (u.preso && u.preso > Date.now()) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐂𝐑𝐈𝐌𝐄", "Você está preso.", formatarTempo(u.preso - Date.now()), null, nomeBot) }, { quoted: msg }) }
+        if (u.ultimoCrimeUrbano && (Date.now() - u.ultimoCrimeUrbano) < 30 * 60 * 1000) {
+          await reagir(sock, msg, "🧊")
+          return sock.sendMessage(jid, { text: msgAviso("𝐂𝐑𝐈𝐌𝐄", "Aguarde o cooldown.", formatarTempo(30 * 60 * 1000 - (Date.now() - u.ultimoCrimeUrbano)), null, nomeBot) }, { quoted: msg })
+        }
+        const alvos = [
+          { nome: "Padaria", valor: 200, chance: 0.80 },
+          { nome: "Farmácia", valor: 500, chance: 0.70 },
+          { nome: "Joalheria", valor: 2000, chance: 0.50 },
+          { nome: "Banco Central", valor: 10000, chance: 0.25 },
+          { nome: "Residência", valor: 300, chance: 0.85 }
+        ]
         const alvo = alvos[Math.floor(Math.random() * alvos.length)]
         u.ultimoCrimeUrbano = Date.now(); u.crimes = (u.crimes || 0) + 1
-        await reagir(sock, msg, "💧")
-        if (Math.random() > alvo.risco) {
-          const bonus = Math.floor(alvo.valor * (1 + u.crimes * 0.02)); rpg.usuarios[num].moedas = (rpg.usuarios[num].moedas || 0) + bonus; u.xp = (u.xp || 0) + 15
+        await reagir(sock, msg, "🌸")
+        if (Math.random() < alvo.chance) {
+          const bonus = Math.floor(alvo.valor * (1 + (u.crimes || 0) * 0.02))
+          rpg.usuarios[num].moedas = (rpg.usuarios[num].moedas || 0) + bonus
+          u.xp = (u.xp || 0) + 15
           db.salvarRpg(rpg); dbSalvar("cidade.json", c)
-          await sock.sendMessage(jid, { text: `💧 • 𝐂𝐑𝐈𝐌𝐄 ✓ •\n\n❄️ O Grande Sábio agiu\n🧊 Alvo: ${alvo.nome}\n🧊 +${fmtGold(bonus)} gold\n🧊 +15 XP\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+          await sock.sendMessage(jid, { text: msgSucesso("𝐂𝐑𝐈𝐌𝐄 ✓", "O Grande Sábio agiu.", `Alvo: ${alvo.nome} • +${fmtGold(bonus)} gold`, "+15 XP", nomeBot), mentions: [sender] }, { quoted: msg })
         } else {
-          const tempo = POLICIA.tempoPadrao + Math.floor(alvo.valor / 100) * 60 * 1000; u.preso = Date.now() + tempo; dbSalvar("cidade.json", c)
-          await sock.sendMessage(jid, { text: `💧 • 𝐏𝐑𝐄𝐒𝐎 •\n\n❄️ Você foi pego!\n🧊 Alvo: ${alvo.nome}\n🧊 Tempo: ${formatarTempo(tempo)}\n🧊 Fiança: ${fmtGold(tempo / 60000 * POLICIA.fiancaPorMinuto)} gold\n\n💡 \`${p}pagar fianca\`\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+          const tempo = POLICIA.tempoPadrao + Math.floor(alvo.valor / 100) * 60 * 1000
+          u.preso = Date.now() + tempo; dbSalvar("cidade.json", c)
+          await sock.sendMessage(jid, { text: msgErro("𝐏𝐑𝐄𝐒𝐎", "Você foi pego!", `Alvo: ${alvo.nome} • Pena: ${formatarTempo(tempo)}`, `Fiança: ${fmtGold(tempo / 60000 * POLICIA.fiancaPorMinuto)} • \`${p}pagar fianca\``, nomeBot), mentions: [sender] }, { quoted: msg })
         }
       }
     },
@@ -509,10 +774,10 @@ _"Uma cidade forte, um império forte."_
       async executar({ sock, msg, utils, sender, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const num = utils.soNumero(sender); const c = getCidade(); const u = getUser(c, num)
-        if (!u.preso || u.preso <= Date.now()) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: `💧 • 𝐒𝐓𝐀𝐓𝐔𝐒 •\n\n❄️ Você tá livre.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!u.preso || u.preso <= Date.now()) { await reagir(sock, msg, "🌸"); return sock.sendMessage(jid, { text: msgSucesso("𝐒𝐓𝐀𝐓𝐔𝐒", "Você está livre.", "Sem pena ativa", null, nomeBot) }, { quoted: msg }) }
         const restante = u.preso - Date.now(); const fianca = Math.floor(restante / 60000 * POLICIA.fiancaPorMinuto)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐏𝐑𝐄𝐒𝐎 •\n\n❄️ Cadeia\n🧊 Restante: ${formatarTempo(restante)}\n🧊 Fiança: ${fmtGold(fianca)} gold\n\n💡 \`${p}pagar fianca\` | \`${p}fugircadeia\`\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: msgAviso("𝐏𝐑𝐄𝐒𝐎", "Cadeia.", `Restante: ${formatarTempo(restante)}`, `Fiança: ${fmtGold(fianca)} • \`${p}pagar fianca\` / \`${p}fugircadeia\``, nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -521,14 +786,14 @@ _"Uma cidade forte, um império forte."_
       async executar({ sock, msg, args, db, utils, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db); const p = prefixoAtivo || "+"
         const num = utils.soNumero(sender); const c = getCidade(); const u = getUser(c, num)
-        if (args[0] && args[0].toLowerCase() !== "fianca") { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐀𝐆𝐀𝐑 •\n\n❄️ Use o comando certo.\n🧊 \`${p}pagar fianca\`\n\n"${nomeBot}"` }, { quoted: msg }) }
-        if (!u.preso || u.preso <= Date.now()) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐀𝐆𝐀𝐑 •\n\n❄️ Você tá livre.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if (!args[0] || args[0].toLowerCase() !== "fianca") { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐏𝐀𝐆𝐀𝐑", "Use o comando correto.", "—", `\`${p}pagar fianca\``, nomeBot) }, { quoted: msg }) }
+        if (!u.preso || u.preso <= Date.now()) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐏𝐀𝐆𝐀𝐑", "Você está livre.", "Sem pena ativa", null, nomeBot) }, { quoted: msg }) }
         const restante = u.preso - Date.now(); const fianca = Math.floor(restante / 60000 * POLICIA.fiancaPorMinuto)
         const rpg = db.rpg(); rpg.usuarios = rpg.usuarios || {}; rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
-        if ((rpg.usuarios[num].moedas || 0) < fianca) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐏𝐀𝐆𝐀𝐑 •\n\n❄️ Faltam ${fmtGold(fianca - (rpg.usuarios[num].moedas || 0))} gold.\n\n"${nomeBot}"` }, { quoted: msg }) }
+        if ((rpg.usuarios[num].moedas || 0) < fianca) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgErro("𝐏𝐀𝐆𝐀𝐑", "Gold insuficiente.", `Faltam ${fmtGold(fianca - (rpg.usuarios[num].moedas || 0))}`, null, nomeBot) }, { quoted: msg }) }
         rpg.usuarios[num].moedas -= fianca; u.preso = null; db.salvarRpg(rpg); dbSalvar("cidade.json", c)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐅𝐈𝐀𝐍𝐂̧𝐀 •\n\n❄️ Paga, você tá livre\n🧊 -${fmtGold(fianca)} gold\n\n_"A liberdade tem seu preço."_\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: msgSucesso("𝐅𝐈𝐀𝐍𝐂̧𝐀", "Paga, você está livre.", `-${fmtGold(fianca)} gold`, "\"A liberdade tem seu preço.\"", nomeBot), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -538,11 +803,19 @@ _"Uma cidade forte, um império forte."_
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         const num = utils.soNumero(sender); const c = getCidade(); const u = getUser(c, num)
         const rpg = db.rpg(); rpg.usuarios = rpg.usuarios || {}; rpg.usuarios[num] = rpg.usuarios[num] || { moedas: 0 }
-        if (!u.preso || u.preso <= Date.now()) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐅𝐔𝐆𝐈𝐑 •\n\n❄️ Você tá livre.\n\n"${nomeBot}"` }, { quoted: msg }) }
-        const chance = 0.30 + (u.crimes || 0) * 0.01
-        await reagir(sock, msg, "💧")
-        if (Math.random() < chance) { u.preso = null; dbSalvar("cidade.json", c); await sock.sendMessage(jid, { text: `💧 • 𝐅𝐔𝐆𝐀 ✓ •\n\n❄️ Você escapou!\n🧊 _"Ninguém prende o Grande Sábio."_\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg }) }
-        else { const multa = POLICIA.multaFuga; rpg.usuarios[num].moedas = Math.max(0, (rpg.usuarios[num].moedas || 0) - multa); u.preso = Date.now() + 20 * 60 * 1000; db.salvarRpg(rpg); dbSalvar("cidade.json", c); await sock.sendMessage(jid, { text: `💧 • 𝐅𝐔𝐆𝐀 ✗ •\n\n❄️ A polícia te pegou\n🧊 -${fmtGold(multa)} gold\n🧊 +20min de pena\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg }) }
+        if (!u.preso || u.preso <= Date.now()) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐅𝐔𝐆𝐈𝐑", "Você está livre.", "—", null, nomeBot) }, { quoted: msg }) }
+        const chance = Math.min(0.85, 0.30 + (u.crimes || 0) * 0.01)
+        await reagir(sock, msg, "🌸")
+        if (Math.random() < chance) {
+          u.preso = null; dbSalvar("cidade.json", c)
+          await sock.sendMessage(jid, { text: msgSucesso("𝐅𝐔𝐆𝐀 ✓", "Você escapou!", "\"Ninguém prende o Grande Sábio.\"", null, nomeBot), mentions: [sender] }, { quoted: msg })
+        } else {
+          const multa = POLICIA.multaFuga
+          rpg.usuarios[num].moedas = Math.max(0, (rpg.usuarios[num].moedas || 0) - multa)
+          u.preso = Date.now() + 20 * 60 * 1000
+          db.salvarRpg(rpg); dbSalvar("cidade.json", c)
+          await sock.sendMessage(jid, { text: msgErro("𝐅𝐔𝐆𝐀 ✗", "A polícia te pegou.", `-${fmtGold(multa)} gold • +20min de pena`, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        }
       }
     },
 
@@ -550,11 +823,12 @@ _"Uma cidade forte, um império forte."_
       aliases: ["mat4r", "assassinar"],
       async executar({ sock, msg, utils, sender }) {
         const jid = msg.key.remoteJid; const alvo = utils.getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: "💧 Use *+matar @user*" }, { quoted: msg }) }
+        if (!alvo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: "🌸 Use *+matar @user*" }, { quoted: msg }) }
         const numA = utils.soNumero(sender); const numB = utils.soNumero(alvo)
         if (numA === numB) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: "🧊 Não pode matar você mesmo!" }, { quoted: msg }) }
-        await reagir(sock, msg, "💧")
-        const gif = sortearGif(GIFS.matar); const frase = sortearFrase(FRASES_MATAR, numA, numB) + "\n\n💧 _\"Guerra é guerra.\"_"
+        await reagir(sock, msg, "🌸")
+        const gif = sortearGif(GIFS.matar)
+        const frase = sortearFrase(FRASES_MATAR, numA, numB) + "\n\n💧 _\"Guerra é guerra.\"_"
         await enviarGif(sock, jid, gif, frase, [sender, alvo], msg)
       }
     },
@@ -563,11 +837,12 @@ _"Uma cidade forte, um império forte."_
       aliases: ["beijo", "kiss", "beij4r"],
       async executar({ sock, msg, utils, sender }) {
         const jid = msg.key.remoteJid; const alvo = utils.getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: "💧 Use *+beijar @user*" }, { quoted: msg }) }
+        if (!alvo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: "🌸 Use *+beijar @user*" }, { quoted: msg }) }
         const numA = utils.soNumero(sender); const numB = utils.soNumero(alvo)
         if (numA === numB) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: "🧊 Beijar a si mesmo? Sem graça..." }, { quoted: msg }) }
-        await reagir(sock, msg, "💧")
-        const gif = sortearGif(GIFS.beijar); const frase = sortearFrase(FRASES_BEIJAR, numA, numB) + "\n\n💧 _\"O amor vence batalhas.\"_"
+        await reagir(sock, msg, "🌸")
+        const gif = sortearGif(GIFS.beijar)
+        const frase = sortearFrase(FRASES_BEIJAR, numA, numB) + "\n\n💧 _\"O amor vence batalhas.\"_"
         await enviarGif(sock, jid, gif, frase, [sender, alvo], msg)
       }
     },
@@ -576,11 +851,12 @@ _"Uma cidade forte, um império forte."_
       aliases: ["abraco", "abracar", "hug"],
       async executar({ sock, msg, utils, sender }) {
         const jid = msg.key.remoteJid; const alvo = utils.getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: "💧 Use *+abraçar @user*" }, { quoted: msg }) }
+        if (!alvo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: "🌸 Use *+abraçar @user*" }, { quoted: msg }) }
         const numA = utils.soNumero(sender); const numB = utils.soNumero(alvo)
         if (numA === numB) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: "🧊 Se abraçar sozinho? Triste..." }, { quoted: msg }) }
-        await reagir(sock, msg, "💧")
-        const gif = sortearGif(GIFS.abracar); const frase = sortearFrase(FRASES_ABRACAR, numA, numB) + "\n\n💧 _\"Um abraço cura tudo.\"_"
+        await reagir(sock, msg, "🌸")
+        const gif = sortearGif(GIFS.abracar)
+        const frase = sortearFrase(FRASES_ABRACAR, numA, numB) + "\n\n💧 _\"Um abraço cura tudo.\"_"
         await enviarGif(sock, jid, gif, frase, [sender, alvo], msg)
       }
     },
@@ -589,11 +865,12 @@ _"Uma cidade forte, um império forte."_
       aliases: ["chut4r", "kickar"],
       async executar({ sock, msg, utils, sender }) {
         const jid = msg.key.remoteJid; const alvo = utils.getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: "💧 Use *+chutar @user*" }, { quoted: msg }) }
+        if (!alvo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: "🌸 Use *+chutar @user*" }, { quoted: msg }) }
         const numA = utils.soNumero(sender); const numB = utils.soNumero(alvo)
         if (numA === numB) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: "🧊 Se chutar? Sei não..." }, { quoted: msg }) }
-        await reagir(sock, msg, "💧")
-        const gif = sortearGif(GIFS.chutar); const frase = sortearFrase(FRASES_CHUTAR, numA, numB) + "\n\n💧 _\"Tomou um chute voador!\"_"
+        await reagir(sock, msg, "🌸")
+        const gif = sortearGif(GIFS.chutar)
+        const frase = sortearFrase(FRASES_CHUTAR, numA, numB) + "\n\n💧 _\"Tomou um chute voador!\"_"
         await enviarGif(sock, jid, gif, frase, [sender, alvo], msg)
       }
     },
@@ -602,11 +879,12 @@ _"Uma cidade forte, um império forte."_
       aliases: ["louca", "lavarlouca", "pratos"],
       async executar({ sock, msg, utils, sender }) {
         const jid = msg.key.remoteJid; const alvo = utils.getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: "💧 Use *+louça @user*" }, { quoted: msg }) }
+        if (!alvo) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: "🌸 Use *+louça @user*" }, { quoted: msg }) }
         const numA = utils.soNumero(sender); const numB = utils.soNumero(alvo)
         if (numA === numB) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: "🧊 Se mandar lavar louça? Kkkk" }, { quoted: msg }) }
-        await reagir(sock, msg, "💧")
-        const gif = sortearGif(GIFS.louca); const frase = sortearFrase(FRASES_LOUCA, numA, numB) + "\n\n💧 _\"A pia não vai se limpar sozinha.\"_"
+        await reagir(sock, msg, "🌸")
+        const gif = sortearGif(GIFS.louca)
+        const frase = sortearFrase(FRASES_LOUCA, numA, numB) + "\n\n💧 _\"A pia não vai se limpar sozinha.\"_"
         await enviarGif(sock, jid, gif, frase, [sender, alvo], msg)
       }
     },
@@ -620,24 +898,75 @@ _"Uma cidade forte, um império forte."_
         const casa = u.casa ? acharCasa(u.casa) : null; const predio = u.predio ? acharPredio(u.predio) : null
         const nivel = u.nivel || 1; const xp = u.xp || 0; const xpNec = nivel * 100
         const rendaHora = (casa ? casa.renda : 0) + (predio ? predio.renda : 0)
-        await reagir(sock, msg, "💧")
-        await sock.sendMessage(jid, { text: `💧 • 𝐂𝐈𝐃𝐀𝐃𝐀̃𝐎 •\n\n❄️ @${num}\n\n🧊 Nível: ${nivel} (${xp}/${xpNec} XP)\n🧊 Carteira: ${fmtGold(gold)}\n🧊 Banco: ${fmtGold(u.banco || 0)}\n🧊 Casa: ${casa?.nome || "Nenhuma"}\n🧊 Prédio: ${predio?.nome || "Nenhum"}\n🧊 Renda: +${rendaHora}/h\n🧊 Fome: ${u.fome || 100}%\n🧊 Sede: ${u.sede || 100}%\n${barraHP(u.fome || 100)}\n🧊 Crimes: ${u.crimes || 0}\n\n${u.preso && u.preso > Date.now() ? "🚔 *PRESO*" : "✅ Livre"}\n\n"${nomeBot}"`, mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        const texto = `${boxTop("𝐂𝐈𝐃𝐀𝐃𝐀̃𝐎")}
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐔𝐒𝐔𝐀́𝐑𝐈𝐎 𓆪
+↳ @${num}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐍𝐈́𝐕𝐄𝐋 𓆪
+↳ ${nivel} (${xp}/${xpNec} XP)
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐁𝐄𝐍𝐒 𓆪
+↳ Carteira: ${fmtGold(gold)}
+↳ Banco: ${fmtGold(u.banco || 0)}
+↳ Casa: ${casa?.nome || "Nenhuma"}
+↳ Prédio: ${predio?.nome || "Nenhum"}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐑𝐄𝐍𝐃𝐀 𓆪
+↳ +${rendaHora}/h
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐕𝐈𝐓𝐀𝐈𝐒 𓆪
+↳ Fome: ${u.fome || 100}%
+↳ Sede: ${u.sede || 100}%
+↳ ${barraHP(u.fome || 100)}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐂𝐑𝐈𝐌𝐄𝐒 𓆪
+↳ ${u.crimes || 0} cometidos
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+╭┈┈┈┈୨୧┈┈┈┈╮
+𓆩 𝐒𝐓𝐀𝐓𝐔𝐒 𓆪
+↳ ${u.preso && u.preso > Date.now() ? "🚔 𝐏𝐑𝐄𝐒𝐎" : "✅ 𝐋𝐈𝐕𝐑𝐄"}
+╰┈┈┈┈୨୧┈┈┈┈╯
+
+${boxFim(nomeBot)}`
+        await sock.sendMessage(jid, { text: texto, mentions: [sender] }, { quoted: msg })
       }
     },
 
     ranking: {
       aliases: ["top", "topcidade"],
-      async executar({ sock, msg, db, utils }) {
+      async executar({ sock, msg, db }) {
         const jid = msg.key.remoteJid; const nomeBot = nomeBotDb(db)
         const c = getCidade(); const rpg = db.rpg(); rpg.usuarios = rpg.usuarios || {}
         const lista = []
-        for (const [num, u] of Object.entries(c.usuarios)) { const gold = (rpg.usuarios[num]?.moedas) || 0; const patrimonio = gold + (u.banco || 0) + (u.casa ? acharCasa(u.casa)?.preco || 0 : 0) + (u.predio ? acharPredio(u.predio)?.preco || 0 : 0); lista.push({ num, patrimonio }) }
-        if (!lista.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: `💧 • 𝐑𝐀𝐍𝐊𝐈𝐍𝐆 •\n\n❄️ Vazio!\n\n"${nomeBot}"` }, { quoted: msg }) }
-        lista.sort((a, b) => b.patrimonio - a.patrimonio); const top10 = lista.slice(0, 10)
-        let txt = `💧 • 𝐑𝐀𝐍𝐊𝐈𝐍𝐆 •\n\n❄️ TOP 10 mais ricos:\n\n`
-        top10.forEach((p2, i) => { const medalha = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🧊"; txt += `${medalha} @${p2.num} — ${fmtGold(p2.patrimonio)}\n` })
-        txt += `\n"${nomeBot}"`
-        await reagir(sock, msg, "💧")
+        for (const [num, u] of Object.entries(c.usuarios)) {
+          const gold = (rpg.usuarios[num]?.moedas) || 0
+          const patrimonio = gold + (u.banco || 0) + (u.casa ? (acharCasa(u.casa)?.preco || 0) : 0) + (u.predio ? (acharPredio(u.predio)?.preco || 0) : 0)
+          lista.push({ num, patrimonio })
+        }
+        if (!lista.length) { await reagir(sock, msg, "🧊"); return sock.sendMessage(jid, { text: msgAviso("𝐑𝐀𝐍𝐊𝐈𝐍𝐆", "Vazio!", "—", null, nomeBot) }, { quoted: msg }) }
+        lista.sort((a, b) => b.patrimonio - a.patrimonio)
+        const top10 = lista.slice(0, 10)
+        let txt = `${boxTop("𝐑𝐀𝐍𝐊𝐈𝐍𝐆")}\n\n`
+        top10.forEach((p2, i) => {
+          const medalha = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🌸"
+          txt += `╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 ${medalha} #${i + 1} 𓆪\n↳ @${p2.num}\n↳ ${fmtGold(p2.patrimonio)} gold\n╰┈┈┈┈୨୧┈┈┈┈╯\n`
+        })
+        txt += `\n${boxFim(nomeBot, "TOP 10 mais ricos.")}`
+        await reagir(sock, msg, "🌸")
         await sock.sendMessage(jid, { text: txt, mentions: top10.map(p2 => p2.num + "@s.whatsapp.net") }, { quoted: msg })
       }
     }
