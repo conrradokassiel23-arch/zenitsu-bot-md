@@ -178,7 +178,7 @@ function levenshtein(a, b) { const matrix = []; for (let i = 0; i <= b.length; i
 function buscarComandoParecido(comandoErrado) { let melhor = null; let menorDistancia = 999; const todos = [...comandos.keys(), ...aliases.keys()]; for (const cmd of todos) { const dist = levenshtein(comandoErrado, cmd); if (dist < menorDistancia) { menorDistancia = dist; melhor = cmd; } } if (menorDistancia <= 3 && melhor) return melhor; return null; }
 
 /* ============================================================
-   🧠 IA DA OBANAI (CORRIGIDA COM A RESPOSTA EXATA)
+   🧠 IA DA OBANAI (RESPOSTA LIMPA E BLINDADA)
    ============================================================ */
 async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
   if (!isGrupo) return false;
@@ -191,15 +191,19 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
 
   const botNum = soNumero(sock.user?.id); 
   const botNome = (db.config().nomeBot || "Rimuru").toLowerCase();
-  const ctx = msg.message?.extendedTextMessage?.contextInfo || {}; 
+  
+  // Pega o contexto (para saber se respondeu a msg do bot)
+  const ctx = msg.message?.extendedTextMessage?.contextInfo || msg.message?.imageMessage?.contextInfo || msg.message?.videoMessage?.contextInfo || {}; 
   const mentionedJid = ctx.mentionedJid || [];
   
+  // Verifica de várias formas se o bot foi chamado
   const mencionadoPorId = mentionedJid.some(j => soNumero(j) === botNum);
   const respondendoBot = ctx.participant && soNumero(ctx.participant) === botNum;
-  const digitouNome = texto.toLowerCase().trim().startsWith(botNome) || texto.toLowerCase().includes(" " + botNome);
+  const digitouNome = texto.toLowerCase().trim().startsWith(botNome) || texto.toLowerCase().includes(" " + botNome) || texto.toLowerCase().includes("@" + botNome);
 
   if (!mencionadoPorId && !respondendoBot && !digitouNome) return false;
 
+  // Limpa a pergunta
   let pergunta = texto
     .replace(/@\d+/g, "")
     .replace(new RegExp("@" + botNome, "gi"), "")
@@ -219,9 +223,19 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
     const r = await fetch(`${obanaiBase}/api/ias/unliai?q=${encodeURIComponent(pergunta)}&apitoken=${obanaiToken}`, { signal: AbortSignal.timeout(30000) });
     const data = await r.json();
     
-    // Correção: Pega a resposta no lugar certo
     if (data?.success && data?.data?.response) {
-      await sock.sendMessage(remetente, { text: data.data.response }, { quoted: msg });
+      // 🔥 FILTRO PARA TIRAR A INTRODUÇÃO DA API
+      let respostaLimpa = data.data.response;
+      
+      // Remove o texto padrão da UnlimitedAI
+      respostaLimpa = respostaLimpa.replace(/Olá! Eu sou o UnlimitedAI\.Chat, criado pela equipe do UnlimitedAI\.Chat\./gi, "").trim();
+      // Remove variações ou saudações iniciais padronizadas (se houver)
+      respostaLimpa = respostaLimpa.replace(/Olá! Eu sou o .*?, criado pela equipe do .*?\./gi, "").trim();
+
+      // Se depois de limpar a resposta ficar vazia, manda um fallback
+      if (!respostaLimpa) respostaLimpa = "Aqui está a resposta para a sua pergunta!";
+      
+      await sock.sendMessage(remetente, { text: respostaLimpa }, { quoted: msg });
     } else {
       await sock.sendMessage(remetente, { text: "🌸 Minhas conexões com o além falharam... Tente novamente em instantes." }, { quoted: msg });
     }
