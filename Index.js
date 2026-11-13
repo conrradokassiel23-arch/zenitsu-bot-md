@@ -160,10 +160,10 @@ function msgSucesso(titulo, aviso, detalhes, rodape, nomeBot) {
 ↳ ${detalhes}
 ╰┈┈┈┈୨୧┈┈┈┈╯
 
-${rodape ? `╭┈┈┈┈୨୧┈┈┈┈╮
+${rodape ? `╭┈┈┈┈୨┈┈┈┈╮
 𓆩 𝐍𝐎𝐓𝐀 𓆪
 ↳ ${rodape}
-╰┈┈┈┈୨୧┈┈┈┈╯
+╰┈┈┈┈୨┈┈┈┈╯
 
 ` : ""}${boxFim(nomeBot, "Concluído com sucesso.")}`
 }
@@ -178,7 +178,7 @@ function levenshtein(a, b) { const matrix = []; for (let i = 0; i <= b.length; i
 function buscarComandoParecido(comandoErrado) { let melhor = null; let menorDistancia = 999; const todos = [...comandos.keys(), ...aliases.keys()]; for (const cmd of todos) { const dist = levenshtein(comandoErrado, cmd); if (dist < menorDistancia) { menorDistancia = dist; melhor = cmd; } } if (menorDistancia <= 3 && melhor) return melhor; return null; }
 
 /* ============================================================
-   🧠 IA DA OBANAI (ATIVADA POR GRUPO)
+   🧠 IA DA OBANAI (CORRIGIDA)
    ============================================================ */
 async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
   if (!isGrupo) return false;
@@ -195,39 +195,43 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
   const ctx = msg.message?.extendedTextMessage?.contextInfo || {}; 
   const mentionedJid = ctx.mentionedJid || [];
   
-  // Verifica se o bot foi marcado OU se a pessoa respondeu a uma mensagem do bot
+  // Verifica se o bot foi marcado, se respondeu a msg do bot, ou se digitou o nome do bot
   const mencionadoPorId = mentionedJid.some(j => soNumero(j) === botNum);
   const respondendoBot = ctx.participant && soNumero(ctx.participant) === botNum;
-  
-  // Verifica se digitou o nome do bot no texto (ex: "@rimuru")
-  const mencionadoPorTexto = texto.toLowerCase().includes("@" + botNome) || texto.toLowerCase().includes(botNome);
+  const digitouNome = texto.toLowerCase().trim().startsWith(botNome) || texto.toLowerCase().includes(" " + botNome);
 
-  if (!mencionadoPorId && !respondendoBot && !mencionadoPorTexto) return false;
+  if (!mencionadoPorId && !respondendoBot && !digitouNome) return false;
 
-  // Limpa o texto tirando as menções
-  let pergunta = texto.replace(/@\d+/g, "").replace(new RegExp("@" + botNome, "gi"), "").replace(new RegExp(botNome, "gi"), "").trim();
-  if (!pergunta) pergunta = "Oi";
+  // Limpa o texto tirando as menções e o nome do bot
+  let pergunta = texto
+    .replace(/@\d+/g, "")
+    .replace(new RegExp("@" + botNome, "gi"), "")
+    .replace(new RegExp(botNome, "gi"), "")
+    .trim();
+
+  if (!pergunta || pergunta.length < 2) {
+    pergunta = "Oi, quem é você?";
+  }
 
   try {
     await sock.sendPresenceUpdate("composing", remetente);
     
-    // === AQUI ENTRA A API DA OBANAI ===
+    // === API DA OBANAI ===
     const obanaiToken = require('./config').obanaiToken || "rj8SpI";
     const obanaiBase = require('./config').obanaiApiBase || "https://obanai-apis.eu.cc";
     
-    // Usando a rota "unliai" da API da Obanai
     const r = await fetch(`${obanaiBase}/api/ias/unliai?q=${encodeURIComponent(pergunta)}&apitoken=${obanaiToken}`, { signal: AbortSignal.timeout(30000) });
     const data = await r.json();
     
     if (data?.success && data?.response) {
       await sock.sendMessage(remetente, { text: data.response }, { quoted: msg });
     } else {
-      await sock.sendMessage(remetente, { text: "🌸 Não consegui pensar em uma resposta agora." }, { quoted: msg });
+      await sock.sendMessage(remetente, { text: "🌸 O Grande Sábio está meditando... tente novamente mais tarde." }, { quoted: msg });
     }
     return true;
   } catch (e) { 
     console.log("❌ Erro IA Obanai:", e.message); 
-    return true; 
+    return false; 
   }
 }
 
@@ -813,11 +817,11 @@ async function iniciarBot() {
           const nomeBot = cfgFoto.nomeBot || "Rimuru";
           const textoEncontrado = `${boxTop("𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎")}
 
-╭┈┈┈┈୨୧┈┈┈┈╮
+╭┈┈┈┈୨┈┈┈┈╮
 𓆩 𝐄𝐗𝐄𝐂𝐔𝐓𝐀𝐍𝐃𝐎 𓆪
 ↳ \`${cmd.nome}\`
 ↳ Usuário: @${soNumero(sender)}
-╰┈┈┈┈୨୧┈┈┈┈╯
+╰┈┈┈┈୨┈┈┈┈╯
 
 ${boxFim(nomeBot, "A serpente observa.")}`;
 
