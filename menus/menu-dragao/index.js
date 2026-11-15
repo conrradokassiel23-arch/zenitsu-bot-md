@@ -1,5 +1,5 @@
 /* ============================================================
-   🌸 MENU DRAGÃO - TEMA FLORAL
+   🌸 MENU FAZENDA - LIMPO E ESTILIZADO
    ============================================================ */
 
 const fs = require("fs")
@@ -7,377 +7,310 @@ const path = require("path")
 
 const DATA_DIR = path.join(__dirname, "..", "..", "data")
 
-function dbLer(a, p = {}) {
-  const f = path.join(DATA_DIR, a)
-  if (!fs.existsSync(f)) { fs.writeFileSync(f, JSON.stringify(p, null, 2)); return p }
-  try { return JSON.parse(fs.readFileSync(f, "utf8")) } catch { return p }
+function dbLer(arquivo, padrao = {}) {
+  const p = path.join(DATA_DIR, arquivo)
+  if (!fs.existsSync(p)) { fs.writeFileSync(p, JSON.stringify(padrao, null, 2)); return padrao }
+  try { return JSON.parse(fs.readFileSync(p, "utf8")) } catch { return padrao }
 }
-function dbSalvar(a, d) { fs.writeFileSync(path.join(DATA_DIR, a), JSON.stringify(d, null, 2)) }
+function dbSalvar(arquivo, dados) { fs.writeFileSync(path.join(DATA_DIR, arquivo), JSON.stringify(dados, null, 2)) }
 
 async function reagir(sock, msg, emoji) {
   try { await sock.sendMessage(msg.key.remoteJid, { react: { text: emoji, key: msg.key } }) } catch (_) {}
 }
 
+function normalizar(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() }
 function nomeBotDb(db) { try { return db.config?.()?.nomeBot || "Rimuru" } catch { return "Rimuru" } }
 function getCfg(db) { try { return db.config?.() || {} } catch { return {} } }
+function soNumero(jid) { if (!jid) return ""; if (typeof jid === "object") jid = jid.phoneNumber || jid.id || ""; return String(jid).split("@")[0].split(":")[0].replace(/\D/g, "") }
 
-function getAlvo(msg) {
-  const ctx = (msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo) || {};
-  const mentions = ctx.mentionedJid || [];
-  if (mentions.length) return mentions[0];
-  if (ctx.participant) return ctx.participant;
-  return null;
+/* ---------- RESPOSTAS PADRONIZADAS ---------- */
+function msgSucesso(titulo, aviso, detalhes) {
+  return `✨ *${titulo || "𝑺𝑼𝑪𝑬𝑺𝑺𝑶"}*\n\n✅ ${aviso}${detalhes ? `\n\n📌 ${detalhes}` : ""}`
+}
+function msgAviso(titulo, aviso, detalhes) {
+  return `⚠️ *${titulo}*\n\n🔸 ${aviso}${detalhes ? `\n\n📌 ${detalhes}` : ""}`
+}
+function msgErro(titulo, aviso, detalhes) {
+  return `❌ *${titulo}*\n\n🚫 ${aviso}${detalhes ? `\n\n📌 ${detalhes}` : ""}`
 }
 
-function sistemaAtivo(db, jid) {
-  const cfg = dbLer("dragaocfg.json", { grupos: {} })
+function formatarTempo(ms) {
+  const s = Math.floor(ms / 1000), m = Math.floor(s / 60), h = Math.floor(m / 60), d = Math.floor(h / 24)
+  if (d > 0) return d + "d " + (h % 24) + "h"
+  if (h > 0) return h + "h " + (m % 60) + "min"
+  if (m > 0) return m + "min " + (s % 60) + "s"
+  return s + "s"
+}
+
+/* ---------- CONFIGURAÇÕES DO JOGO ---------- */
+const INTERVALO_RENDA = 3 * 60 * 60 * 1000
+const INTERVALO_RESTOCK = 60 * 60 * 1000
+const INTERVALO_VENDEDOR_SEMENTE = 4 * 60 * 60 * 1000
+const INTERVALO_VENDEDOR_ANIMAL = 3 * 60 * 60 * 1000
+const INTERVALO_EVENTO_AGUA = 2 * 60 * 60 * 1000
+const DURACAO_VENDEDOR = 30 * 60 * 1000
+
+const MAX_UPGRADES = 10
+const CAP_BASE = 3
+const CAP_UPGRADE = 3
+const PRECO_CERCADO = 500
+const PRECO_ALIMENTAR = 300
+const PRECO_BANHO = 200
+const PRECO_TERRA = 800
+const PRECO_AGUA = 50
+const AGUA_POR_REGA = 1
+const GALAO_AGUA = 10
+
+const ANIMAIS = [
+  { id: "galinha", nome: "Galinha", emoji: "🐔", preco: 100, producaoHora: 5, raridade: "Comum" },
+  { id: "galo", nome: "Galo", emoji: "🐓", preco: 150, producaoHora: 8, raridade: "Comum" },
+  { id: "porco", nome: "Porco", emoji: "🐷", preco: 400, producaoHora: 17, raridade: "Raro" },
+  { id: "ovelha", nome: "Ovelha", emoji: "🐑", preco: 400, producaoHora: 17, raridade: "Raro" },
+  { id: "vaca", nome: "Vaca", emoji: "🐮", preco: 500, producaoHora: 22, raridade: "Épico" },
+  { id: "boi", nome: "Boi", emoji: "🐂", preco: 700, producaoHora: 28, raridade: "Épico" },
+  { id: "cavalo", nome: "Cavalo", emoji: "🐴", preco: 900, producaoHora: 33, raridade: "Lendário" }
+]
+
+const SEMENTES = [
+  { id: "milho", nome: "Milho", emoji: "🌽", preco: 30, vendaBase: 30, tempo: 20, raridade: "Comum" },
+  { id: "trigo", nome: "Trigo", emoji: "🌾", preco: 25, vendaBase: 25, tempo: 18, raridade: "Comum" },
+  { id: "arroz", nome: "Arroz", emoji: "🍚", preco: 35, vendaBase: 35, tempo: 22, raridade: "Comum" },
+  { id: "feijao", nome: "Feijão", emoji: "🫘", preco: 28, vendaBase: 28, tempo: 20, raridade: "Comum" },
+  { id: "batata", nome: "Batata", emoji: "🥔", preco: 30, vendaBase: 30, tempo: 20, raridade: "Comum" },
+  { id: "cenoura", nome: "Cenoura", emoji: "🥕", preco: 28, vendaBase: 28, tempo: 19, raridade: "Comum" },
+  { id: "soja", nome: "Soja", emoji: "🫘", preco: 40, vendaBase: 40, tempo: 25, raridade: "Raro" },
+  { id: "tomate", nome: "Tomate", emoji: "🍅", preco: 40, vendaBase: 40, tempo: 25, raridade: "Raro" },
+  { id: "melancia", nome: "Melancia", emoji: "🍉", preco: 65, vendaBase: 65, tempo: 40, raridade: "Épico" },
+  { id: "morango", nome: "Morango", emoji: "🍓", preco: 70, vendaBase: 70, tempo: 32, raridade: "Épico" },
+  { id: "uva", nome: "Uva", emoji: "🍇", preco: 80, vendaBase: 80, tempo: 45, raridade: "Lendário" },
+  { id: "cafe", nome: "Café", emoji: "☕", preco: 100, vendaBase: 100, tempo: 50, raridade: "Lendário" }
+]
+
+const STOCK_MAX = {
+  sementes: {
+    milho: 8, trigo: 8, arroz: 6, feijao: 6, batata: 6, cenoura: 6,
+    soja: 3, tomate: 3,
+    melancia: 2, morango: 2,
+    uva: 1, cafe: 1
+  },
+  animais: { galinha: 5, galo: 4, porco: 2, ovelha: 2, vaca: 1, boi: 1, cavalo: 1 }
+}
+
+const RARIDADES = ["Comum", "Raro", "Épico", "Lendário"]
+const PESOS_RARIDADE_VENDEDOR = { Comum: 0.30, Raro: 0.35, Épico: 0.25, Lendário: 0.10 }
+
+const MUTACOES = {
+  flamejante: { id: "flamejante", nome: "Flamejante", emoji: "🔥", bonus: 2.0, peso: 15, raridade: "Raro" },
+  gold:       { id: "gold",       nome: "Gold",       emoji: "🟡", bonus: 3.0, peso: 8,  raridade: "Épico" },
+  rainbow:    { id: "rainbow",    nome: "Rainbow",    emoji: "🌈", bonus: 5.0, peso: 2,  raridade: "Lendário" },
+  diamante:   { id: "diamante",   nome: "Diamante",   emoji: "💎", bonus: 7.0, peso: 1,  raridade: "Mítico" },
+  acida:      { id: "acida",      nome: "Ácida",      emoji: "☢️", bonus: 8.0, peso: 1,  raridade: "Mítico" },
+  bone:       { id: "bone",       nome: "Bone",       emoji: "💀", bonus: 10.0, peso: 0.5, raridade: "Mítico" }
+}
+
+function acharAnimal(nome) { const n = normalizar(nome); return ANIMAIS.find(a => normalizar(a.nome) === n) || ANIMAIS.find(a => a.id === n) || ANIMAIS.find(a => normalizar(a.nome).includes(n)) }
+function acharSemente(nome) { const n = normalizar(nome); return SEMENTES.find(s => normalizar(s.nome) === n) || SEMENTES.find(s => s.id === n) || SEMENTES.find(s => normalizar(s.nome).includes(n)) }
+function sortearRaridade(pesos) { const r = Math.random(); let acc = 0; for (const rar of RARIDADES) { acc += pesos[rar] || 0; if (r < acc) return rar } return "Comum" }
+function itensPorRaridade(lista, raridade) { return lista.filter(x => x.raridade === raridade) }
+
+function getFazenda(num) {
+  const f = dbLer("fazenda.json", { usuarios: {} })
+  f.usuarios = f.usuarios || {}
+  f.usuarios[num] = f.usuarios[num] || { cercados: 0, limiteAnimais: 0, upgrades: 0, animais: [], sujeira: 0, ultimaRenda: Date.now(), rendaTotal: 0, rendaPendente: 0, terras: 0, agua: 0, sementes: {}, plantacoes: [] }
+  const u = f.usuarios[num]
+  u.terras = u.terras || 0; u.agua = u.agua || 0; u.sementes = u.sementes || {}; u.plantacoes = u.plantacoes || []; u.rendaPendente = u.rendaPendente || 0
+  return { f, u }
+}
+
+function salvarFazenda(f) { dbSalvar("fazenda.json", f) }
+
+function getLoja() {
+  const loja = dbLer("fazendaloja.json", { sementes: {}, animais: {}, ultimoRestock: 0 })
+  loja.sementes = loja.sementes || {}; loja.animais = loja.animais || {}
+  if (Object.keys(loja.sementes).length === 0) { for (const [id, qtd] of Object.entries(STOCK_MAX.sementes)) loja.sementes[id] = qtd }
+  if (Object.keys(loja.animais).length === 0) { for (const [id, qtd] of Object.entries(STOCK_MAX.animais)) loja.animais[id] = qtd }
+  return loja
+}
+function salvarLoja(loja) { dbSalvar("fazendaloja.json", loja) }
+
+function getVendedores() {
+  return dbLer("fazendavendedores.json", {
+    sementes: { ativo: false, expiraEm: 0, chegouEm: 0, itens: [] },
+    animais: { ativo: false, expiraEm: 0, chegouEm: 0, itens: [] },
+    ultimoSemente: 0,
+    ultimoAnimal: 0,
+    ultimoEventoAgua: 0
+  })
+}
+function salvarVendedores(v) { dbSalvar("fazendavendedores.json", v) }
+
+function calcularRenda(user) {
+  if (!user.animais || !user.animais.length) return 0
+  let renda = 0
+  for (const a of user.animais) {
+    const info = ANIMAIS.find(x => x.id === a.id)
+    if (!info) continue
+    let prod = info.producaoHora
+    prod *= (1 - Math.min(a.fome || 0, 100) / 200)
+    prod *= (1 - Math.min(a.sujo || 0, 100) / 200)
+    renda += prod
+  }
+  renda *= (1 - Math.min(user.sujeira || 0, 100) / 200)
+  renda *= (1 + (user.upgrades || 0) * 0.05)
+  return renda
+}
+
+function qualidadePlanta(p) {
+  const regas = p.regas || 0
+  let q = Math.min(100, Math.floor(regas * 15 + (p.qualidadeBase || 50)))
+  if (Array.isArray(p.mutacoes)) {
+    for (const mId of p.mutacoes) {
+      const mut = MUTACOES[mId]
+      if (mut) q = Math.min(100, q + Math.floor(mut.bonus * 5))
+    }
+  }
+  return q
+}
+function valorPlanta(p) {
+  const s = SEMENTES.find(x => x.id === p.id)
+  if (!s) return 0
+  const q = qualidadePlanta(p)
+  let valor = Math.floor(s.vendaBase * (0.5 + q / 100))
+  if (Array.isArray(p.mutacoes) && p.mutacoes.length > 0) {
+    let bonusTotal = 1
+    for (const mId of p.mutacoes) {
+      const mut = MUTACOES[mId]
+      if (mut) bonusTotal *= mut.bonus
+    }
+    valor = Math.floor(valor * bonusTotal)
+  }
+  return valor
+}
+
+function sistemaFazendaAtivo(db, jid) {
+  const cfg = dbLer("fazendacfg.json", { grupos: {} })
   return cfg.grupos[jid]?.ativo === true
 }
 
-function gerarKeyAleatoria() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let key = 'KEY-';
-  for (let i = 0; i < 8; i++) {
-    key += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return key;
+const GOLD_FZ_FILE = "goldfz.json"
+function getGoldFZ(num) {
+  const g = dbLer(GOLD_FZ_FILE, { usuarios: {} })
+  g.usuarios = g.usuarios || {}
+  g.usuarios[num] = g.usuarios[num] || 0
+  return { g, saldo: g.usuarios[num] }
 }
-
-/* ---------- TEMPLATES FLORAIS ---------- */
-function boxTop(titulo) {
-  return `╔═══ஓ๑♡๑ஓ═══╗
-𓆩 ${titulo} 𓆪
-╚═══ஓ๑♡๑ஓ═══╝`
+function addGoldFZ(num, qtd) {
+  const { g } = getGoldFZ(num)
+  g.usuarios[num] = (g.usuarios[num] || 0) + qtd
+  dbSalvar(GOLD_FZ_FILE, g)
+  return g.usuarios[num]
 }
-function boxFim(nomeBot, frase = "Concluído com sucesso.") {
-  return `╔═══ஓ๑♡๑ஓ═══╗
-𓆩 ${String(nomeBot).toUpperCase()} 𓆪
-❝ ${frase} ❞
-╚═══ஓ๑♡๑ஓ═══╝`
-}
-function msgSucesso(titulo, aviso, detalhes, rodape, nomeBot) {
-  return `${boxTop(titulo)}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐒𝐓𝐀𝐓𝐔𝐒 𓆪
-↳ ${aviso}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐃𝐄𝐓𝐀𝐋𝐇𝐄𝐒 𓆪
-↳ ${detalhes}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${rodape ? `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐍𝐎𝐓𝐀 𓆪
-↳ ${rodape}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-` : ""}${boxFim(nomeBot, "Concluído com sucesso.")}`
-}
-function msgAviso(titulo, aviso, detalhes, rodape, nomeBot) {
-  return `${boxTop(titulo)}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐀𝐕𝐈𝐒𝐎 𓆪
-↳ ${aviso}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐃𝐄𝐓𝐀𝐋𝐇𝐄𝐒 𓆪
-↳ ${detalhes}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${rodape ? `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐍𝐎𝐓𝐀 𓆪
-↳ ${rodape}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-` : ""}${boxFim(nomeBot, "Verifique e tente novamente.")}`
-}
-function msgErro(titulo, aviso, detalhes, rodape, nomeBot) {
-  return `${boxTop(titulo)}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐄𝐑𝐑𝐎 𓆪
-↳ ${aviso}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐃𝐄𝐓𝐀𝐋𝐇𝐄𝐒 𓆪
-↳ ${detalhes}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${rodape ? `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐍𝐎𝐓𝐀 𓆪
-↳ ${rodape}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-` : ""}${boxFim(nomeBot, "Algo deu errado.")}`
-}
-function secao(t) { return `╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 ${t} 𓆪` }
-function item(c) { return `↳ \`${c}\`` }
-function fimSecao() { return `╰┈┈┈┈୨୧┈┈┈┈╯` }
-
-const DRAGOES = {
-  "Terror Terrível": { raridade: "Comum", foto: "https://files.catbox.moe/0055r7.jpg", hp: 100, energia: 50, atk: 10, def: 5, evasao: 10, xp: 10, bioma: "Comum" },
-  "Gronckle": { raridade: "Comum", foto: "https://files.catbox.moe/9yvvc5.jpg", hp: 150, energia: 40, atk: 15, def: 20, evasao: 5, xp: 10, bioma: "Comum" },
-  "Nadder Mortal": { raridade: "Comum", foto: "https://files.catbox.moe/762qus.jpg", hp: 120, energia: 60, atk: 18, def: 10, evasao: 15, xp: 15, bioma: "Comum" },
-  "Pesadelo Monstruoso": { raridade: "Raro", foto: "https://files.catbox.moe/g4ocxh.jpg", hp: 180, energia: 70, atk: 25, def: 15, evasao: 10, xp: 20, bioma: "Comum" },
-  "Ziperarrepiante": { raridade: "Raro", foto: "https://files.catbox.moe/yk9eic.jpg", hp: 160, energia: 65, atk: 22, def: 18, evasao: 12, xp: 20, bioma: "Comum" },
-  "Nadder Mortal (Tempestade)": { raridade: "Raro", foto: "https://files.catbox.moe/bwhqmc.jpg", hp: 140, energia: 75, atk: 24, def: 12, evasao: 18, xp: 25, bioma: "Floresta" },
-  "Fúria da Noite": { raridade: "Épico", foto: "https://files.catbox.moe/06lj5i.jpg", hp: 200, energia: 90, atk: 35, def: 20, evasao: 25, xp: 50, bioma: "Caverna" },
-  "Fúria da Luz": { raridade: "Épico", foto: "https://files.catbox.moe/vz770u.jpg", hp: 200, energia: 90, atk: 35, def: 20, evasao: 25, xp: 50, bioma: "Caverna" },
-  "Corta-Tormenta": { raridade: "Épico", foto: "https://files.catbox.moe/js58qw.jpg", hp: 220, energia: 85, atk: 30, def: 25, evasao: 20, xp: 60, bioma: "Praia" },
-  "Morte Vermelha": { raridade: "Lendário", foto: "https://files.catbox.moe/45uete.jpg", hp: 400, energia: 120, atk: 50, def: 40, evasao: 10, xp: 100, bioma: "Montanha" },
-  "Morte Gritante": { raridade: "Lendário", foto: "https://files.catbox.moe/lh62l3.jpg", hp: 450, energia: 130, atk: 55, def: 45, evasao: 8, xp: 120, bioma: "Montanha" },
-  "Bewilderbeast": { raridade: "Lendário", foto: "https://files.catbox.moe/r47clm.jpg", hp: 500, energia: 150, atk: 60, def: 50, evasao: 5, xp: 150, bioma: "Gelo" },
-  "Asa de Fogo": { raridade: "Lendário", foto: "https://i.ibb.co/DD1xPGdR/IMG-20261103-WA0004.jpg", hp: 480, energia: 140, atk: 58, def: 45, evasao: 15, xp: 130, bioma: "Vulcão" },
-  "Morte Púrpura": { raridade: "Lendário", foto: "https://i.ibb.co/Y4xbSPBh/IMG-20261103-WA0002.jpg", hp: 460, energia: 135, atk: 55, def: 48, evasao: 12, xp: 135, bioma: "Pântano" },
-  "Fúria da Noite (Asa de Titã)": { raridade: "Mítico", foto: "https://files.catbox.moe/r91204.jpg", hp: 600, energia: 200, atk: 80, def: 60, evasao: 30, xp: 250, bioma: "Secreto" },
-  "Death Song": { raridade: "Mítico", foto: "https://i.ibb.co/k2pr1csQ/IMG-20261103-WA0001.jpg", hp: 650, energia: 220, atk: 85, def: 65, evasao: 25, xp: 280, bioma: "Selva Sombria" },
-  "Estridente": { raridade: "Mítico", foto: "https://i.ibb.co/j9RSQpQf/IMG-20261103-WA0003.jpg", hp: 620, energia: 210, atk: 80, def: 60, evasao: 35, xp: 260, bioma: "Montanha Rochosa" }
-};
-
-const OVOS = {
-  "Ovo Comum": { raridade: "Comum", choca: ["Terror Terrível", "Gronckle", "Nadder Mortal"], foto: "https://files.catbox.moe/0055r7.jpg" },
-  "Ovo Raro": { raridade: "Raro", choca: ["Pesadelo Monstruoso", "Ziperarrepiante", "Nadder Mortal (Tempestade)"], foto: "https://files.catbox.moe/g4ocxh.jpg" },
-  "Ovo Épico": { raridade: "Épico", choca: ["Fúria da Noite", "Fúria da Luz", "Corta-Tormenta"], foto: "https://files.catbox.moe/06lj5i.jpg" },
-  "Ovo Lendário": { raridade: "Lendário", choca: ["Morte Vermelha", "Morte Gritante", "Bewilderbeast", "Asa de Fogo", "Morte Púrpura"], foto: "https://files.catbox.moe/45uete.jpg" },
-  "Ovo Mítico": { raridade: "Mítico", choca: ["Death Song", "Estridente", "Fúria da Noite (Asa de Titã)"], foto: "https://files.catbox.moe/r91204.jpg" }
-}
-
-const MISSOES = {
-  "pirata": { nome: "Resgatar dragões de navios piratas", raridade: "Comum", nivelMin: 1, dragaoAlvo: "Terror Terrível", xp: 50, dropOvo: "Ovo Comum", chanceDrop: 5, foto: "https://files.catbox.moe/0055r7.jpg" },
-  "banguela": { nome: "Salvar o Banguela", raridade: "Média", nivelMin: 2, dragaoAlvo: "Fúria da Noite", xp: 100, dropOvo: "Ovo Épico", chanceDrop: 5, foto: "https://files.catbox.moe/06lj5i.jpg" },
-  "morte_gritante": { nome: "Derrote o Morte Gritante", raridade: "Lendária", nivelMin: 5, dragaoAlvo: "Morte Gritante", xp: 250, dropOvo: "Ovo Lendário", chanceDrop: 5, foto: "https://files.catbox.moe/lh62l3.jpg" },
-  "estridante": { nome: "Derrote o Estridente", raridade: "Mítica", nivelMin: 8, dragaoAlvo: "Estridente", xp: 500, dropOvo: "Ovo Mítico", chanceDrop: 5, foto: "https://i.ibb.co/j9RSQpQf/IMG-20261103-WA0003.jpg" }
-};
-
-const BOSSES = {
-  "Morte Vermelha (Boss)": { raridade: "Lendário", foto: "https://files.catbox.moe/45uete.jpg", hp: 800, atk: 50, def: 30, evasao: 5, xp: 200, dropOvo: "Ovo Lendário" },
-  "Morte Gritante (Boss)": { raridade: "Lendário", foto: "https://files.catbox.moe/lh62l3.jpg", hp: 850, atk: 55, def: 35, evasao: 5, xp: 250, dropOvo: "Ovo Lendário" },
-  "Bewilderbeast (Boss)": { raridade: "Lendário", foto: "https://files.catbox.moe/r47clm.jpg", hp: 1000, atk: 60, def: 40, evasao: 5, xp: 300, dropOvo: "Ovo Lendário" },
-  "Death Song (Boss)": { raridade: "Mítico", foto: "https://i.ibb.co/k2pr1csQ/IMG-20261103-WA0001.jpg", hp: 1200, atk: 70, def: 50, evasao: 15, xp: 500, dropOvo: "Ovo Mítico" },
-  "Estridente (Boss)": { raridade: "Mítico", foto: "https://i.ibb.co/j9RSQpQf/IMG-20261103-WA0003.jpg", hp: 1100, atk: 75, def: 45, evasao: 20, xp: 450, dropOvo: "Ovo Mítico" }
-};
-
-const SALAS_RUINA = [
-  { nivel: 1, hpInimigo: 150, atkInimigo: 15, xp: 30 },
-  { nivel: 2, hpInimigo: 300, atkInimigo: 25, xp: 60 },
-  { nivel: 3, hpInimigo: 500, atkInimigo: 40, xp: 120 },
-  { nivel: 4, hpInimigo: 800, atkInimigo: 60, xp: 200 },
-  { nivel: 5, hpInimigo: 1200, atkInimigo: 90, xp: 350 }
-];
-
-function buscarUsuario(db, sender, msg) {
-  const d = dbLer("dragoes.json", { usuarios: {} })
-
-  let numSender = String(sender).replace(/\D/g, "")
-  if (msg && msg.key && msg.key.participant && !msg.key.participant.endsWith("@lid")) {
-      numSender = String(msg.key.participant).replace(/\D/g, "")
-  }
-  if (!numSender || numSender.length < 8) {
-      numSender = String(sender).replace(/\D/g, "")
-  }
-
-  let idOriginal = String(sender).split("@")[0].split(":")[0]
-
-  if (!numSender && !idOriginal) return { dbDragoes: d, user: { dragoes: {}, gold: 0, hpVila: 100, maxVila: 100, nivelVila: 1, xpTreinador: 0, nivelTreinador: 1, inventario: { selas: 0, pergaminhos: 0, ovos: {} }, pvpAtivo: true, ultimaMissao: 0, ultimoBoss: 0, ultimaRuina: 0 }, idReal: "0@s.whatsapp.net" }
-
-  let idEncontrado = null
-  for (const key of Object.keys(d.usuarios)) {
-    const u = d.usuarios[key]
-    if (numSender && numSender.length > 8 && (key.includes(numSender) || (u.telefoneReal && u.telefoneReal === numSender))) { idEncontrado = key; break }
-    if (idOriginal && key.split("@")[0].split(":")[0] === idOriginal) { idEncontrado = key; break }
-    if (u.apelidos && u.apelidos.some(ap => (idOriginal && ap.includes(idOriginal)) || (numSender.length > 8 && ap.includes(numSender)))) { idEncontrado = key; break }
-  }
-
-  if (idEncontrado) {
-    const u = d.usuarios[idEncontrado]
-    if (!u.apelidos) u.apelidos = []
-    if (idOriginal && !u.apelidos.includes(idOriginal)) u.apelidos.push(idOriginal)
-    if (numSender && !u.telefoneReal) u.telefoneReal = numSender
-
-    u.xpTreinador = typeof u.xpTreinador === "number" ? u.xpTreinador : 0
-    u.nivelTreinador = typeof u.nivelTreinador === "number" ? u.nivelTreinador : 1
-    u.nivelVila = typeof u.nivelVila === "number" ? u.nivelVila : 1
-    u.maxVila = typeof u.maxVila === "number" ? u.maxVila : 100
-    u.ultimaMissao = u.ultimaMissao || 0
-    u.ultimoBoss = u.ultimoBoss || 0
-    u.ultimaRuina = u.ultimaRuina || 0
-    u.inventario = u.inventario || { selas: 0, pergaminhos: 0, ovos: {} }
-    u.inventario.ovos = u.inventario.ovos || {}
-
-    dbSalvar("dragoes.json", d)
-    return { dbDragoes: d, user: u, idReal: idEncontrado }
-  }
-
-  const novoId = (numSender || idOriginal) + "@s.whatsapp.net"
-  d.usuarios[novoId] = { dragoes: {}, gold: 0, hpVila: 100, maxVila: 100, nivelVila: 1, xpTreinador: 0, nivelTreinador: 1, inventario: { selas: 0, pergaminhos: 0, ovos: {} }, dragaoBatalha: null, pvpAtivo: true, ultimaMissao: 0, ultimoBoss: 0, ultimaRuina: 0, telefoneReal: numSender, apelidos: [idOriginal] }
-  dbSalvar("dragoes.json", d)
-  return { dbDragoes: d, user: d.usuarios[novoId], idReal: novoId }
-}
-
-function salvarDragoesUser(db, idReal, user) {
-  const d = dbLer("dragoes.json", { usuarios: {} })
-  d.usuarios[idReal] = user
-  dbSalvar("dragoes.json", d)
-}
-
-function getSessao(jid) { const s = dbLer("dragoesessoes.json", {}); return s[jid] || null; }
-function setSessao(jid, sessao) { const s = dbLer("dragoesessoes.json", {}); s[jid] = sessao; dbSalvar("dragoesessoes.json", s); }
-function delSessao(jid) { const s = dbLer("dragoesessoes.json", {}); delete s[jid]; dbSalvar("dragoesessoes.json", s); }
-
-function darXp(user, qtd) {
-  if (user.nivelTreinador >= 15) {
-    user.nivelTreinador = 15;
-    user.xpTreinador = 0;
-    return false;
-  }
-  user.xpTreinador = (user.xpTreinador || 0) + qtd;
-  let upou = false;
-  while (user.nivelTreinador < 15) {
-    const xpNec = user.nivelTreinador * 200;
-    if (user.xpTreinador >= xpNec) {
-      user.nivelTreinador++;
-      user.xpTreinador -= xpNec;
-      upou = true;
-    } else break;
-  }
-  if (user.nivelTreinador >= 15) {
-    user.nivelTreinador = 15;
-    user.xpTreinador = 0;
-  }
-  return upou;
-}
-
-async function rendaAutomatica(sock, db) {
-  const cfg = dbLer("dragaocfg.json", { grupos: {} })
-  const gruposAtivos = Object.entries(cfg.grupos || {}).filter(([_, c]) => c.ativo === true)
-  if (!gruposAtivos.length) return
-  if (Math.random() > 0.2) return
-
-  const [jidGrupo] = gruposAtivos[Math.floor(Math.random() * gruposAtivos.length)]
-  const dAll = dbLer("dragoes.json", { usuarios: {} })
-
-  const usersNoGrupo = Object.keys(dAll.usuarios).filter(u => (dAll.usuarios[u].dragoes && Object.keys(dAll.usuarios[u].dragoes).length > 0))
-  if (!usersNoGrupo.length) return
-
-  const userId = usersNoGrupo[Math.floor(Math.random() * usersNoGrupo.length)]
-  const user = dAll.usuarios[userId]
-  const dragoesNomes = Object.keys(user.dragoes)
-  const dragaoNome = dragoesNomes[Math.floor(Math.random() * dragoesNomes.length)]
-  const dragao = user.dragoes[dragaoNome]
-  const infoDragao = DRAGOES[dragao.nome.replace(" (Asa de Titã)", "").replace(" (Bebê)", "")] || DRAGOES[dragaoNome]
-
-  const defesa = (dragao.atk + dragao.def + (dragao.nivel * 5)) * (dragao.asaTita ? 1.5 : 1)
-  const ataqueCacador = 50 + Math.random() * 50
-
-  let texto = `${boxTop("𝐈𝐍𝐕𝐀𝐒𝐀̃𝐎 𝐃𝐄 𝐂𝐀𝐂̧𝐀𝐃𝐎𝐑𝐄𝐒")}
-
-🌸 Caçadores estão atacando a vila de @${userId.split("@")[0]}!
-
-`
-
-  if (defesa >= ataqueCacador) {
-    user.gold = (user.gold || 0) + 100
-    const xpGanha = infoDragao ? infoDragao.xp : 20
-    const upou = darXp(user, xpGanha)
-    dbSalvar("dragoes.json", dAll)
-    texto += `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐃𝐄𝐅𝐄𝐍𝐃𝐈𝐃𝐎 𓆪
-↳ *${dragaoNome}* protegeu a vila!
-↳ Defesa: ${Math.floor(defesa)} vs Ataque: ${Math.floor(ataqueCacador)}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐑𝐄𝐂𝐎𝐌𝐏𝐄𝐍𝐒𝐀 𓆪
-↳ +100 Gold
-↳ +${xpGanha} XP${upou ? `\n↳ ⭐ UPOU PARA NÍVEL ${user.nivelTreinador}!` : ""}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${boxFim(nomeBotDb(db), "A serpente protege os seus.")}`
-  } else {
-    user.hpVila = (user.hpVila || 100) - 25
-    if (user.hpVila < 0) user.hpVila = 0
-    dbSalvar("dragoes.json", dAll)
-    texto += `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐀𝐓𝐀𝐂𝐀𝐃𝐎 𓆪
-↳ *${dragaoNome}* não resistiu!
-↳ Defesa: ${Math.floor(defesa)} vs Ataque: ${Math.floor(ataqueCacador)}
-↳ Vida da vila: ${user.hpVila}/${user.maxVila}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${boxFim(nomeBotDb(db), "Precisamos treinar mais.")}`
-  }
-  await sock.sendMessage(jidGrupo, { text: texto, mentions: [userId] })
+function removeGoldFZ(num, qtd) {
+  const { g, saldo } = getGoldFZ(num)
+  if (saldo < qtd) return { ok: false, saldo }
+  g.usuarios[num] = saldo - qtd
+  dbSalvar(GOLD_FZ_FILE, g)
+  return { ok: true, saldo: g.usuarios[num] }
 }
 
 module.exports = {
-  menu: "menu-dragao",
-  grupoOnly: true,
+  menu: "menu-fazenda",
+  grupoOnly: false,
   adminOnly: false,
   donoOnly: false,
-  rendaAutomatica,
 
-  commands: {    menudragao: {
-      aliases: ["dragaomenu", "comandosdragao"],
-      async executar({ sock, msg, db, prefixoAtivo }) {
+  async rendaAutomatica(sock, db) {
+    const f = dbLer("fazenda.json", { usuarios: {} })
+    let alterou = false
+    const agora = Date.now()
+
+    const cfgFaz = dbLer("fazendacfg.json", { grupos: {} })
+    const gruposAtivos = Object.keys(cfgFaz.grupos || {}).filter(j => cfgFaz.grupos[j]?.ativo === true)
+
+    for (const [num, user] of Object.entries(f.usuarios || {})) {
+      if (user.plantacoes) {
+        for (const p of user.plantacoes) {
+          if (p.pronta) continue
+          const s = SEMENTES.find(x => x.id === p.id)
+          if (!s) continue
+          const tempoNecessario = s.tempo * 60 * 1000
+          const regasBonus = (p.regas || 0) * 2 * 60 * 1000
+          const tempoFinal = Math.max(60 * 1000, tempoNecessario - regasBonus)
+          if (agora - p.plantadaEm >= tempoFinal) { p.pronta = true; p.prontaEm = agora; alterou = true }
+        }
+      }
+      if (!user.animais || !user.animais.length) continue
+      if (agora - (user.ultimaRenda || 0) < INTERVALO_RENDA) continue
+      const renda3h = calcularRenda(user) * 3
+      user.rendaPendente = (user.rendaPendente || 0) + renda3h
+      user.rendaTotal = (user.rendaTotal || 0) + renda3h
+      for (const a of user.animais) { a.fome = Math.min(100, (a.fome || 0) + 20); a.sujo = Math.min(100, (a.sujo || 0) + 15) }
+      user.sujeira = Math.min(100, (user.sujeira || 0) + 20)
+      user.ultimaRenda = agora
+      alterou = true
+    }
+    if (alterou) dbSalvar("fazenda.json", f)
+  },
+
+  commands: {
+
+    menufazenda: {
+      aliases: ["fazenda", "menuf", "comandosfazenda"],
+      async executar({ sock, msg, prefixoAtivo, db, sender, config, isDono, isSubDono, isAdmin, groupMetadata }) {
         const jid = msg.key.remoteJid
         const p = prefixoAtivo || "+"
-        const nomeBot = nomeBotDb(db)
         const cfg = getCfg(db)
+        const nomeBot = nomeBotDb(db)
+        await reagir(sock, msg, "🌾")
 
-        await reagir(sock, msg, "🌸")
+        const texto = `🌾 *𝑴𝑬𝑵𝑼 𝑭𝑨𝒁𝑬𝑵𝑫𝑨* 🌾
 
-        const texto = `${boxTop("𝐌 𝐄 𝐍 𝐔   𝐃 𝐑 𝐀 𝐆 𝐀̃ 𝐎")}
+🤖 𝐁𝐨𝐭: ${nomeBot}
+⚡ 𝐏𝐫𝐞𝐟𝐢𝐱𝐨: ${p}
+🟢 𝐒𝐭𝐚𝐭𝐮𝐬: 𝐎𝐧𝐥𝐢𝐧𝐞
 
-${secao("𝐆𝐄𝐑𝐀𝐋")}
-${item(`${p}dragao on/off`)}
-${item(`${p}domar <nome>`)}
-${item(`${p}meudragao`)}
-${item(`${p}verdragao @user`)}
-${item(`${p}alimentardragao <nome>`)}
-${item(`${p}treinadordg`)}
-${item(`${p}uparvila`)}
-${fimSecao()}
+🌿 *𝑮𝑶𝑳𝑫 𝑭𝒁*
+${p}saldofz
+${p}gerarkeyfz
+${p}keygoldfz
 
-${secao("𝐀𝐂̧𝐎̃𝐄𝐒")}
-${item(`${p}batalha on/off`)}
-${item(`${p}batalhadragao`)}
-${item(`${p}escolherdg <nº>`)}
-${item(`${p}ataque 1/2/3`)}
-${item(`${p}boss`)}
-${item(`${p}ruinas`)}
-${fimSecao()}
+🌿 *𝑨𝑵𝑰𝑴𝑨𝑰𝑺*
+${p}animais
+${p}compraranimal
+${p}venderanimal
+${p}statusanimais
 
-${secao("𝐄𝐂𝐎𝐍𝐎𝐌𝐈𝐀")}
-${item(`${p}saldo`)}
-${item(`${p}lojadragao`)}
-${item(`${p}comprardragao <item>`)}
-${item(`${p}inventariodragao`)}
-${item(`${p}usarsela <nome>`)}
-${item(`${p}evoluirdragao <nome>`)}
-${fimSecao()}
+🌿 *𝑺𝑬𝑴𝑬𝑵𝑻𝑬𝑺*
+${p}sementes
+${p}comprarsemente
+${p}plantarsemente
+${p}regarsementes
+${p}regarplanta
+${p}venderplanta
+${p}statusplanta
 
-${secao("𝐎𝐕𝐎𝐒 & 𝐕𝐎𝐎")}
-${item(`${p}voar <nome>`)}
-${item(`${p}chocarovo <nome>`)}
-${item(`${p}meuseggs`)}
-${item(`${p}livrodg`)}
-${fimSecao()}
+🌿 *𝑻𝑬𝑹𝑹𝑨𝑺*
+${p}comprarcercado
+${p}comprarterra
+${p}compraragua
 
-${secao("𝐌𝐈𝐒𝐒𝐎̃𝐄𝐒")}
-${item(`${p}missao`)}
-${fimSecao()}
+🌿 *𝑪𝑼𝑰𝑫𝑨𝑫𝑶𝑺*
+${p}alimentaranimais
+${p}banhoanimais
+${p}limparfazenda
 
-╔═══ஓ๑♡๑ஓ═══╗
-𓆩 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 𓆪
-↳ \`${p}\`
-╚═══ஓ๑♡๑ஓ═══╝
+🌿 *𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹𝑬𝑺*
+${p}vendedorsementes
+${p}comprarvendedor
+${p}vendedoranimais
+${p}comprarvendedoranimal
+${p}eventoagua
 
-${boxFim(nomeBot, "O Grande Sábio observa.")}`
+🌿 *𝑺𝑻𝑨𝑻𝑼𝑺*
+${p}statusfazenda
+${p}resgatarfazenda
+
+> _Prefixo: ${p}_`
 
         if (cfg.fotoMenu) {
           let buf = null
@@ -396,1326 +329,694 @@ ${boxFim(nomeBot, "O Grande Sábio observa.")}`
       }
     },
 
-    dragao: {
-      aliases: ["dragon", "dragaoon"],
-      async executar({ sock, msg, args, db, prefixoAtivo, isDono, isSubDono, isAdmin }) {
+    fazenda: {
+      aliases: ["fazendaon", "fazendaoff", "ativarfazenda"],
+      adminOnly: true, grupoOnly: true,
+      async executar({ sock, msg, args, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         const p = prefixoAtivo || "+"
         const nomeBot = nomeBotDb(db)
         const op = (args[0] || "").toLowerCase()
 
-        if (!isDono && !isSubDono && !isAdmin) {
-          await reagir(sock, msg, "💨")
-          return sock.sendMessage(jid, { text: msgErro("𝐀𝐕𝐈𝐒𝐎", "Apenas admins podem ativar.", `Use \`${p}menuadm\` para ver os comandos.`, null, nomeBot) }, { quoted: msg })
-        }
-
-        const cfg = dbLer("dragaocfg.json", { grupos: {} })
+        const cfg = dbLer("fazendacfg.json", { grupos: {} })
         cfg.grupos[jid] = cfg.grupos[jid] || {}
 
         if (!["on", "off"].includes(op)) {
           const s = cfg.grupos[jid].ativo ? "ON ✅" : "OFF ❌"
-          await reagir(sock, msg, "🌸")
-          return sock.sendMessage(jid, { text: msgAviso("𝐃𝐑𝐀𝐆𝐀̃𝐎", `Sistema atualmente: ${s}`, `Use \`${p}dragao on\` ou \`${p}dragao off\``, null, nomeBot) }, { quoted: msg })
+          await reagir(sock, msg, "🌾")
+          return sock.sendMessage(jid, { text: msgAviso("𝑭𝑨𝒁𝑬𝑵𝑫𝑨", `Status atual: ${s}`, `Use \`${p}fazenda on/off\``) }, { quoted: msg })
         }
 
         cfg.grupos[jid].ativo = op === "on"
-        dbSalvar("dragaocfg.json", cfg)
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐃𝐑𝐀𝐆𝐀̃𝐎", `Sistema ${op.toUpperCase()}`, "Dragões selvagens podem aparecer no grupo!", null, nomeBot) }, { quoted: msg })
+        dbSalvar("fazendacfg.json", cfg)
+        await reagir(sock, msg, op === "on" ? "✅" : "🗑️")
+        await sock.sendMessage(jid, { text: op === "on" ? msgSucesso("", "Sistema ativado.") : msgAviso("𝑭𝑨𝒁𝑬𝑵𝑫𝑨", "Sistema desativado.") }, { quoted: msg })
       }
     },
 
-    batalha: {
-      aliases: ["pvp", "permitirbatalha"],
-      async executar({ sock, msg, args, db, sender }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-
-        if (!sistemaAtivo(db, jid)) {
-          await reagir(sock, msg, "💨")
-          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg })
-        }
-
-        const op = (args[0] || "").toLowerCase()
-        const { user, idReal } = buscarUsuario(db, sender, msg)
-        if (user.pvpAtivo === undefined) user.pvpAtivo = true
-
-        if (!["on", "off"].includes(op)) {
-          const s = user.pvpAtivo ? "ON ✅" : "OFF ❌"
-          await reagir(sock, msg, "🌸")
-          return sock.sendMessage(jid, { text: msgAviso("𝐁𝐀𝐓𝐀𝐋𝐇𝐀 𝐏𝐕𝐏", `Status atual: ${s}`, `Use \`+batalha on\` ou \`+batalha off\``, null, nomeBot) }, { quoted: msg })
-        }
-
-        user.pvpAtivo = op === "on"
-        salvarDragoesUser(db, idReal, user)
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐁𝐀𝐓𝐀𝐋𝐇𝐀 𝐏𝐕𝐏", `Você ${op === "on" ? "AGORA PODE" : "NÃO PODE MAIS"} ser desafiado!`, `Status: ${op.toUpperCase()}`, null, nomeBot) }, { quoted: msg })
-      }
-    },
-
-    treinadordg: {
-      aliases: ["meutreinador", "leveltreinador"],
+    saldofz: {
+      aliases: ["goldfz", "meugoldfz", "meusaldo"],
       async executar({ sock, msg, db, sender }) {
         const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) {
-          await reagir(sock, msg, "💨")
-          return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg })
-        }
-        const { user } = buscarUsuario(db, sender, msg)
-        const xpNec = user.nivelTreinador * 200
-        const progresso = Math.floor((user.xpTreinador / xpNec) * 10)
-        const barra = "🌸".repeat(Math.min(10, progresso)) + "⬛".repeat(Math.max(0, 10 - progresso))
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐓𝐑𝐄𝐈𝐍𝐀𝐃𝐎𝐑", "Seu progresso atual", `Nível: *${user.nivelTreinador}* / 15\nXP: *${user.xpTreinador}* / ${xpNec}\n${barra}\nVila Nível: ${user.nivelVila}/6`, `Use \`+missao\` para ganhar XP!`, nomeBot) }, { quoted: msg })
+        const num = soNumero(sender)
+        const { saldo } = getGoldFZ(num)
+        await reagir(sock, msg, "🌾")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑮𝑶𝑳𝑫𝑭𝒁", "Saldo da fazenda.", `Você tem ${saldo} GoldFZ`) }, { quoted: msg })
       }
     },
 
-    uparvila: {
-      aliases: ["upvila", "evoluirvila"],
-      async executar({ sock, msg, db, sender }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
-        const { user, idReal } = buscarUsuario(db, sender, msg)
-        if (user.nivelVila >= 6) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgAviso("𝐕𝐈𝐋𝐀 𝐌𝐀𝐗𝐈𝐌𝐀", "Sua vila já está no nível máximo (6).", `Vida: ${user.hpVila}/${user.maxVila}`, null, nomeBot) }, { quoted: msg }) }
-        const custo = user.nivelVila * 200
-        if ((user.gold || 0) < custo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐆𝐎𝐋𝐃", "Você não tem ouro suficiente.", `Custa *${custo} Gold*\nSaldo: *${user.gold}*`, null, nomeBot) }, { quoted: msg }) }
-        user.gold -= custo
-        user.nivelVila += 1
-        user.maxVila = 100 + (user.nivelVila - 1) * 120
-        if (user.maxVila > 700) user.maxVila = 700
-        user.hpVila = user.maxVila
-        salvarDragoesUser(db, idReal, user)
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐕𝐈𝐋𝐀 𝐔𝐏𝐀𝐃𝐀", "Sua vila cresceu!", `Novo Nível: *${user.nivelVila}*\nVida Máxima: *${user.maxVila}*\nGold restante: ${user.gold}`, null, nomeBot) }, { quoted: msg })
-      }
-    },
-
-    meudragao: {
-      aliases: ["meusdragoes", "mydragons"],
-      async executar({ sock, msg, db, sender }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
-        const { user } = buscarUsuario(db, sender, msg)
-        const dragoes = Object.values(user.dragoes)
-        if (!dragoes.length) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐍𝐄𝐍𝐇𝐔𝐌 𝐃𝐑𝐀𝐆𝐀̃𝐎", "Você ainda não domou nenhum.", `Use \`+domar <nome>\` quando um dragão aparecer.`, "A serpente aguarda.", nomeBot) }, { quoted: msg }) }
-
-        let txt = `${boxTop("𝐒𝐄𝐔𝐒 𝐃𝐑𝐀𝐆𝐎̃𝐄𝐒")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐒𝐓𝐀𝐓𝐔𝐒 𓆪
-↳ Gold: *${user.gold || 0}*
-↳ Vila: *${user.hpVila}/${user.maxVila}* (Nv. ${user.nivelVila})
-↳ PvP: *${user.pvpAtivo === false ? "OFF" : "ON"}*
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-`
-        dragoes.forEach((d, i) => {
-          const titulo = d.asaTita ? `⚡ ${d.nome}` : d.nome
-          const sela = d.temSela ? "🐎" : "❌"
-          const bebe = d.ehBebe ? "🐣 Bebê" : "Adulto"
-          txt += `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 #${i + 1} 𓆪
-↳ *${titulo}*
-↳ Nv. ${d.nivel} • ${d.raridade} • ${sela} • ${bebe}
-↳ HP: ${d.hp}/${d.hpMax} • EN: ${d.energia}/${d.energiaMax}
-╰┈┈┈┈୨୧┈┈┈┈╯
-`
-        })
-        txt += `\n╔═══ஓ๑♡๑ஓ═══╗
-𓆩 ${nomeBot.toUpperCase()} 𓆪
-❝ Use +voar <nome> ou +batalhadragao. ❞
-╚═══ஓ๑♡๑ஓ═══╝`
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: txt }, { quoted: msg })
-      }
-    },
-
-    verdragao: {
-      aliases: ["vd", "verdragoes", "dragoesde"],
-      async executar({ sock, msg, db, utils }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
-
-        let alvo = utils.getAlvo(msg)
-        if (!alvo) {
-          const txt = msg.message?.conversation || msg.message?.extendedTextMessage?.text || ""
-          const args = txt.split(" ").slice(1)
-          if (args[0]) alvo = args[0].replace(/\D/g, "") + "@s.whatsapp.net"
-        }
-        if (!alvo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐕𝐄𝐑 𝐃𝐑𝐀𝐆𝐎̃𝐄𝐒", "Você não marcou ninguém.", `Marque ou digite o número.\nExemplo: \`+verdragao 5511999999999\``, null, nomeBot) }, { quoted: msg }) }
-
-        const { user } = buscarUsuario(db, alvo, msg)
-        const dragoes = Object.values(user.dragoes)
-        const numAlvo = alvo.split("@")[0]
-        if (!dragoes.length) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgAviso("𝐄𝐑𝐑𝐎", "Treinador sem dragões.", `O treinador ${numAlvo} não tem dragões.`, null, nomeBot) }, { quoted: msg }) }
-
-        let txt = `${boxTop(`𝐃𝐑𝐀𝐆𝐎̃𝐄𝐒 𝐃𝐄 ${numAlvo}`)}\n\n`
-        dragoes.forEach((d, i) => {
-          const titulo = d.asaTita ? `⚡ ${d.nome}` : d.nome
-          const sela = d.temSela ? "🐎" : "❌"
-          const bebe = d.ehBebe ? "🐣 Bebê" : "Adulto"
-          txt += `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 #${i + 1} 𓆪
-↳ *${titulo}*
-↳ Nv. ${d.nivel} • ${d.raridade} • ${sela} • ${bebe}
-↳ HP: ${d.hp}/${d.hpMax}
-╰┈┈┈┈୨୧┈┈┈┈╯
-`
-        })
-        txt += `\n${boxFim(nomeBot, "A serpente observa.")}`
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: txt }, { quoted: msg })
-      }
-    },
-
-    domar: {
-      aliases: ["domesticar", "tamedragon"],
-      async executar({ sock, msg, args, db, sender }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
-
-        const nomeDragao = args.join(" ").trim()
-        const sessao = getSessao(jid)
-        if (!sessao || !sessao.dragao) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐃𝐎𝐌𝐀𝐑", "Nenhum dragão para domar.", "Aguarde um dragão aparecer no grupo.", null, nomeBot) }, { quoted: msg }) }
-        if (Date.now() - sessao.timestamp > 60000) { delSessao(jid); await reagir(sock, msg, "⏰"); return sock.sendMessage(jid, { text: msgAviso("𝐓𝐄𝐌𝐏𝐎 𝐄𝐒𝐆𝐎𝐓𝐀𝐃𝐎", "O dragão fugiu.", "Ele esperou muito tempo e foi embora.", null, nomeBot) }, { quoted: msg }) }
-        if (nomeDragao.toLowerCase() !== sessao.dragao.nome.toLowerCase()) {
-          await reagir(sock, msg, "💨")
-          return sock.sendMessage(jid, { text: msgErro("𝐍𝐎𝐌𝐄 𝐄𝐑𝐑𝐀𝐃𝐎", "O nome não coincide.", `O dragão no grupo é: *${sessao.dragao.nome}*\nTente \`+domar ${sessao.dragao.nome}\``, null, nomeBot) }, { quoted: msg })
-        }
-
-        const { user, idReal } = buscarUsuario(db, sender, msg)
-        const chances = { "Comum": 70, "Raro": 50, "Épico": 30, "Lendário": 10, "Mítico": 1 }
-        const chanceBase = chances[sessao.dragao.raridade] || 50
-        const bonusNivel = user.nivelTreinador * 2
-        const chanceFinal = chanceBase + bonusNivel
-
-        if (Math.random() * 100 > chanceFinal) {
-          if (Math.random() < 0.5) { delSessao(jid); await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐔𝐆𝐈𝐔", "O dragão fugiu!", `Sua chance era de ${chanceFinal}%.\nAumente seu nível com \`+missao\`.`, null, nomeBot) }, { quoted: msg }) }
-          await reagir(sock, msg, "💨")
-          return sock.sendMessage(jid, { text: msgAviso("𝐅𝐀𝐋𝐇𝐎𝐔", "O dragão resistiu!", `Sua chance era de ${chanceFinal}%.\nUse \`+domar ${sessao.dragao.nome}\` de novo.`, null, nomeBot) }, { quoted: msg })
-        }
-
-        user.dragoes[sessao.dragao.nome] = {
-          nome: sessao.dragao.nome, raridade: sessao.dragao.raridade, foto: sessao.dragao.foto,
-          hp: sessao.dragao.hp, hpMax: sessao.dragao.hp, energia: sessao.dragao.energia, energiaMax: sessao.dragao.energia,
-          atk: sessao.dragao.atk, def: sessao.dragao.def, evasao: sessao.dragao.evasao,
-          nivel: 1, temSela: false, asaTita: false, tentativasTita: 0, ehBebe: false, domadoEm: Date.now()
-        }
-        salvarDragoesUser(db, idReal, user)
-        delSessao(jid)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, {
-          image: { url: sessao.dragao.foto },
-          caption: msgSucesso("𝐃𝐎𝐌𝐀𝐃𝐎!", "Você domou um novo dragão!", `*${sessao.dragao.nome}*\nNível: 1 | Raridade: ${sessao.dragao.raridade}`, `Use \`+meudragao\` para ver sua coleção.`, nomeBot)
-        }, { quoted: msg })
-      }
-    },
-
-    batalhadragao: {
-      aliases: ["batalhar", "battle", "lobby"],
-      async executar({ sock, msg, db, prefixoAtivo, sender }) {
-        const jid = msg.key.remoteJid
-        const p = prefixoAtivo || "+"
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
-
-        const { user, idReal } = buscarUsuario(db, sender, msg)
-        const chaveLobby = `lobby_${jid}`
-        let lobby = getSessao(chaveLobby)
-
-        if (!lobby || (lobby.jogador1 && lobby.jogador2)) {
-          if (Object.keys(user.dragoes || {}).length === 0) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Sem dragões.", `Domine um dragão antes de batalhar.`, null, nomeBot) }, { quoted: msg }) }
-          if (user.pvpAtivo === false) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐏𝐕𝐏 𝐎𝐅𝐅", "Você desativou o PvP.", `Use \`${p}batalha on\` para reativar.`, null, nomeBot) }, { quoted: msg }) }
-          lobby = { jogador1: { id: idReal, num: idReal.split("@")[0], dragao: null, escolhido: false }, jogador2: null, estado: "esperando" }
-          setSessao(chaveLobby, lobby)
-          await reagir(sock, msg, "🌸")
-          return sock.sendMessage(jid, { text: msgSucesso("𝐋𝐎𝐁𝐁𝐘 𝐀𝐁𝐄𝐑𝐓𝐎", "Aguardando oponente...", `@${lobby.jogador1.num} abriu um lobby!\nPara entrar: \`${p}batalhadragao\``, "Aguardando...", nomeBot), mentions: [idReal] }, { quoted: msg })
-        }
-
-        if (lobby && lobby.jogador1 && !lobby.jogador2) {
-          if (lobby.jogador1.id === idReal) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgAviso("𝐀𝐕𝐈𝐒𝐎", "Você já está no lobby.", "Aguarde alguém entrar.", null, nomeBot) }, { quoted: msg }) }
-          if (Object.keys(user.dragoes || {}).length === 0) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Sem dragões.", `Domine um dragão antes.`, null, nomeBot) }, { quoted: msg }) }
-          if (user.pvpAtivo === false) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐏𝐕𝐏 𝐎𝐅𝐅", "Você desativou o PvP.", `Use \`${p}batalha on\` para reativar.`, null, nomeBot) }, { quoted: msg }) }
-
-          lobby.jogador2 = { id: idReal, num: idReal.split("@")[0], dragao: null, escolhido: false }
-          lobby.estado = "escolhendo"
-          const chaveBatalha = `batalha_${jid}`
-          setSessao(chaveBatalha, lobby)
-          delSessao(chaveLobby)
-
-          const { user: u1 } = buscarUsuario(db, lobby.jogador1.id, msg)
-          const { user: u2 } = buscarUsuario(db, lobby.jogador2.id, msg)
-
-          let txt = `${boxTop("𝐁𝐀𝐓𝐀𝐋𝐇𝐀 𝐏𝐑𝐎𝐍𝐓𝐀")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐂𝐎𝐍𝐅𝐑𝐎𝐍𝐓𝐎 𓆪
-↳ @${lobby.jogador1.num} vs @${lobby.jogador2.num}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐃𝐑𝐀𝐆𝐎̃𝐄𝐒 @${lobby.jogador1.num} 𓆪
-`
-          let idx1 = 1
-          for (const nome in u1.dragoes) { txt += `↳ ${idx1}. ${nome} (Nv. ${u1.dragoes[nome].nivel})\n`; idx1++ }
-          txt += `╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐃𝐑𝐀𝐆𝐎̃𝐄𝐒 @${lobby.jogador2.num} 𓆪
-`
-          let idx2 = 1
-          for (const nome in u2.dragoes) { txt += `↳ ${idx2}. ${nome} (Nv. ${u2.dragoes[nome].nivel})\n`; idx2++ }
-          txt += `╰┈┈┈┈୨୧┈┈┈┈╯
-
-╔═══ஓ๑♡๑ஓ═══╗
-𓆩 𝐄𝐒𝐂𝐎𝐋𝐇𝐀𝐌 𓆪
-↳ @${lobby.jogador1.num}: \`${p}escolherdg 1\`
-↳ @${lobby.jogador2.num}: \`${p}escolherdg 1\`
-╚═══ஓ๑♡๑ஓ═══╝
-
-${boxFim(nomeBot, "Que o melhor vença!")}`
-
-          await reagir(sock, msg, "🌸")
-          return sock.sendMessage(jid, { text: txt, mentions: [lobby.jogador1.id, lobby.jogador2.id] }, { quoted: msg })
-        }
-      }
-    },
-
-    escolherdg: {
-      aliases: ["escolher", "selectdragon"],
-      async executar({ sock, msg, args, db, sender }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
-
-        const numEscolha = parseInt(args[0])
-        if (!numEscolha || numEscolha < 1) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Número inválido.", `Use o número do dragão.\nExemplo: \`+escolherdg 1\``, null, nomeBot) }, { quoted: msg }) }
-
-        const chaveBatalha = `batalha_${jid}`
-        const batalha = getSessao(chaveBatalha)
-        if (!batalha || batalha.estado !== "escolhendo") { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Nenhuma batalha ativa.", "Não há batalha em andamento neste grupo.", null, nomeBot) }, { quoted: msg }) }
-
-        const { user, idReal } = buscarUsuario(db, sender, msg)
-        const jogador = batalha.jogador1.id === idReal ? batalha.jogador1 : batalha.jogador2.id === idReal ? batalha.jogador2 : null
-        if (!jogador) return
-
-        const nomesDragoes = Object.keys(user.dragoes)
-        const dragaoNome = nomesDragoes[numEscolha - 1]
-        if (!dragaoNome) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Número não existe.", "Você não tem um dragão nesse slot.", null, nomeBot) }, { quoted: msg }) }
-
-        const d = user.dragoes[dragaoNome]
-        jogador.dragao = dragaoNome
-        jogador.hp = d.hp
-        jogador.hpMax = d.hpMax
-        jogador.energia = d.energia
-        jogador.energiaMax = d.energiaMax
-        jogador.atk = d.atk
-        jogador.def = d.def
-        jogador.evasao = d.evasao
-        jogador.escolhido = true
-        setSessao(chaveBatalha, batalha)
-
-        if (batalha.jogador1.escolhido && batalha.jogador2.escolhido) {
-          batalha.estado = "iniciada"
-          batalha.turno = 1
-          setSessao(chaveBatalha, batalha)
-          await reagir(sock, msg, "🌸")
-          return sock.sendMessage(jid, {
-            text: msgSucesso("𝐁𝐀𝐓𝐀𝐋𝐇𝐀 𝐏𝐑𝐎𝐍𝐓𝐀", "Os dois dragões foram escolhidos!", `*${batalha.jogador1.dragao}* (@${batalha.jogador1.num})\nvs\n*${batalha.jogador2.dragao}* (@${batalha.jogador2.num})\n\nJOGADOR 1, comece:\n\`+ataque 1/2/3\``, null, nomeBot),
-            mentions: [batalha.jogador1.id, batalha.jogador2.id]
-          }, { quoted: msg })
-        }
-        await reagir(sock, msg, "🌸")
-        return sock.sendMessage(jid, { text: msgAviso("𝐄𝐒𝐂𝐎𝐋𝐇𝐈𝐃𝐎", "Dragão pronto para a batalha.", `*${dragaoNome}* foi escolhido!\nAguardando o oponente escolher...`, null, nomeBot) }, { quoted: msg })
-      }
-    },
-
-    ataque: {
-      aliases: ["atacar", "attack"],
-      async executar({ sock, msg, args, db, prefixoAtivo, sender }) {
-        const jid = msg.key.remoteJid
-        const p = prefixoAtivo || "+"
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
-
-        const numAtaque = parseInt(args[0])
-        const { idReal: userId } = buscarUsuario(db, sender, msg)
-        if (![1, 2, 3].includes(numAtaque)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Ataque inválido.", `Use: \`${p}ataque 1\`, \`${p}ataque 2\` ou \`${p}ataque 3\`.`, null, nomeBot) }, { quoted: msg }) }
-
-        const chaveBatalha = `batalha_${jid}`
-        const batalha = getSessao(chaveBatalha)
-        if (!batalha || batalha.estado !== "iniciada") { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Batalha não iniciada.", "Nenhuma batalha em andamento.", null, nomeBot) }, { quoted: msg }) }
-
-        const jogadorAtual = batalha.turno === 1 ? batalha.jogador1 : batalha.jogador2
-        if (jogadorAtual.id !== userId) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgAviso("𝐄𝐒𝐏𝐄𝐑𝐄", "Não é seu turno.", "Aguarde o oponente atacar.", null, nomeBot) }, { quoted: msg }) }
-
-        const atacante = jogadorAtual
-        const defensor = batalha.turno === 1 ? batalha.jogador2 : batalha.jogador1
-        const custos = { 1: 10, 2: 20, 3: 30 }
-        const custo = custos[numAtaque]
-
-        if (atacante.energia < custo) {
-          const vencedor = batalha.jogador1.energia >= batalha.jogador2.energia ? batalha.jogador1 : batalha.jogador2
-          delSessao(chaveBatalha)
-          const { user: uVencedor, idReal: idVencedor } = buscarUsuario(db, vencedor.id, msg)
-          const upouV = darXp(uVencedor, 50)
-          salvarDragoesUser(db, idVencedor, uVencedor)
-          await reagir(sock, msg, "🌸")
-          return sock.sendMessage(jid, { text: msgAviso("𝐅𝐈𝐌 𝐃𝐄 𝐉𝐎𝐆𝐎", "Cansaço extremo.", `${atacante.dragao} ficou exausto!\n\nVencedor: *${vencedor.dragao}* (@${vencedor.num})\n+50 XP${upouV ? `\n⭐ UPOU PARA NÍVEL ${uVencedor.nivelTreinador}!` : ""}`, null, nomeBot) }, { quoted: msg })
-        }
-
-        atacante.energia -= custo
-        const danoBase = { 1: atacante.atk * 1.5, 2: atacante.atk * 2.5, 3: atacante.atk * 4.0 }[numAtaque]
-        const critico = Math.random() < 0.15
-        const danoFinal = Math.floor(danoBase * (critico ? 2 : 1) * (0.9 + Math.random() * 0.2))
-        const esquivou = Math.random() * 100 < defensor.evasao
-
-        let log = ""
-        if (esquivou) { log = `${defensor.dragao} esquivou do ataque!` }
-        else { defensor.hp -= danoFinal; log = `${atacante.dragao} usou ataque ${numAtaque}!\nDano: ${danoFinal}${critico ? " 💥 CRÍTICO!" : ""}\n${defensor.dragao} HP: ${Math.max(0, defensor.hp)}/${defensor.hpMax}` }
-
-        if (defensor.hp <= 0) {
-          delSessao(chaveBatalha)
-          const { user: uVencedor, idReal: idVencedor } = buscarUsuario(db, atacante.id, msg)
-          const upouV = darXp(uVencedor, 50)
-          salvarDragoesUser(db, idVencedor, uVencedor)
-          await reagir(sock, msg, "🏆")
-          return sock.sendMessage(jid, { text: msgSucesso("𝐁𝐀𝐓𝐀𝐋𝐇𝐀 𝐄𝐍𝐂𝐄𝐑𝐑𝐀𝐃𝐀", "Temos um vencedor!", `Vencedor: *${atacante.dragao}* (@${atacante.num})\n\n${log}\n+50 XP${upouV ? `\n⭐ UPOU PARA NÍVEL ${uVencedor.nivelTreinador}!` : ""}`, null, nomeBot) }, { quoted: msg })
-        }
-
-        batalha.turno = batalha.turno === 1 ? 2 : 1
-        setSessao(chaveBatalha, batalha)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, {
-          text: msgAviso("𝐓𝐔𝐑𝐍𝐎", "Seu oponente atacou!", `${log}\n\nVez de @${defensor.num} atacar:\nUse \`${p}ataque 1/2/3\``, null, nomeBot),
-          mentions: [defensor.id.includes("@") ? defensor.id : defensor.id + "@s.whatsapp.net"]
-        }, { quoted: msg })
-      }
-    },    lojadragao: {
-      aliases: ["lojadragão", "shopdragao"],
+    resgatarfazenda: {
+      aliases: ["resgatar", "coletar", "coletarfazenda"],
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Use \`${prefixoAtivo || "+"}fazenda on\``) }, { quoted: msg }) }
+        const num = soNumero(sender)
+        const { f, u } = getFazenda(num)
+        const pendente = u.rendaPendente || 0
+        if (pendente <= 0) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑹𝑬𝑺𝑮𝑨𝑻𝑨𝑹", "Nada pra resgatar.", "Renda acumula a cada 3h") }, { quoted: msg }) }
 
-        const p = prefixoAtivo || "+"
-        const { user } = buscarUsuario(db, sender, msg)
+        addGoldFZ(num, pendente)
+        u.rendaPendente = 0
+        salvarFazenda(f)
+        const { saldo } = getGoldFZ(num)
 
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgAviso("𝐋𝐎𝐉𝐀 𝐃𝐑𝐀𝐆𝐀̃𝐎", `Seu saldo: *${user.gold || 0} Goldragon*`, `${secao("𝐒𝐄𝐋𝐀")}
-↳ 💰 Preço: 150 Gold
-↳ Necessária para voar
-↳ \`${p}comprardragao sela\`
-${fimSecao()}
-
-${secao("𝐏𝐄𝐑𝐆𝐀𝐌𝐈𝐍𝐇𝐎")}
-↳ 💰 Preço: 300 Gold
-↳ Sobe 1 nível do dragão
-↳ Nv 7+ = chance de Asa de Titã
-↳ \`${p}comprardragao pergaminho\`
-${fimSecao()}`, "Invista sabiamente.", nomeBot) }, { quoted: msg })
+        await reagir(sock, msg, "✅")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Renda coletada", `+${pendente} GoldFZ\nSaldo: ${saldo}`), mentions: [`${num}@s.whatsapp.net`] }, { quoted: msg })
       }
     },
 
-    comprardragao: {
-      aliases: ["comprardragão", "buydragao", "comprar"],
+    animais: {
+      aliases: ["listaanimais", "lojaanimais"],
+      async executar({ sock, msg, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const p = prefixoAtivo || "+"
+        const loja = getLoja()
+        await reagir(sock, msg, "🌸")
+        let txt = `𝑳𝑶𝑱𝑨 𝑫𝑬 𝑨𝑵𝑰𝑴𝑨𝑰𝑺\n\n`
+        for (const a of ANIMAIS) {
+          const stock = loja.animais[a.id] || 0
+          txt += `${a.emoji} ${a.nome}\n${a.preco} GoldFZ | +${a.producaoHora}/h | Stock: ${stock}\n\n`
+        }
+        txt += `Use \`${p}compraranimal <nome>\``
+        await sock.sendMessage(jid, { text: txt }, { quoted: msg })
+      }
+    },
+
+    comprarcercado: {
+      aliases: ["cercado", "buycercado"],
+      async executar({ sock, msg, db, sender }) {
+        const jid = msg.key.remoteJid
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const num = soNumero(sender)
+        const { f, u } = getFazenda(num)
+        if (u.upgrades >= MAX_UPGRADES) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑪𝑬𝑹𝑪𝑨𝑫𝑶", "Máximo atingido.", `Upgrades: ${u.upgrades}/${MAX_UPGRADES}`) }, { quoted: msg }) }
+
+        const { saldo } = getGoldFZ(num)
+        const preco = u.upgrades === 0 ? 0 : PRECO_CERCADO
+        if (saldo < preco) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑪𝑬𝑹𝑪𝑨𝑫𝑶", "GoldFZ insuficiente.", `Faltam ${preco - saldo}`) }, { quoted: msg }) }
+
+        if (preco > 0) removeGoldFZ(num, preco)
+        u.upgrades += 1; u.cercados += 1
+        u.limiteAnimais = CAP_BASE + (u.upgrades - 1) * CAP_UPGRADE
+        salvarFazenda(f)
+
+        await reagir(sock, msg, "✅")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Mais espaço pros animais.", `Capacidade: ${u.limiteAnimais}\nUpgrades: ${u.upgrades}/${MAX_UPGRADES}`), mentions: [sender] }, { quoted: msg })
+      }
+    },
+
+    compraranimal: {
+      aliases: ["buyanimal", "adotaranimal"],
       async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
-
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
         const p = prefixoAtivo || "+"
-        const item = args.join(" ").trim().toLowerCase()
-        const { user, idReal } = buscarUsuario(db, sender, msg)
-        const sentMsg = await sock.sendMessage(jid, { text: `⏳ • 𝐏𝐑𝐎𝐂𝐄𝐒𝐒𝐀𝐍𝐃𝐎...` }, { quoted: msg })
+        const num = soNumero(sender)
+        const { f, u } = getFazenda(num)
+        if (u.cercados === 0) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑨𝑵𝑰𝑴𝑨𝑳", "Compre cercado primeiro.", `Use \`${p}comprarcercado\``) }, { quoted: msg }) }
+        if (u.animais.length >= u.limiteAnimais) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑨𝑵𝑰𝑴𝑨𝑳", "Cercado cheio.", `Ocupado: ${u.animais.length}/${u.limiteAnimais}`) }, { quoted: msg }) }
 
-        if (item === "sela" || item === "selas") {
-          if ((user.gold || 0) < 150) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐆𝐎𝐋𝐃", "Ouro insuficiente.", `Precisa 150 Gold (tem ${user.gold || 0}).`, null, nomeBot), edit: sentMsg.key }) }
-          user.gold -= 150; user.inventario.selas = (user.inventario.selas || 0) + 1
-          salvarDragoesUser(db, idReal, user)
-          await reagir(sock, msg, "🌸")
-          return sock.sendMessage(jid, { text: msgSucesso("𝐂𝐎𝐌𝐏𝐑𝐀𝐃𝐎", "1 Sela adquirida!", `Saldo atual: ${user.gold} Gold\nUse: \`${p}usarsela <nome>\``, null, nomeBot), edit: sentMsg.key })
-        }
+        const animal = acharAnimal(args.join(" "))
+        if (!animal) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑨𝑵𝑰𝑴𝑨𝑳", "Não achei.", `Veja \`${p}animais\``) }, { quoted: msg }) }
 
-        if (item === "pergaminho" || item === "pergaminhos") {
-          if ((user.gold || 0) < 300) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐆𝐎𝐋𝐃", "Ouro insuficiente.", `Precisa 300 Gold (tem ${user.gold || 0}).`, null, nomeBot), edit: sentMsg.key }) }
-          user.gold -= 300; user.inventario.pergaminhos = (user.inventario.pergaminhos || 0) + 1
-          salvarDragoesUser(db, idReal, user)
-          await reagir(sock, msg, "🌸")
-          return sock.sendMessage(jid, { text: msgSucesso("𝐂𝐎𝐌𝐏𝐑𝐀𝐃𝐎", "1 Pergaminho adquirido!", `Saldo atual: ${user.gold} Gold\nUse: \`${p}evoluirdragao <nome>\``, null, nomeBot), edit: sentMsg.key })
-        }
+        const loja = getLoja()
+        if ((loja.animais[animal.id] || 0) < 1) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑨𝑵𝑰𝑴𝑨𝑳", "Esgotado na loja.", "Reabastece a cada 1h") }, { quoted: msg }) }
 
-        await reagir(sock, msg, "💨")
-        await sock.sendMessage(jid, { text: msgErro("𝐋𝐎𝐉𝐀", "Item inválido.", `Você digitou: *${item || "vazio"}*\nUse: \`${p}comprardragao sela\` ou \`${p}comprardragao pergaminho\``, null, nomeBot), edit: sentMsg.key })
+        const { saldo } = getGoldFZ(num)
+        if (saldo < animal.preco) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑨𝑵𝑰𝑴𝑨𝑳", "GoldFZ insuficiente.", `Faltam ${animal.preco - saldo}`) }, { quoted: msg }) }
+
+        removeGoldFZ(num, animal.preco)
+        u.animais.push({ id: animal.id, nome: animal.nome, emoji: animal.emoji, fome: 0, sujo: 0, compradoEm: Date.now() })
+        loja.animais[animal.id] -= 1
+        salvarFazenda(f); salvarLoja(loja)
+
+        await reagir(sock, msg, "✅")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Novo animal.", `${animal.emoji} ${animal.nome}\nProdução: +${animal.producaoHora}/h`), mentions: [sender] }, { quoted: msg })
       }
     },
 
-    saldo: {
-      aliases: ["gold", "meugold", "meusaldo"],
-      async executar({ sock, msg, db, sender }) {
+    venderanimal: {
+      aliases: ["vendaranimal", "sellanimal"],
+      async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
-        const { user } = buscarUsuario(db, sender, msg)
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐂𝐀𝐑𝐓𝐄𝐈𝐑𝐀", "O ouro atrai dragões.", `Seu saldo atual é de *${user.gold || 0} Goldragon*\nUse \`+lojadragao\` para gastar.`, null, nomeBot) }, { quoted: msg })
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const p = prefixoAtivo || "+"
+        const num = soNumero(sender)
+        const { f, u } = getFazenda(num)
+        const busca = normalizar(args.join(" "))
+        const idx = u.animais.findIndex(a => normalizar(a.nome) === busca || a.id === busca)
+        if (idx === -1) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑽𝑬𝑵𝑫𝑬𝑹", "Você não tem esse.", `Veja \`${p}statusanimais\``) }, { quoted: msg }) }
+
+        const a = u.animais[idx]
+        const info = ANIMAIS.find(x => x.id === a.id)
+        const valor = Math.floor((info?.preco || 100) * 0.5)
+        u.animais.splice(idx, 1)
+        addGoldFZ(num, valor)
+        salvarFazenda(f)
+
+        await reagir(sock, msg, "✅")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Animal vendido.", `${a.emoji} ${a.nome}\n+${valor} GoldFZ`), mentions: [sender] }, { quoted: msg })
       }
     },
 
-    inventariodragao: {
-      aliases: ["inv_dragao", "mochiladragao"],
+    alimentaranimais: {
+      aliases: ["alimentaranimal", "feedanimais"],
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
-
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
         const p = prefixoAtivo || "+"
-        const { user } = buscarUsuario(db, sender, msg)
+        const num = soNumero(sender)
+        const { f, u } = getFazenda(num)
+        if (!u.animais.length) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑨𝑳𝑰𝑴𝑬𝑵𝑻𝑨𝑹", "Sem animais.", `Use \`${p}compraranimal\``) }, { quoted: msg }) }
 
-        let ovosTxt = ""
-        const ovos = Object.entries(user.inventario.ovos || {}).filter(([_, qtd]) => qtd > 0)
-        if (ovos.length) { ovos.forEach(([nome, qtd]) => { ovosTxt += `↳ ${nome} (x${qtd})\n` }) }
-        else { ovosTxt = "↳ Nenhum ovo.\n" }
+        const { saldo } = getGoldFZ(num)
+        if (saldo < PRECO_ALIMENTAR) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑨𝑳𝑰𝑴𝑬𝑵𝑻𝑨𝑹", "GoldFZ insuficiente.", `Precisa ${PRECO_ALIMENTAR}`) }, { quoted: msg }) }
 
-        const txt = `${boxTop("𝐈𝐍𝐕𝐄𝐍𝐓𝐀́𝐑𝐈𝐎")}
+        removeGoldFZ(num, PRECO_ALIMENTAR)
+        let n = 0
+        for (const a of u.animais) { if ((a.fome || 0) > 0) { a.fome = 0; n++ } }
+        salvarFazenda(f)
 
-${secao("𝐒𝐓𝐀𝐓𝐔𝐒")}
-↳ Goldragon: *${user.gold || 0}*
-↳ Vida da Vila: *${user.hpVila || 100}/${user.maxVila || 100}*
-${fimSecao()}
-
-${secao("𝐈𝐓𝐄𝐍𝐒")}
-↳ Selas: *${user.inventario.selas}*
-↳ Pergaminhos: *${user.inventario.pergaminhos}*
-${fimSecao()}
-
-${secao("𝐎𝐕𝐎𝐒")}
-${ovosTxt}${fimSecao()}
-
-╔═══ஓ๑♡๑ஓ═══╗
-𓆩 ${nomeBot.toUpperCase()} 𓆪
-❝ Use ${p}chocarovo <nome>. ❞
-╚═══ஓ๑♡๑ஓ═══╝`
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: txt }, { quoted: msg })
+        await reagir(sock, msg, "✅")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Todos alimentados.", `Animais: ${n}\n-${PRECO_ALIMENTAR} GoldFZ`), mentions: [sender] }, { quoted: msg })
       }
     },
 
-    // 🥚 NOVO COMANDO — mostra todos os ovos do usuário
-    meuseggs: {
-      aliases: ["meusovos", "verovos", "meusegg"],
+    banhoanimais: {
+      aliases: ["banhoanimal", "lavaranimais"],
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const num = soNumero(sender)
+        const { f, u } = getFazenda(num)
+        if (!u.animais.length) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑩𝑨𝑵𝑯𝑶", "Sem animais.") }, { quoted: msg }) }
+
+        const { saldo } = getGoldFZ(num)
+        if (saldo < PRECO_BANHO) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑩𝑨𝑵𝑯𝑶", "GoldFZ insuficiente.", `Precisa ${PRECO_BANHO}`) }, { quoted: msg }) }
+
+        removeGoldFZ(num, PRECO_BANHO)
+        let n = 0
+        for (const a of u.animais) { if ((a.sujo || 0) > 0) { a.sujo = 0; n++ } }
+        salvarFazenda(f)
+
+        await reagir(sock, msg, "✅")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Todos lavados.", `Animais: ${n}\n-${PRECO_BANHO} GoldFZ`), mentions: [sender] }, { quoted: msg })
+      }
+    },
+
+    limparfazenda: {
+      aliases: ["limparfaz"],
+      async executar({ sock, msg, sender, db }) {
+        const jid = msg.key.remoteJid
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const num = soNumero(sender)
+        const { f, u } = getFazenda(num)
+        if ((u.sujeira || 0) === 0) { await reagir(sock, msg, "✅"); return sock.sendMessage(jid, { text: msgSucesso("", "Já tá limpa.", "Nada a fazer") }, { quoted: msg }) }
+        u.sujeira = 0
+        salvarFazenda(f)
+        await reagir(sock, msg, "✅")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Sujeira removida.", "Tudo brilhando!") }, { quoted: msg })
+      }
+    },
+
+    statusfazenda: {
+      aliases: ["fazendastatus", "minhafazenda"],
+      async executar({ sock, msg, sender, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
         const p = prefixoAtivo || "+"
+        const num = soNumero(sender)
+        const { u } = getFazenda(num)
+        if (u.cercados === 0 && u.terras === 0) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑺𝑻𝑨𝑻𝑼𝑺", "Você não tem fazenda.", `Use \`${p}comprarcercado\``) }, { quoted: msg }) }
 
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
+        const { saldo } = getGoldFZ(num)
+        const rendaHora = Math.floor(calcularRenda(u))
+        const restante = Math.max(0, INTERVALO_RENDA - (Date.now() - (u.ultimaRenda || Date.now())))
+        const tempo = formatarTempo(restante)
+        const prontas = (u.plantacoes || []).filter(p2 => p2.pronta).length
 
-        const { user } = buscarUsuario(db, sender, msg)
-        const ovos = Object.entries(user.inventario?.ovos || {}).filter(([_, qtd]) => qtd > 0)
+        const texto = `𝑺𝑻𝑨𝑻𝑼𝑺\n\nUsuário: @${num}\nGoldFZ: ${saldo}\n\nCercados: ${u.cercados}\nTerras: ${u.terras}\nÁgua: ${u.agua}L\n\nAnimais: ${u.animais.length}/${u.limiteAnimais}\nPlantações: ${u.plantacoes.length} (${prontas} prontas)\nSujeira: ${u.sujeira}%\n\nRenda: +${rendaHora}/h\nPendente: ${u.rendaPendente || 0}\nPróxima: ${tempo}\n\n> _Use ${p}resgatarfazenda_`
 
-        if (!ovos.length) {
-          await reagir(sock, msg, "💨")
-          return sock.sendMessage(jid, {
-            text: msgAviso("𝐌𝐄𝐔𝐒 𝐎𝐕𝐎𝐒", "Você não tem nenhum ovo.", `Voe com seu dragão para encontrar ovos.\nUse \`${p}voar <nome>\``, null, nomeBot)
-          }, { quoted: msg })
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: texto, mentions: [`${num}@s.whatsapp.net`] }, { quoted: msg })
+      }
+    },
+
+    statusanimais: {
+      aliases: ["meusanimais", "veranimais"],
+      async executar({ sock, msg, sender, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const p = prefixoAtivo || "+"
+        const num = soNumero(sender)
+        const { u } = getFazenda(num)
+        if (!u.animais.length) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑨𝑵𝑰𝑴𝑨𝑰𝑺", "Você não tem animais.", `Use \`${p}compraranimal\``) }, { quoted: msg }) }
+
+        let txt = `𝑨𝑵𝑰𝑴𝑨𝑰𝑺 (${u.animais.length}/${u.limiteAnimais})\n\n`
+        for (const a of u.animais) {
+          txt += `${a.emoji} ${a.nome} | Fome: ${a.fome}% | Sujo: ${a.sujo}%\n`
         }
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: txt, mentions: [sender] }, { quoted: msg })
+      }
+    },
 
-        const gruposPorRaridade = { Comum: [], Raro: [], Épico: [], Lendário: [], Mítico: [] }
-        let totalOvos = 0
-        for (const [nome, qtd] of ovos) {
-          const info = OVOS[nome]
-          const raridade = info?.raridade || "Comum"
-          if (!gruposPorRaridade[raridade]) gruposPorRaridade[raridade] = []
-          gruposPorRaridade[raridade].push({ nome, qtd })
-          totalOvos += qtd
-        }
+    sementes: {
+      aliases: ["lojasementes", "listarsementes"],
+      async executar({ sock, msg, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const p = prefixoAtivo || "+"
+        const loja = getLoja()
+        await reagir(sock, msg, "🌸")
 
-        const emojiRaridade = { Comum: "🟢", Raro: "🔵", Épico: "🟣", Lendário: "🟡", Mítico: "🔴" }
+        const grupos = { Comum: [], Raro: [], Épico: [], Lendário: [] }
+        for (const s of SEMENTES) { if (!grupos[s.raridade]) grupos[s.raridade] = []; grupos[s.raridade].push(s) }
 
-        let txt = `${boxTop("𝐌𝐄𝐔𝐒 𝐎𝐕𝐎𝐒")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐓𝐎𝐓𝐀𝐋 𓆪
-↳ ${totalOvos} ovo${totalOvos > 1 ? "s" : ""}
-╰┈┈┈┈୨୧┈┈┈┈╯
-`
-        for (const raridade of ["Comum", "Raro", "Épico", "Lendário", "Mítico"]) {
-          const lista = gruposPorRaridade[raridade] || []
+        let txt = `𝑳𝑶𝑱𝑨 𝑫𝑬 𝑺𝑬𝑴𝑬𝑵𝑻𝑬𝑺\n\n`
+        for (const raridade of ["Comum", "Raro", "Épico", "Lendário"]) {
+          const lista = grupos[raridade] || []
           if (!lista.length) continue
-          txt += `\n${secao(`${emojiRaridade[raridade]} ${raridade.toUpperCase()}`)}\n`
-          for (const { nome, qtd } of lista) {
-            txt += `↳ \`${nome}\` x${qtd}\n`
+          txt += `*${raridade.toUpperCase()}*\n`
+          for (const s of lista) {
+            const stock = loja.sementes[s.id] || 0
+            txt += `${s.emoji} ${s.nome} | ${s.preco} GoldFZ | ${s.tempo}min | Stock: ${stock}\n`
           }
-          txt += `${fimSecao()}\n`
+          txt += `\n`
         }
-
-        txt += `\n╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐂𝐎𝐌𝐀𝐍𝐃𝐎𝐒 𓆪
-↳ \`${p}chocarovo <nome>\`
-↳ \`${p}inventariodragao\`
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${boxFim(nomeBot, "Cada ovo guarda um segredo.")}`
-
-        await reagir(sock, msg, "🥚")
+        txt += `Use \`${p}comprarsemente <nome> <qtd>\``
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
 
-    usarsela: {
-      aliases: ["equiparsela", "colocarsela"],
+    comprarsemente: {
+      aliases: ["buysemente"],
       async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
-
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
         const p = prefixoAtivo || "+"
-        const nomeDragao = args.join(" ").trim()
-        const { user, idReal } = buscarUsuario(db, sender, msg)
-        const nomeReal = Object.keys(user.dragoes).find(k => k.toLowerCase() === nomeDragao.toLowerCase())
-        if (!nomeReal) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Dragão não encontrado.", `Você não tem o dragão: *${nomeDragao}*.\nUse \`${p}meudragao\` para ver.`, null, nomeBot) }, { quoted: msg }) }
+        const num = soNumero(sender)
+        const { f, u } = getFazenda(num)
+        if (u.terras === 0) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑺𝑬𝑴𝑬𝑵𝑻𝑬", "Compre terra primeiro.", `Use \`${p}comprarterra\``) }, { quoted: msg }) }
 
-        const d = user.dragoes[nomeReal]
-        if (d.temSela) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgAviso("𝐉𝐀́ 𝐓𝐄𝐌 𝐒𝐄𝐋𝐀", "Este dragão já está equipado.", `*${nomeReal}* já pode voar.`, null, nomeBot) }, { quoted: msg }) }
-        if (user.inventario.selas < 1) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐒𝐄𝐋𝐀", "Você não tem selas.", `Compre com \`${p}comprardragao sela\``, null, nomeBot) }, { quoted: msg }) }
+        let qtd = 1
+        const ultimo = args[args.length - 1]
+        if (/^\d+$/.test(ultimo)) { qtd = parseInt(ultimo); args.pop() }
+        const sem = acharSemente(args.join(" "))
+        if (!sem) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑺𝑬𝑴𝑬𝑵𝑻𝑬", "Não achei.", `Veja \`${p}sementes\``) }, { quoted: msg }) }
 
-        user.inventario.selas -= 1
-        d.temSela = true
-        salvarDragoesUser(db, idReal, user)
+        const loja = getLoja()
+        if ((loja.sementes[sem.id] || 0) < qtd) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑺𝑬𝑴𝑬𝑵𝑻𝑬", "Stock insuficiente.", `Stock: ${loja.sementes[sem.id] || 0}`) }, { quoted: msg }) }
 
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐒𝐄𝐋𝐀 𝐄𝐐𝐔𝐈𝐏𝐀𝐃𝐀", "Dragão pronto para voar!", `*${nomeReal}* agora tem sela!\nUse \`${p}voar ${nomeReal}\` para voar.`, null, nomeBot) }, { quoted: msg })
+        const total = sem.preco * qtd
+        const { saldo } = getGoldFZ(num)
+        if (saldo < total) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑺𝑬𝑴𝑬𝑵𝑻𝑬", "GoldFZ insuficiente.", `Faltam ${total - saldo}`) }, { quoted: msg }) }
+
+        removeGoldFZ(num, total)
+        u.sementes[sem.id] = (u.sementes[sem.id] || 0) + qtd
+        loja.sementes[sem.id] -= qtd
+        salvarFazenda(f); salvarLoja(loja)
+
+        await reagir(sock, msg, "✅")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Adicionada ao estoque.", `${sem.emoji} ${sem.nome} x${qtd}\n-${total} GoldFZ`), mentions: [sender] }, { quoted: msg })
       }
     },
 
-    voar: {
-      aliases: ["fly", "voardragao"],
-      async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
-
-        const p = prefixoAtivo || "+"
-        const nomeDragao = args.join(" ").trim()
-        const { user, idReal } = buscarUsuario(db, sender, msg)
-        const nomeReal = Object.keys(user.dragoes).find(k => k.toLowerCase() === nomeDragao.toLowerCase())
-        if (!nomeReal) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Dragão não encontrado.", `Você não tem o dragão: *${nomeDragao}*.`, null, nomeBot) }, { quoted: msg }) }
-
-        const d = user.dragoes[nomeReal]
-        if (!d.temSela) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐒𝐄𝐋𝐀", "Dragão sem sela.", `*${nomeReal}* não pode voar sem sela!\nCompre com \`${p}comprardragao sela\``, null, nomeBot) }, { quoted: msg }) }
-
-        const chanceVoar = { "Comum": 60, "Raro": 70, "Épico": 85, "Lendário": 95, "Mítico": 99 }[d.raridade] || 60
-        if (Math.random() * 100 > chanceVoar) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐐𝐔𝐄𝐃𝐀", "Você caiu durante o voo.", `Você e *${nomeReal}* caíram!\nTente novamente.`, null, nomeBot) }, { quoted: msg }) }
-
-        let recompensa = 0
-        if (d.raridade === "Comum") recompensa = Math.floor(Math.random() * 21) + 10
-        else if (d.raridade === "Raro") recompensa = Math.floor(Math.random() * 41) + 30
-        else if (d.raridade === "Épico") recompensa = Math.floor(Math.random() * 51) + 70
-        else if (d.raridade === "Lendário") recompensa = Math.floor(Math.random() * 101) + 150
-        else if (d.raridade === "Mítico") recompensa = Math.floor(Math.random() * 201) + 300
-
-        if (d.asaTita) recompensa = Math.floor(recompensa * 1.5)
-        user.gold = (user.gold || 0) + recompensa
-
-        let achouOvo = ""
-        let xpGanhaVoar = 20
-        const sorteOvo = Math.random() * 100
-        const chanceOvo = 5 + (user.nivelTreinador * 2)
-        if (sorteOvo < chanceOvo) {
-          let tipoOvo = "Ovo Comum"
-          if (user.nivelTreinador >= 10 && Math.random() < 0.2) tipoOvo = "Ovo Mítico"
-          else if (user.nivelTreinador >= 8 && Math.random() < 0.3) tipoOvo = "Ovo Lendário"
-          else if (user.nivelTreinador >= 5 && Math.random() < 0.4) tipoOvo = "Ovo Épico"
-          else if (user.nivelTreinador >= 2 && Math.random() < 0.6) tipoOvo = "Ovo Raro"
-
-          user.inventario.ovos[tipoOvo] = (user.inventario.ovos[tipoOvo] || 0) + 1
-          achouOvo = `\n\n🥚 *VOCÊ ACHOU UM OVO!*\n${tipoOvo} foi adicionado ao inventário.`
-          xpGanhaVoar += 30
-        }
-
-        const upou = darXp(user, xpGanhaVoar)
-        salvarDragoesUser(db, idReal, user)
-        const locais = ["Montanhas Geladas", "Ilha dos Dragões", "Cavernas Ocultas", "Vale Escondido", "Mar de Nuvens"]
-        const local = locais[Math.floor(Math.random() * locais.length)]
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐕𝐎𝐀𝐍𝐃𝐎", "Sobrevoando os céus!", `Você subiu em *${nomeReal}*!\nLocal: *${local}*\n\nRecompensa: +${recompensa} Gold\nXP: +${xpGanhaVoar}${upou ? `\n⭐ UPOU PARA NÍVEL ${user.nivelTreinador}!` : ""}\nSaldo: ${user.gold} Gold${achouOvo}`, "Liberdade... e lucro!", nomeBot) }, { quoted: msg })
-      }
-    },
-
-    chocarovo: {
-      aliases: ["chocar", "eclodirovo"],
-      async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
-
-        const p = prefixoAtivo || "+"
-        const nomeOvo = args.join(" ").trim()
-        const { user, idReal } = buscarUsuario(db, sender, msg)
-
-        if (!nomeOvo) {
-          const ovos = Object.entries(user.inventario.ovos || {}).filter(([_, qtd]) => qtd > 0)
-          if (!ovos.length) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐎𝐕𝐎𝐒", "Você não tem ovos.", `Voe com seu dragão para achar ovos.\nUse \`${p}voar <nome>\``, null, nomeBot) }, { quoted: msg }) }
-          let lista = ""
-          ovos.forEach(([n, q]) => { lista += `${n} (x${q})\n` })
-          await reagir(sock, msg, "🌸")
-          return sock.sendMessage(jid, { text: msgAviso("𝐒𝐄𝐔𝐒 𝐎𝐕𝐎𝐒", "Escolha um ovo para chocar.", `${lista}\nPara chocar:\n\`${p}chocarovo <nome do ovo>\``, null, nomeBot) }, { quoted: msg })
-        }
-
-        const nomeRealOvo = Object.keys(user.inventario.ovos).find(k => k.toLowerCase() === nomeOvo.toLowerCase())
-        if (!nomeRealOvo || user.inventario.ovos[nomeRealOvo] < 1) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Ovo não encontrado.", `Você não tem o ovo: *${nomeOvo}*.`, null, nomeBot) }, { quoted: msg }) }
-        if (Object.keys(user.dragoes).length >= 15) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgAviso("𝐋𝐈𝐌𝐈𝐓𝐄", "Você atingiu o limite de 15 dragões.", `Venda ou doe algum antes de chocar outro ovo.`, null, nomeBot) }, { quoted: msg }) }
-
-        user.inventario.ovos[nomeRealOvo] -= 1
-        if (user.inventario.ovos[nomeRealOvo] <= 0) delete user.inventario.ovos[nomeRealOvo]
-
-        const ovoInfo = OVOS[nomeRealOvo]
-        const dragaoAleatorio = ovoInfo.choca[Math.floor(Math.random() * ovoInfo.choca.length)]
-        const dadosDragao = DRAGOES[dragaoAleatorio]
-
-        const dragaoBebe = {
-          nome: `${dragaoAleatorio} (Bebê)`,
-          raridade: dadosDragao.raridade,
-          foto: dadosDragao.foto,
-          hp: Math.floor(dadosDragao.hp * 0.3),
-          hpMax: Math.floor(dadosDragao.hp * 0.3),
-          energia: Math.floor(dadosDragao.energia * 0.3),
-          energiaMax: Math.floor(dadosDragao.energia * 0.3),
-          atk: Math.floor(dadosDragao.atk * 0.3),
-          def: Math.floor(dadosDragao.def * 0.3),
-          evasao: dadosDragao.evasao,
-          nivel: 1, temSela: false, asaTita: false, tentativasTita: 0, ehBebe: true, domadoEm: Date.now()
-        }
-
-        user.dragoes[dragaoBebe.nome] = dragaoBebe
-        salvarDragoesUser(db, idReal, user)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { image: { url: dadosDragao.foto }, caption: msgSucesso("𝐎𝐕𝐎 𝐂𝐇𝐎𝐂𝐀𝐃𝐎", "Nasceu um dragão bebê!", `*${dragaoAleatorio} (Bebê)*\nUse pergaminhos para evoluir até a fase adulta.`, `Use \`${p}evoluirdragao <nome>\``, nomeBot) }, { quoted: msg })
-      }
-    },
-
-    livrodg: {
-      aliases: ["livro", "dragoes"],
-      async executar({ sock, msg, db }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
-
-        let txt = `${boxTop("𝐋𝐈𝐕𝐑𝐎 𝐃𝐄 𝐃𝐑𝐀𝐆𝐎̃𝐄𝐒")}\n\n`
-        for (const [nome, info] of Object.entries(DRAGOES)) {
-          txt += `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 ${nome} 𓆪
-↳ Raridade: ${info.raridade} • Bioma: ${info.bioma}
-↳ HP: ${info.hp} • ATK: ${info.atk} • DEF: ${info.def} • EVS: ${info.evasao}
-╰┈┈┈┈୨୧┈┈┈┈╯
-`
-        }
-        txt += `\n${boxFim(nomeBot, "Conhecimento é poder.")}`
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: txt }, { quoted: msg })
-      }
-    },
-
-    evoluirdragao: {
-      aliases: ["evolve", "evoluir"],
-      async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
-
-        const p = prefixoAtivo || "+"
-        const nomeDragao = args.join(" ").trim()
-        const { user, idReal } = buscarUsuario(db, sender, msg)
-        const nomeReal = Object.keys(user.dragoes).find(k => k.toLowerCase() === nomeDragao.toLowerCase())
-        if (!nomeReal) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Dragão não encontrado.", `Você não tem o dragão: *${nomeDragao}*.`, null, nomeBot) }, { quoted: msg }) }
-        if (user.inventario.pergaminhos < 1) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌 𝐏𝐄𝐑𝐆𝐀𝐌𝐈𝐍𝐇𝐎", "Pergaminho em falta.", `Compre com \`${p}comprardragao pergaminho\`.`, null, nomeBot) }, { quoted: msg }) }
-
-        const d = user.dragoes[nomeReal]
-        if (d.asaTita) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgAviso("𝐉𝐀́ 𝐄́ 𝐓𝐈𝐓𝐀̃", "Evolução máxima atingida.", `*${nomeReal}* já é uma Asa de Titã!`, null, nomeBot) }, { quoted: msg }) }
-
-        user.inventario.pergaminhos -= 1
-
-        if (d.ehBebe) {
-          d.ehBebe = false
-          d.nome = d.nome.replace(" (Bebê)", "")
-          const novoNome = d.nome
-          delete user.dragoes[nomeReal]
-          d.hpMax = DRAGOES[novoNome].hp
-          d.hp = d.hpMax
-          d.energiaMax = DRAGOES[novoNome].energia
-          d.energia = d.energiaMax
-          d.atk = DRAGOES[novoNome].atk
-          d.def = DRAGOES[novoNome].def
-          user.dragoes[novoNome] = d
-          salvarDragoesUser(db, idReal, user)
-          await reagir(sock, msg, "🌸")
-          return sock.sendMessage(jid, { text: msgSucesso("𝐂𝐑𝐄𝐒𝐂𝐄𝐔", "Fase adulta atingida!", `*${novoNome}* se tornou adulto.\nEstá pronto para batalhar e voar!`, null, nomeBot) }, { quoted: msg })
-        }
-
-        if (d.nivel < 7) {
-          d.nivel += 1
-          d.hpMax = Math.floor(d.hpMax * 1.15); d.hp = d.hpMax
-          d.energiaMax = Math.floor(d.energiaMax * 1.15); d.energia = d.energiaMax
-          d.atk = Math.floor(d.atk * 1.1); d.def = Math.floor(d.def * 1.1)
-          salvarDragoesUser(db, idReal, user)
-          await reagir(sock, msg, "🌸")
-          await sock.sendMessage(jid, { text: msgSucesso("𝐄𝐕𝐎𝐋𝐔𝐈𝐔", "Nível aumentado!", `*${nomeReal}* subiu para o Nível ${d.nivel}!\nStatus aumentados.`, null, nomeBot) }, { quoted: msg })
-        } else {
-          d.tentativasTita += 1
-          const chanceFinal = 5 * d.tentativasTita
-          if (Math.random() * 100 < chanceFinal) {
-            d.asaTita = true
-            const novoNome = `${nomeReal} (Asa de Titã)`
-            d.nome = novoNome
-            d.hpMax = Math.floor(d.hpMax * 1.5); d.hp = d.hpMax
-            d.energiaMax = Math.floor(d.energiaMax * 1.5); d.energia = d.energiaMax
-            d.atk = Math.floor(d.atk * 1.3); d.def = Math.floor(d.def * 1.3)
-            d.evasao += 10
-            delete user.dragoes[nomeReal]
-            user.dragoes[novoNome] = d
-            salvarDragoesUser(db, idReal, user)
-            await reagir(sock, msg, "⚡")
-            await sock.sendMessage(jid, { image: { url: "https://files.catbox.moe/r91204.jpg" }, caption: msgSucesso("𝐀𝐒𝐀 𝐃𝐄 𝐓𝐈𝐓𝐀̃", "O poder ancestral despertou!", `*${nomeReal}* EVOLUIU PARA TITÃ!`, null, nomeBot) }, { quoted: msg })
-          } else {
-            salvarDragoesUser(db, idReal, user)
-            await reagir(sock, msg, "💨")
-            await sock.sendMessage(jid, { text: msgAviso("𝐄𝐕𝐎𝐋𝐔𝐂̧𝐀̃𝐎 𝐅𝐀𝐋𝐇𝐎𝐔", "O despertar não ocorreu.", `*${nomeReal}* não despertou como Asa de Titã.\nChance atual na próxima: ${Math.min(100, chanceFinal + 5)}%`, null, nomeBot) }, { quoted: msg })
-          }
-        }
-      }
-    },
-
-    alimentardragao: {
-      aliases: ["feedragon", "alimentar"],
-      async executar({ sock, msg, args, db, sender }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
-
-        const nomeDragao = args.join(" ").trim()
-        const { user, idReal } = buscarUsuario(db, sender, msg)
-        const nomeReal = Object.keys(user.dragoes).find(k => k.toLowerCase() === nomeDragao.toLowerCase())
-        if (!nomeReal) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Dragão não encontrado.", `Você não tem o dragão: *${nomeDragao}*.`, null, nomeBot) }, { quoted: msg }) }
-
-        const d = user.dragoes[nomeReal]
-        d.hp = Math.min(d.hpMax, d.hp + 30)
-        d.energia = Math.min(d.energiaMax, d.energia + 20)
-        salvarDragoesUser(db, idReal, user)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐋𝐈𝐌𝐄𝐍𝐓𝐀𝐃𝐎", "Refeição servida!", `*${nomeReal}*\nHP: ${d.hp}/${d.hpMax}\nEnergia: ${d.energia}/${d.energiaMax}`, null, nomeBot) }, { quoted: msg })
-      }
-    },
-
-    missao: {
-      aliases: ["missoes", "farmar", "treinar"],
+    comprarterra: {
+      aliases: ["terra", "buyterra"],
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const num = soNumero(sender)
+        const { f, u } = getFazenda(num)
+        if (u.terras >= 20) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑻𝑬𝑹𝑹𝑨", "Máximo 20 terras.", `Terras: ${u.terras}`) }, { quoted: msg }) }
 
+        const { saldo } = getGoldFZ(num)
+        const preco = PRECO_TERRA + u.terras * 200
+        if (saldo < preco) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑻𝑬𝑹𝑹𝑨", "GoldFZ insuficiente.", `Precisa ${preco}`) }, { quoted: msg }) }
+
+        removeGoldFZ(num, preco)
+        u.terras += 1
+        salvarFazenda(f)
+
+        await reagir(sock, msg, "✅")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Mais espaço pra plantação.", `Total: ${u.terras}\n-${preco} GoldFZ`), mentions: [sender] }, { quoted: msg })
+      }
+    },
+
+    compraragua: {
+      aliases: ["agua", "buyagua"],
+      async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
         const p = prefixoAtivo || "+"
-        const { user, idReal } = buscarUsuario(db, sender, msg)
-        const agora = Date.now()
-        const cooldown = 30 * 60 * 1000
-        const ultimaMissao = user.ultimaMissao || 0
-        const chaveSessao = `missao_${jid}`
-        let sessao = getSessao(chaveSessao)
+        const num = soNumero(sender)
+        const { f, u } = getFazenda(num)
+        const qtd = parseInt(args[0]) || 10
+        if (qtd < 1 || qtd > 100) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑨́𝑮𝑼𝑨", "Qtd inválida.", `Use \`${p}compraragua <1-100>\``) }, { quoted: msg }) }
 
-        if (sessao && sessao.jogador === idReal && sessao.estado === "ativa") {
-          const m = MISSOES[sessao.tipoMissao]
-          const { user: uAtacante } = buscarUsuario(db, sender, msg)
-          const dragoes = Object.values(uAtacante.dragoes)
-          if (dragoes.length === 0) { await reagir(sock, msg, "💨"); delSessao(chaveSessao); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Sem dragões para lutar.", "Você não tem dragões.", null, nomeBot) }, { quoted: msg }) }
+        const total = PRECO_AGUA * qtd
+        const { saldo } = getGoldFZ(num)
+        if (saldo < total) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑨́𝑮𝑼𝑨", "GoldFZ insuficiente.", `Faltam ${total - saldo}`) }, { quoted: msg }) }
 
-          const dragaoEscolhido = dragoes[Math.floor(Math.random() * dragoes.length)]
-          const poderJogador = dragaoEscolhido.atk + dragaoEscolhido.def + (uAtacante.nivelTreinador * 10)
-          const poderInimigo = 50 + (m.nivelMin * 20)
+        removeGoldFZ(num, total)
+        u.agua += qtd
+        salvarFazenda(f)
 
-          if (poderJogador >= poderInimigo) {
-            const upou = darXp(uAtacante, m.xp)
-            let dropMsg = ""
-            if (Math.random() * 100 <= m.chanceDrop) {
-              uAtacante.inventario.ovos[m.dropOvo] = (uAtacante.inventario.ovos[m.dropOvo] || 0) + 1
-              dropMsg = `\n\n🥚 *DROP!* Você encontrou um *${m.dropOvo}*!`
-            }
-            uAtacante.ultimaMissao = agora
-            salvarDragoesUser(db, idReal, uAtacante)
-            delSessao(chaveSessao)
-            await reagir(sock, msg, "🏆")
-            return sock.sendMessage(jid, { text: msgSucesso("𝐕𝐈𝐓𝐎́𝐑𝐈𝐀", "Missão concluída com sucesso!", `Seu dragão *${dragaoEscolhido.nome}* venceu!\nXP: +${m.xp}${upou ? `\n⭐ UPOU PARA NÍVEL ${uAtacante.nivelTreinador}!` : ""}${dropMsg}`, `Use \`${p}missao\` novamente em 30 minutos.`, nomeBot) }, { quoted: msg })
-          } else {
-            uAtacante.ultimaMissao = agora
-            salvarDragoesUser(db, idReal, uAtacante)
-            delSessao(chaveSessao)
-            await reagir(sock, msg, "💨")
-            return sock.sendMessage(jid, { text: msgErro("𝐃𝐄𝐑𝐑𝐎𝐓𝐀", "Seu dragão não foi forte o suficiente.", `*${dragaoEscolhido.nome}* foi derrotado.\nTente novamente em 30 minutos.`, null, nomeBot) }, { quoted: msg })
-          }
-        }
-
-        if (agora - ultimaMissao < cooldown) {
-          const falta = cooldown - (agora - ultimaMissao)
-          const min = Math.floor(falta / 60000)
-          const seg = Math.floor((falta % 60000) / 1000)
-          await reagir(sock, msg, "⏰")
-          return sock.sendMessage(jid, { text: msgAviso("𝐄𝐒𝐏𝐄𝐑𝐄", "Aguarde para nova missão.", `Suas missões renovam em *${min}min ${seg}s*.`, null, nomeBot) }, { quoted: msg })
-        }
-
-        const missoesDisponiveis = Object.entries(MISSOES).filter(([_, m]) => user.nivelTreinador >= m.nivelMin)
-        if (!missoesDisponiveis.length) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Nível insuficiente.", "Você ainda não tem nível para nenhuma missão.\nTreine defendendo a vila primeiro!", null, nomeBot) }, { quoted: msg }) }
-
-        const [tipoMissao, dadosMissao] = missoesDisponiveis[Math.floor(Math.random() * missoesDisponiveis.length)]
-        setSessao(chaveSessao, { jogador: idReal, tipoMissao, estado: "ativa", timestamp: agora })
-
-        const emojiRaridade = { "Comum": "🟢", "Média": "🔵", "Lendária": "🟣", "Mítica": "🔴" }[dadosMissao.raridade]
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, {
-          image: { url: dadosMissao.foto },
-          caption: msgAviso("𝐍𝐎𝐕𝐀 𝐌𝐈𝐒𝐒𝐀̃𝐎", "Uma missão apareceu!", `${emojiRaridade} *${dadosMissao.nome}*\nRaridade: ${dadosMissao.raridade}\nNível mínimo: ${dadosMissao.nivelMin}\n\nRecompensa: +${dadosMissao.xp} XP\nChance de Ovo: ${dadosMissao.chanceDrop}%\n\nUse \`${p}missao\` novamente para LUTAR!`, "O perigo chama.", nomeBot)
-        }, { quoted: msg })
+        await reagir(sock, msg, "✅")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Estoque atualizado.", `+${qtd}L\nTotal: ${u.agua}L\n-${total} GoldFZ`), mentions: [sender] }, { quoted: msg })
       }
     },
 
-    boss: {
-      aliases: ["bosses", "invadir"],
-      async executar({ sock, msg, db, sender }) {
+    plantarsemente: {
+      aliases: ["plantar", "plant"],
+      async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const p = prefixoAtivo || "+"
+        const num = soNumero(sender)
+        const { f, u } = getFazenda(num)
+        if (u.terras === 0) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑷𝑳𝑨𝑵𝑻𝑨𝑹", "Sem terra!", `Use \`${p}comprarterra\``) }, { quoted: msg }) }
+        if (u.plantacoes.length >= u.terras) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑷𝑳𝑨𝑵𝑻𝑨𝑹", "Terras ocupadas.", `Ocupadas: ${u.plantacoes.length}/${u.terras}`) }, { quoted: msg }) }
 
-        const { user, idReal } = buscarUsuario(db, sender, msg)
-        const agora = Date.now()
-        const cooldown = 30 * 60 * 1000
-        const ultimoBoss = user.ultimoBoss || 0
+        const sem = acharSemente(args.join(" "))
+        if (!sem) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑷𝑳𝑨𝑵𝑻𝑨𝑹", "Não achei.", `Veja \`${p}sementes\``) }, { quoted: msg }) }
+        if ((u.sementes[sem.id] || 0) < 1) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑷𝑳𝑨𝑵𝑻𝑨𝑹", "Não tem essa semente.", sem.nome) }, { quoted: msg }) }
 
-        if (agora - ultimoBoss < cooldown) {
-          const falta = cooldown - (agora - ultimoBoss)
-          const min = Math.floor(falta / 60000)
-          const seg = Math.floor((falta % 60000) / 1000)
-          await reagir(sock, msg, "⏰")
-          return sock.sendMessage(jid, { text: msgAviso("𝐄𝐒𝐏𝐄𝐑𝐄", "Bosses não estão disponíveis.", `Os chefes só aparecem em *${min}min ${seg}s*.`, null, nomeBot) }, { quoted: msg })
-        }
+        u.sementes[sem.id] -= 1
+        if (u.sementes[sem.id] === 0) delete u.sementes[sem.id]
 
-        const dragoes = Object.values(user.dragoes)
-        if (dragoes.length === 0) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Sem dragões.", "Você não tem dragões para lutar contra o Boss!", null, nomeBot) }, { quoted: msg }) }
+        u.plantacoes.push({
+          id: sem.id, nome: sem.nome, emoji: sem.emoji,
+          plantadaEm: Date.now(), regas: 0, qualidadeBase: 30,
+          pronta: false, prontaEm: null, mutacoes: []
+        })
+        salvarFazenda(f)
 
-        await reagir(sock, msg, "🌸")
-        await new Promise(r => setTimeout(r, 1500))
-
-        const bossNomes = Object.keys(BOSSES)
-        const bossNome = bossNomes[Math.floor(Math.random() * bossNomes.length)]
-        const boss = BOSSES[bossNome]
-
-        let txt = `${boxTop("𝐁𝐎𝐒𝐒 𝐄𝐍𝐂𝐎𝐍𝐓𝐑𝐀𝐃𝐎")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐈𝐍𝐈𝐌𝐈𝐆𝐎 𓆪
-↳ *${bossNome}*
-↳ Raridade: ${boss.raridade}
-↳ HP: ${boss.hp}
-↳ ATK: ${boss.atk}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-`
-        dragoes.sort((a, b) => (b.atk + b.def) - (a.atk + a.def))
-        const dragaoEscolhido = dragoes[0]
-        txt += `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐒𝐄𝐔 𝐃𝐑𝐀𝐆𝐀̃𝐎 𓆪
-↳ *${dragaoEscolhido.nome}* vai lutar!
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-`
-
-        const poderJogador = (dragaoEscolhido.atk * 2) + dragaoEscolhido.def + (user.nivelTreinador * 15)
-        const poderBoss = (boss.atk * 1.5) + boss.def
-        let ganhou = poderJogador >= poderBoss || Math.random() < 0.3
-
-        if (ganhou) {
-          txt += `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐕𝐈𝐓𝐎́𝐑𝐈𝐀 𓆪
-↳ Seu dragão venceu!
-`
-          const upou = darXp(user, boss.xp)
-          txt += `↳ XP: +${boss.xp}${upou ? `\n↳ ⭐ UPOU PARA NÍVEL ${user.nivelTreinador}!` : ""}
-╰┈┈┈┈୨୧┈┈┈┈╯
-`
-          if (Math.random() * 100 <= 10) {
-            user.inventario.ovos[boss.dropOvo] = (user.inventario.ovos[boss.dropOvo] || 0) + 1
-            txt += `\n🥚 *DROP!* Você encontrou um *${boss.dropOvo}*!\n`
-          }
-        } else {
-          txt += `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐃𝐄𝐑𝐑𝐎𝐓𝐀 𓆪
-↳ Seu dragão foi derrotado...
-↳ O Boss era forte demais.
-↳ Tente novamente em 30 minutos.
-╰┈┈┈┈୨୧┈┈┈┈╯
-`
-        }
-
-        user.ultimoBoss = agora
-        salvarDragoesUser(db, idReal, user)
-        await sock.sendMessage(jid, { image: { url: boss.foto }, caption: txt + `\n${boxFim(nomeBot)}` }, { quoted: msg })
+        await reagir(sock, msg, "🌱")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Semente no chão.", `${sem.emoji} ${sem.nome}\nTempo: ~${sem.tempo}min\nUse \`${p}regarplanta ${sem.nome}\``), mentions: [sender] }, { quoted: msg })
       }
     },
 
-    ruinas: {
-      aliases: ["ruina", "explorar"],
-      async executar({ sock, msg, db, sender }) {
+    regarsementes: {
+      aliases: ["regartudo", "regartodas"],
+      async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!sistemaAtivo(db, jid)) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐈𝐒𝐓𝐄𝐌𝐀 𝐎𝐅𝐅", "O jogo está desativado.", `Um administrador precisa usar \`+dragao on\``, null, nomeBot) }, { quoted: msg }) }
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const p = prefixoAtivo || "+"
+        const num = soNumero(sender)
+        const { f, u } = getFazenda(num)
+        if (!u.plantacoes.length) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑹𝑬𝑮𝑨𝑹", "Sem plantações.", `Use \`${p}plantarsemente\``) }, { quoted: msg }) }
+        if (u.agua < AGUA_POR_REGA) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑹𝑬𝑮𝑨𝑹", "Sem água.", `Use \`${p}compraragua\``) }, { quoted: msg }) }
 
-        const { user, idReal } = buscarUsuario(db, sender, msg)
-        const agora = Date.now()
-        const cooldown = 20 * 60 * 1000
-        const ultimaRuina = user.ultimaRuina || 0
-
-        if (agora - ultimaRuina < cooldown) {
-          const falta = cooldown - (agora - ultimaRuina)
-          const min = Math.floor(falta / 60000)
-          const seg = Math.floor((falta % 60000) / 1000)
-          await reagir(sock, msg, "⏰")
-          return sock.sendMessage(jid, { text: msgAviso("𝐄𝐒𝐏𝐄𝐑𝐄", "As ruínas estão fechadas.", `Elas se reabrem em *${min}min ${seg}s*.`, null, nomeBot) }, { quoted: msg })
+        let regadas = 0
+        for (const p2 of u.plantacoes) {
+          if (u.agua < AGUA_POR_REGA) break
+          if (p2.pronta) continue
+          u.agua -= AGUA_POR_REGA
+          p2.regas = (p2.regas || 0) + 1
+          p2.qualidadeBase = Math.min(100, (p2.qualidadeBase || 30) + 5)
+          regadas++
         }
+        salvarFazenda(f)
 
-        const dragoes = Object.values(user.dragoes)
-        if (dragoes.length === 0) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Sem dragões.", "Você não tem dragões para explorar!", null, nomeBot) }, { quoted: msg }) }
-
-        await reagir(sock, msg, "🌸")
-        await new Promise(r => setTimeout(r, 1500))
-
-        dragoes.sort((a, b) => b.hp - a.hp)
-        const dragaoEscolhido = dragoes[0]
-        let poderJogador = (dragaoEscolhido.atk * 2) + dragaoEscolhido.def + (user.nivelTreinador * 15)
-        let andares = 0
-        let xpTotal = 0
-        let txt = `${boxTop("𝐑𝐔𝐈́𝐍𝐀𝐒")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐃𝐑𝐀𝐆𝐀̃𝐎 𓆪
-↳ *${dragaoEscolhido.nome}*
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-Explorando...
-
-`
-
-        for (let i = 0; i < 5; i++) {
-          const sala = SALAS_RUINA[i]
-          txt += `Andar ${sala.nivel} — Inimigo (HP: ${sala.hpInimigo} • ATK: ${sala.atkInimigo})\n`
-          if (poderJogador >= (sala.hpInimigo + sala.atkInimigo)) {
-            andares++
-            xpTotal += sala.xp
-            txt += `✅ Você venceu! +${sala.xp} XP\n\n`
-            poderJogador -= sala.atkInimigo
-          } else {
-            txt += `💀 Seu dragão foi derrotado... A ruína termina aqui.\n\n`
-            break
-          }
-        }
-
-        if (andares > 0) {
-          const upou = darXp(user, xpTotal)
-          txt += `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐕𝐈𝐓𝐎́𝐑𝐈𝐀 𓆪
-↳ Andares: ${andares}/5
-↳ XP: +${xpTotal}${upou ? `\n↳ ⭐ UPOU PARA NÍVEL ${user.nivelTreinador}!` : ""}
-╰┈┈┈┈୨୧┈┈┈┈╯
-`
-          if (Math.random() * 100 <= 15) {
-            const tipoOvo = andares >= 4 ? "Ovo Lendário" : andares >= 2 ? "Ovo Épico" : "Ovo Raro"
-            user.inventario.ovos[tipoOvo] = (user.inventario.ovos[tipoOvo] || 0) + 1
-            txt += `\n🥚 *DROP!* Você encontrou um *${tipoOvo}*!\n`
-          }
-        } else {
-          txt += `Você não conseguiu passar do primeiro andar...\n`
-        }
-
-        user.ultimaRuina = agora
-        salvarDragoesUser(db, idReal, user)
-        await sock.sendMessage(jid, { image: { url: "https://files.catbox.moe/r47clm.jpg" }, caption: txt + `\n${boxFim(nomeBot)}` }, { quoted: msg })
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Rega em massa.", `Regadas: ${regadas}\nÁgua: ${u.agua}L`), mentions: [sender] }, { quoted: msg })
       }
     },
 
-    /* ========== KEYS ========== */
+    regarplanta: {
+      aliases: ["regar"],
+      async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const p = prefixoAtivo || "+"
+        const num = soNumero(sender)
+        const { f, u } = getFazenda(num)
+        if (u.agua < AGUA_POR_REGA) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑹𝑬𝑮𝑨𝑹", "Sem água.", `Use \`${p}compraragua\``) }, { quoted: msg }) }
 
-    gerarkeyxp: {
-      aliases: ["gerarkey", "criarxp"],
+        const busca = normalizar(args.join(" "))
+        const planta = u.plantacoes.find(x => normalizar(x.nome) === busca || x.id === busca || normalizar(x.nome).includes(busca))
+        if (!planta) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑹𝑬𝑮𝑨𝑹", "Planta não encontrada.", `Veja \`${p}statusplanta\``) }, { quoted: msg }) }
+        if (planta.pronta) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑹𝑬𝑮𝑨𝑹", "Já está pronta.", `Use ${p}venderplanta ${planta.nome}`) }, { quoted: msg }) }
+
+        u.agua -= AGUA_POR_REGA
+        planta.regas = (planta.regas || 0) + 1
+        planta.qualidadeBase = Math.min(100, (planta.qualidadeBase || 30) + 5)
+        salvarFazenda(f)
+
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Planta regada.", `${planta.emoji} ${planta.nome}\nÁgua: ${u.agua}L | Regas: ${planta.regas}`), mentions: [sender] }, { quoted: msg })
+      }
+    },
+
+    venderplanta: {
+      aliases: ["vender", "colher"],
+      async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const p = prefixoAtivo || "+"
+        const num = soNumero(sender)
+        const { f, u } = getFazenda(num)
+        const busca = normalizar(args.join(" "))
+        if (!busca) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑹", "Informe o nome.", `\`${p}venderplanta <nome>\``) }, { quoted: msg }) }
+
+        const idx = u.plantacoes.findIndex(x => normalizar(x.nome) === busca || x.id === busca || normalizar(x.nome).includes(busca))
+        if (idx === -1) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑽𝑬𝑵𝑫𝑬𝑹", "Você não tem.", `Veja \`${p}statusplanta\``) }, { quoted: msg }) }
+
+        const planta = u.plantacoes[idx]
+        if (!planta.pronta) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑹", "Ainda não está pronta.", planta.nome) }, { quoted: msg }) }
+
+        const valor = valorPlanta(planta)
+        const qualidade = qualidadePlanta(planta)
+        u.plantacoes.splice(idx, 1)
+        addGoldFZ(num, valor)
+        salvarFazenda(f)
+
+        await reagir(sock, msg, "💰")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Colheita vendida.", `${planta.emoji} ${planta.nome}\nQualidade: ${qualidade}%\n+${valor} GoldFZ`), mentions: [sender] }, { quoted: msg })
+      }
+    },
+
+    statusplanta: {
+      aliases: ["minhasplantas", "plantacoes"],
+      async executar({ sock, msg, sender, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const p = prefixoAtivo || "+"
+        const num = soNumero(sender)
+        const { u } = getFazenda(num)
+        if (!u.plantacoes.length) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑷𝑳𝑨𝑵𝑻𝑨𝑺", "Sem plantações.", `Use \`${p}plantarsemente\``) }, { quoted: msg }) }
+
+        const agora = Date.now()
+        let txt = `𝑷𝑳𝑨𝑵𝑻𝑨𝑪̧𝑶̃𝑬𝑺 (${u.plantacoes.length}/${u.terras})\n\n`
+
+        for (const planta of u.plantacoes) {
+          const s = SEMENTES.find(x => x.id === planta.id)
+          if (!s) continue
+          const tempoNecessario = s.tempo * 60 * 1000
+          const regasBonus = (planta.regas || 0) * 2 * 60 * 1000
+          const tempoFinal = Math.max(60 * 1000, tempoNecessario - regasBonus)
+          const decorrido = agora - planta.plantadaEm
+          const restante = Math.max(0, tempoFinal - decorrido)
+          const progresso = Math.min(100, Math.floor((decorrido / tempoFinal) * 100))
+          const tempoTxt = planta.pronta ? "✅ Pronta!" : formatarTempo(restante)
+          const q = qualidadePlanta(planta)
+
+          txt += `${planta.emoji} ${planta.nome}\n${planta.pronta ? "✅ Pronta" : `⏰ ${tempoTxt}`}\nCrescimento: ${progresso}%\nQualidade: ${q}%\nRegas: ${planta.regas || 0}\n\n`
+        }
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: txt, mentions: [sender] }, { quoted: msg })
+      }
+    },
+
+    vendedorsementes: {
+      aliases: ["vsementes", "vendorsementes"],
+      async executar({ sock, msg, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const p = prefixoAtivo || "+"
+        const v = getVendedores()
+        if (!v.sementes.ativo || Date.now() > v.sementes.expiraEm) {
+          await reagir(sock, msg, "⚠️")
+          return sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "O vendedor de sementes foi embora.", "Aguarde o próximo (4h)") }, { quoted: msg })
+        }
+        const restante = Math.max(0, v.sementes.expiraEm - Date.now())
+        const min = Math.floor(restante / 60000), seg = Math.floor((restante % 60000) / 1000)
+        let txt = `𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹 𝑫𝑬 𝑺𝑬𝑴𝑬𝑵𝑻𝑬𝑺\n\nJanela: ${min}min ${seg}s\n\n`
+        v.sementes.itens.forEach((it, i) => {
+          const desc = Math.round((1 - it.preco / it.precoOriginal) * 100)
+          txt += `${i + 1}. ${it.emoji} ${it.nome} | ${it.preco} GoldFZ (-${desc}%) | Rende: ~${it.vendaBase}/h\n`
+        })
+        txt += `\nUse \`${p}comprarvendedor <nome>\``
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: txt }, { quoted: msg })
+      }
+    },
+
+    comprarvendedor: {
+      aliases: ["buyvendedor", "comprarvendedorsemente"],
+      async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const p = prefixoAtivo || "+"
+        const num = soNumero(sender)
+        const { f, u } = getFazenda(num)
+        if (u.terras === 0) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "Compre terra primeiro.", `Use \`${p}comprarterra\``) }, { quoted: msg }) }
+
+        const v = getVendedores()
+        if (!v.sementes.ativo || Date.now() > v.sementes.expiraEm) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "Vendedor foi embora.", "Aguarde o próximo (4h)") }, { quoted: msg }) }
+
+        let qtd = 1
+        const ultimo = args[args.length - 1]
+        if (/^\d+$/.test(ultimo)) { qtd = parseInt(ultimo); args.pop() }
+        const busca = normalizar(args.join(" "))
+        const oferta = v.sementes.itens.find(x => normalizar(x.nome) === busca || x.id === busca || normalizar(x.nome).includes(busca))
+        if (!oferta) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "Oferta não encontrada.", `Veja \`${p}vendedorsementes\``) }, { quoted: msg }) }
+
+        const total = oferta.preco * qtd
+        const { saldo } = getGoldFZ(num)
+        if (saldo < total) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "GoldFZ insuficiente.", `Faltam ${total - saldo}`) }, { quoted: msg }) }
+
+        removeGoldFZ(num, total)
+        u.sementes[oferta.id] = (u.sementes[oferta.id] || 0) + qtd
+        salvarFazenda(f)
+
+        await reagir(sock, msg, "✅")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Semente do vendedor!", `${oferta.emoji} ${oferta.nome} x${qtd}\n-${total} GoldFZ`), mentions: [sender] }, { quoted: msg })
+      }
+    },
+
+    vendedoranimais: {
+      aliases: ["vanimais", "vendoranimais"],
+      async executar({ sock, msg, db, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const p = prefixoAtivo || "+"
+        const v = getVendedores()
+        if (!v.animais.ativo || Date.now() > v.animais.expiraEm) {
+          await reagir(sock, msg, "⚠️")
+          return sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "O vendedor de animais foi embora.", "Aguarde o próximo (3h)") }, { quoted: msg })
+        }
+        const restante = Math.max(0, v.animais.expiraEm - Date.now())
+        const min = Math.floor(restante / 60000), seg = Math.floor((restante % 60000) / 1000)
+        let txt = `𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹 𝑫𝑬 𝑨𝑵𝑰𝑴𝑨𝑰𝑺\n\nJanela: ${min}min ${seg}s\n\n`
+        v.animais.itens.forEach((it, i) => {
+          const desc = Math.round((1 - it.preco / it.precoOriginal) * 100)
+          txt += `${i + 1}. ${it.emoji} ${it.nome} | ${it.preco} GoldFZ (-${desc}%) | Rende: +${it.producaoHora}/h\n`
+        })
+        txt += `\nUse \`${p}comprarvendedoranimal <nome>\``
+        await reagir(sock, msg, "🌸")
+        await sock.sendMessage(jid, { text: txt }, { quoted: msg })
+      }
+    },
+
+    comprarvendedoranimal: {
+      aliases: ["buyvendedoranimal", "compraranimalvendedor"],
+      async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const p = prefixoAtivo || "+"
+        const num = soNumero(sender)
+        const { f, u } = getFazenda(num)
+        if (u.cercados === 0) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "Compre cercado primeiro.", `Use \`${p}comprarcercado\``) }, { quoted: msg }) }
+        if (u.animais.length >= u.limiteAnimais) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "Cercado cheio.", `Ocupado: ${u.animais.length}/${u.limiteAnimais}`) }, { quoted: msg }) }
+
+        const v = getVendedores()
+        if (!v.animais.ativo || Date.now() > v.animais.expiraEm) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "Vendedor foi embora.", "Aguarde o próximo (3h)") }, { quoted: msg }) }
+
+        const busca = normalizar(args.join(" "))
+        const oferta = v.animais.itens.find(x => normalizar(x.nome) === busca || x.id === busca || normalizar(x.nome).includes(busca))
+        if (!oferta) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "Oferta não encontrada.", `Veja \`${p}vendedoranimais\``) }, { quoted: msg }) }
+
+        const { saldo } = getGoldFZ(num)
+        if (saldo < oferta.preco) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "GoldFZ insuficiente.", `Faltam ${oferta.preco - saldo}`) }, { quoted: msg }) }
+
+        removeGoldFZ(num, oferta.preco)
+        u.animais.push({ id: oferta.id, nome: oferta.nome, emoji: oferta.emoji, fome: 0, sujo: 0, compradoEm: Date.now() })
+        salvarFazenda(f)
+
+        await reagir(sock, msg, "✅")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Animal do vendedor!", `${oferta.emoji} ${oferta.nome}\nRende: +${oferta.producaoHora}/h\n-${oferta.preco} GoldFZ`), mentions: [sender] }, { quoted: msg })
+      }
+    },
+
+    eventoagua: {
+      aliases: ["promocaoagua", "aguaPromo"],
+      async executar({ sock, msg, db, sender, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
+        if (!sistemaFazendaAtivo(db, jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.") }, { quoted: msg }) }
+        const num = soNumero(sender)
+        const { f, u } = getFazenda(num)
+        const v = getVendedores()
+        const expiraEm = (v.ultimoEventoAgua || 0) + DURACAO_VENDEDOR
+        if (Date.now() > expiraEm) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑬𝑽𝑬𝑵𝑻𝑶", "O evento de água terminou.", "Aguarde o próximo (2h)") }, { quoted: msg }) }
+
+        const PRECO_PROMO = 60
+        const { saldo } = getGoldFZ(num)
+        if (saldo < PRECO_PROMO) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑬𝑽𝑬𝑵𝑻𝑶", "GoldFZ insuficiente.", `Precisa ${PRECO_PROMO}`) }, { quoted: msg }) }
+
+        removeGoldFZ(num, PRECO_PROMO)
+        u.agua += 3 * GALAO_AGUA
+        salvarFazenda(f)
+
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("", "3 galões por 60 GoldFZ!", `Total: ${u.agua}L\n-${PRECO_PROMO} GoldFZ`), mentions: [sender] }, { quoted: msg })
+      }
+    },
+
+    gerarkeyfz: {
+      aliases: ["gerarkeyfazenda", "criarkeyfz"],
+      donoOnly: true,
       async executar({ sock, msg, args, db, isDono, isSubDono }) {
+        if (!isDono && !isSubDono) { await reagir(sock, msg, "🚫"); return }
         const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!isDono && !isSubDono) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐀𝐕𝐈𝐒𝐎", "Comando restrito.", "Apenas o mestre pode gerar keys!", null, nomeBot) }, { quoted: msg }) }
-
         const qtd = parseInt(args[0])
-        if (!qtd || qtd <= 0) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Quantidade inválida.", "Digite a quantidade de XP.\nExemplo: `+gerarkeyxp 500`", null, nomeBot) }, { quoted: msg }) }
+        if (!qtd || qtd <= 0) {
+          await reagir(sock, msg, "⚠️")
+          return sock.sendMessage(jid, { text: msgErro("𝑲𝑬𝒀 𝑭𝒁", "Quantidade inválida.", "Use `+gerarkeyfz <qtd>`") }, { quoted: msg })
+        }
 
-        const dbKeys = dbLer("keysxp.json", { keys: {} })
-        const novaKey = gerarKeyAleatoria()
-        dbKeys.keys[novaKey] = { xp: qtd, usado: false, criadoPor: msg.key.participant || msg.key.remoteJid, criadoEm: Date.now() }
-        dbSalvar("keysxp.json", dbKeys)
+        const dbKeys = dbLer("keysfz.json", { keys: {} })
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        let novaKey = 'KEYFZ-'
+        for (let i = 0; i < 8; i++) novaKey += chars.charAt(Math.floor(Math.random() * chars.length))
 
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐊𝐄𝐘 𝐆𝐄𝐑𝐀𝐃𝐀", "Nova key de XP criada!", `Key: \`${novaKey}\`\nValor: *+${qtd} XP*\n\nEssa key é de uso único.`, `Entregue com \`+keyxp ${novaKey}\``, nomeBot) }, { quoted: msg })
+        dbKeys.keys[novaKey] = { goldfz: qtd, usado: false, criadoPor: msg.key.participant || msg.key.remoteJid, criadoEm: Date.now() }
+        dbSalvar("keysfz.json", dbKeys)
+
+        await reagir(sock, msg, "🔑")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑲𝑬𝒀 𝑭𝒁", "Nova key de GoldFZ criada!", `Key: \`${novaKey}\`\nValor: ${qtd} GoldFZ`) }, { quoted: msg })
       }
     },
 
-    keyxp: {
-      aliases: ["resgatarxp", "usarkey"],
+    keygoldfz: {
+      aliases: ["resgatargoldfz", "usarkeyfz"],
       async executar({ sock, msg, args, db, sender }) {
         const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
         const keyInserida = (args[0] || "").toUpperCase().trim()
-        if (!keyInserida) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Key em falta.", "Digite a key.\nExemplo: `+keyxp KEY-XXXXXX`", null, nomeBot) }, { quoted: msg }) }
+        if (!keyInserida) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgErro("𝑲𝑬𝒀 𝑭𝒁", "Key em falta.", "Use `+keygoldfz <key>`") }, { quoted: msg }) }
 
-        const dbKeys = dbLer("keysxp.json", { keys: {} })
+        const dbKeys = dbLer("keysfz.json", { keys: {} })
         let keyReal = null
         for (const k in dbKeys.keys) { if (k.toUpperCase() === keyInserida) { keyReal = k; break } }
-        if (!keyReal || !dbKeys.keys[keyReal]) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Key inválida.", "A key digitada não existe ou está errada.", null, nomeBot) }, { quoted: msg }) }
+        if (!keyReal || !dbKeys.keys[keyReal]) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑲𝑬𝒀 𝑭𝒁", "Key inválida.") }, { quoted: msg }) }
 
         const dataKey = dbKeys.keys[keyReal]
-        if (dataKey.usado) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Key já resgatada.", "Essa key já foi utilizada.", null, nomeBot) }, { quoted: msg }) }
+        if (dataKey.usado) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑲𝑬𝒀 𝑭𝒁", "Key já resgatada.") }, { quoted: msg }) }
 
-        const { user, idReal } = buscarUsuario(db, sender, msg)
-        const qtdXp = dataKey.xp
-        const upou = darXp(user, qtdXp)
-        salvarDragoesUser(db, idReal, user)
-
-        dataKey.usado = true
-        dataKey.usadoPor = idReal
-        dataKey.usadoEm = Date.now()
-        dbSalvar("keysxp.json", dbKeys)
-
-        const xpNec = user.nivelTreinador * 200
-        const progresso = Math.floor((user.xpTreinador / xpNec) * 10)
-        const barra = "🌸".repeat(Math.min(10, progresso)) + "⬛".repeat(Math.max(0, 10 - progresso))
-        const pct = Math.floor((user.xpTreinador / xpNec) * 100)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: `${boxTop("𝐊𝐄𝐘 𝐑𝐄𝐒𝐆𝐀𝐓𝐀𝐃𝐀")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐗𝐏 𝐆𝐀𝐍𝐇𝐎 𓆪
-↳ +${qtdXp} XP
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐏𝐑𝐎𝐆𝐑𝐄𝐒𝐒𝐎 𓆪
-↳ Nível: *${user.nivelTreinador}* / 15
-↳ XP: ${user.xpTreinador}/${xpNec} (${pct}%)
-↳ ${barra}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${upou ? `⭐ **SUBIU DE NÍVEL!**\n\n` : ""}${boxFim(nomeBot)}` }, { quoted: msg })
-      }
-    },
-
-    gerarkeygold: {
-      aliases: ["gerarkeyg", "criargold"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!isDono && !isSubDono) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐀𝐕𝐈𝐒𝐎", "Comando restrito.", "Apenas o mestre pode gerar keys!", null, nomeBot) }, { quoted: msg }) }
-
-        const qtd = parseInt(args[0])
-        if (!qtd || qtd <= 0) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Quantidade inválida.", "Digite a quantidade de Gold.\nExemplo: `+gerarkeygold 1000`", null, nomeBot) }, { quoted: msg }) }
-
-        const dbKeys = dbLer("keysgold.json", { keys: {} })
-        const novaKey = gerarKeyAleatoria()
-        dbKeys.keys[novaKey] = { gold: qtd, usado: false, criadoPor: msg.key.participant || msg.key.remoteJid, criadoEm: Date.now() }
-        dbSalvar("keysgold.json", dbKeys)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐊𝐄𝐘 𝐃𝐄 𝐆𝐎𝐋𝐃", "Nova key de Gold criada!", `Key: \`${novaKey}\`\nValor: *+${qtd} Gold*\n\nEssa key é de uso único.`, `Entregue com \`+keygold ${novaKey}\``, nomeBot) }, { quoted: msg })
-      }
-    },
-
-    keygold: {
-      aliases: ["resgatargold", "usarkeygold"],
-      async executar({ sock, msg, args, db, sender }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        const keyInserida = (args[0] || "").toUpperCase().trim()
-        if (!keyInserida) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Key em falta.", "Digite a key.\nExemplo: `+keygold KEY-XXXXXX`", null, nomeBot) }, { quoted: msg }) }
-
-        const dbKeys = dbLer("keysgold.json", { keys: {} })
-        let keyReal = null
-        for (const k in dbKeys.keys) { if (k.toUpperCase() === keyInserida) { keyReal = k; break } }
-        if (!keyReal || !dbKeys.keys[keyReal]) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Key inválida.", "A key digitada não existe ou está errada.", null, nomeBot) }, { quoted: msg }) }
-
-        const dataKey = dbKeys.keys[keyReal]
-        if (dataKey.usado) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Key já resgatada.", "Essa key já foi utilizada.", null, nomeBot) }, { quoted: msg }) }
-
-        const { user, idReal } = buscarUsuario(db, sender, msg)
-        const qtdGold = dataKey.gold
-        user.gold = (user.gold || 0) + qtdGold
-        salvarDragoesUser(db, idReal, user)
+        const num = soNumero(sender)
+        addGoldFZ(num, dataKey.goldfz)
+        const { saldo } = getGoldFZ(num)
 
         dataKey.usado = true
-        dataKey.usadoPor = idReal
+        dataKey.usadoPor = num
         dataKey.usadoEm = Date.now()
-        dbSalvar("keysgold.json", dbKeys)
+        dbSalvar("keysfz.json", dbKeys)
 
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: `${boxTop("𝐊𝐄𝐘 𝐑𝐄𝐒𝐆𝐀𝐓𝐀𝐃𝐀")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐆𝐎𝐋𝐃 𝐆𝐀𝐍𝐇𝐎 𓆪
-↳ +${qtdGold} Gold
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐒𝐀𝐋𝐃𝐎 𓆪
-↳ ${user.gold} Gold
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${boxFim(nomeBot)}` }, { quoted: msg })
-      }
-    },
-
-    /* ========== ADMIN ========== */
-
-    addxp: {
-      aliases: ["darxp", "addxp"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!isDono && !isSubDono) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐀𝐕𝐈𝐒𝐎", "Comando restrito.", "Apenas o mestre pode dar XP!", null, nomeBot) }, { quoted: msg }) }
-
-        let alvo = getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Alvo não definido.", "Marque a pessoa.\nExemplo: `+addxp @usuario 200`", null, nomeBot) }, { quoted: msg }) }
-
-        const qtd = parseInt(args.find(a => !isNaN(a) && !a.includes("@")))
-        if (!qtd || qtd <= 0) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Valor inválido.", "Digite uma quantidade válida de XP.", null, nomeBot) }, { quoted: msg }) }
-
-        const { user, idReal } = buscarUsuario(db, alvo, msg)
-        const upou = darXp(user, qtd)
-        salvarDragoesUser(db, idReal, user)
-
-        const xpNec = user.nivelTreinador * 200
-        const progresso = Math.floor((user.xpTreinador / xpNec) * 10)
-        const barra = "🌸".repeat(Math.min(10, progresso)) + "⬛".repeat(Math.max(0, 10 - progresso))
-        const pct = Math.floor((user.xpTreinador / xpNec) * 100)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: `${boxTop("𝐗𝐏 𝐀𝐃𝐈𝐂𝐈𝐎𝐍𝐀𝐃𝐎")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐄𝐍𝐕𝐈𝐎 𓆪
-↳ Mestre enviou +${qtd} XP
-↳ Para @${idReal.split("@")[0]}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐏𝐑𝐎𝐆𝐑𝐄𝐒𝐒𝐎 𓆪
-↳ Nível: *${user.nivelTreinador}* / 15
-↳ XP: ${user.xpTreinador}/${xpNec} (${pct}%)
-↳ ${barra}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${upou ? `⭐ **SUBIU DE NÍVEL!**\n\n` : ""}${boxFim(nomeBot)}`, mentions: [alvo] }, { quoted: msg })
-      }
-    },
-
-    addgoldragon: {
-      aliases: ["dargold", "addgold"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!isDono && !isSubDono) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐀𝐕𝐈𝐒𝐎", "Comando restrito.", "Apenas o mestre pode dar gold!", null, nomeBot) }, { quoted: msg }) }
-
-        let alvo = getAlvo(msg)
-        if (!alvo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Alvo não definido.", "Marque a pessoa.\nExemplo: `+addgold @usuario 100`", null, nomeBot) }, { quoted: msg }) }
-
-        const qtd = parseInt(args.find(a => !isNaN(a) && !a.includes("@")))
-        if (!qtd || qtd <= 0) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Valor inválido.", "Digite uma quantidade válida de Gold.", null, nomeBot) }, { quoted: msg }) }
-
-        const { user, idReal } = buscarUsuario(db, alvo, msg)
-        user.gold = (user.gold || 0) + qtd
-        salvarDragoesUser(db, idReal, user)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐆𝐎𝐋𝐃 𝐀𝐃𝐈𝐂𝐈𝐎𝐍𝐀𝐃𝐎", "Ouro enviado com sucesso!", `Mestre enviou *${qtd} Gold* para @${idReal.split("@")[0]}!\nSaldo atual: *${user.gold}*`, null, nomeBot), mentions: [alvo] }, { quoted: msg })
-      }
-    },
-
-    spawndragao: {
-      aliases: ["forcardragao", "spawn"],
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
-        if (!isDono && !isSubDono) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐀𝐕𝐈𝐒𝐎", "Comando restrito.", "Apenas o mestre pode forçar spawn!", null, nomeBot) }, { quoted: msg }) }
-
-        const raridadeArg = (args[0] || "").toLowerCase()
-        let raridadeAlvo = ""
-        if (raridadeArg === "comum") raridadeAlvo = "Comum"
-        else if (raridadeArg === "raro") raridadeAlvo = "Raro"
-        else if (raridadeArg === "epico") raridadeAlvo = "Épico"
-        else if (raridadeArg === "lendario") raridadeAlvo = "Lendário"
-        else if (raridadeArg === "mitico") raridadeAlvo = "Mítico"
-        else {
-          const roll = Math.random() * 100
-          if (roll < 0.1) raridadeAlvo = "Mítico"
-          else if (roll < 5.1) raridadeAlvo = "Lendário"
-          else if (roll < 15.1) raridadeAlvo = "Épico"
-          else if (roll < 40.1) raridadeAlvo = "Raro"
-          else raridadeAlvo = "Comum"
-        }
-
-        const candidatos = Object.entries(DRAGOES).filter(([_, d]) => d.raridade === raridadeAlvo)
-        if (!candidatos.length) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐑𝐑𝐎", "Raridade inválida.", `Raridade *${raridadeArg}* não encontrada.\nUse: comum, raro, epico, lendario ou mitico.`, null, nomeBot) }, { quoted: msg }) }
-
-        const [nome, dados] = candidatos[Math.floor(Math.random() * candidatos.length)]
-        const dragao = { nome, ...dados }
-
-        const sessaoAtual = getSessao(jid)
-        if (sessaoAtual && sessaoAtual.dragao && Date.now() - sessaoAtual.timestamp < 60000) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgAviso("𝐀𝐕𝐈𝐒𝐎", "Já tem um dragão no grupo.", "Espere ele fugir ou ser domado.", null, nomeBot) }, { quoted: msg }) }
-
-        setSessao(jid, { dragao, timestamp: Date.now() })
-        const emojiRaridade = { "Comum": "🟢", "Raro": "🔵", "Épico": "🟣", "Lendário": "🟡", "Mítico": "🔴" }[dragao.raridade] || "🌸"
-
-        const texto = `${boxTop("𝐃𝐑𝐀𝐆𝐀̃𝐎 𝐀𝐏𝐀𝐑𝐄𝐂𝐄𝐔")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 ${emojiRaridade} 𝐃𝐑𝐀𝐆𝐀̃𝐎 𓆪
-↳ *${dragao.nome}*
-↳ Raridade: ${dragao.raridade}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐀𝐕𝐈𝐒𝐎 𓆪
-↳ Vocês têm *1 minuto* pra domar!
-↳ Use: \`+domar ${dragao.nome}\`
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${boxFim(nomeBot, "A serpente observa...")}`
-
-        await reagir(sock, msg, "🌸")
-        try { await sock.sendMessage(jid, { image: { url: dragao.foto }, caption: texto }, { quoted: msg }) }
-        catch (e) { await sock.sendMessage(jid, { text: texto }, { quoted: msg }) }
-
-        setTimeout(() => {
-          const s = getSessao(jid)
-          if (s && s.dragao && Date.now() - s.timestamp >= 55000) {
-            delSessao(jid)
-            sock.sendMessage(jid, { text: msgAviso("𝐅𝐔𝐆𝐈𝐔", "O dragão foi embora.", `O *${dragao.nome}* fugiu... ninguém o domou a tempo.`, null, nomeBot) }).catch(() => {})
-          }
-        }, 60000)
+        await reagir(sock, msg, "✅")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑲𝑬𝒀 𝑭𝒁", "Key resgatada!", `+${dataKey.goldfz} GoldFZ\nSaldo: ${saldo}`) }, { quoted: msg })
       }
     }
 
