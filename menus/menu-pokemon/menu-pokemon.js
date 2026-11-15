@@ -1,5 +1,5 @@
 /* ============================================================
-   🌸 MENU POKÉMON - TEMA FLORAL
+   🌸 MENU POKÉMON - LIMPO E ESTILIZADO
    ============================================================ */
 
 const fs = require("fs")
@@ -23,81 +23,16 @@ function nomeBotDb(db) { try { return db.config?.()?.nomeBot || "Rimuru" } catch
 function soNumero(jid) { if (!jid) return ""; if (typeof jid === "object") jid = jid.phoneNumber || jid.id || ""; return String(jid).split("@")[0].split(":")[0].replace(/\D/g, "") }
 function getCfg(db) { try { return db.config?.() || {} } catch { return {} } }
 
-/* ---------- TEMPLATES FLORAIS ---------- */
-function boxTop(titulo) {
-  return `╔═══ஓ๑♡๑ஓ═══╗
-𓆩 ${titulo} 𓆪
-╚═══ஓ๑♡๑ஓ═══╝`
+/* ---------- RESPOSTAS PADRONIZADAS ---------- */
+function msgSucesso(titulo, aviso, detalhes) {
+  return `✨ *${titulo || "𝑺𝑼𝑪𝑬𝑺𝑺𝑶"}*\n\n✅ ${aviso}${detalhes ? `\n\n📌 ${detalhes}` : ""}`
 }
-function boxFim(nomeBot, frase = "Concluído com sucesso.") {
-  return `╔═══ஓ๑♡๑ஓ═══╗
-𓆩 ${String(nomeBot).toUpperCase()} 𓆪
-❝ ${frase} ❞
-╚═══ஓ๑♡๑ஓ═══╝`
+function msgAviso(titulo, aviso, detalhes) {
+  return `⚠️ *${titulo}*\n\n🔸 ${aviso}${detalhes ? `\n\n📌 ${detalhes}` : ""}`
 }
-function msgSucesso(titulo, aviso, detalhes, rodape, nomeBot) {
-  return `${boxTop(titulo)}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐒𝐓𝐀𝐓𝐔𝐒 𓆪
-↳ ${aviso}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐃𝐄𝐓𝐀𝐋𝐇𝐄𝐒 𓆪
-↳ ${detalhes}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${rodape ? `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐍𝐎𝐓𝐀 𓆪
-↳ ${rodape}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-` : ""}${boxFim(nomeBot, "Concluído com sucesso.")}`
+function msgErro(titulo, aviso, detalhes) {
+  return `❌ *${titulo}*\n\n🚫 ${aviso}${detalhes ? `\n\n📌 ${detalhes}` : ""}`
 }
-function msgAviso(titulo, aviso, detalhes, rodape, nomeBot) {
-  return `${boxTop(titulo)}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐀𝐕𝐈𝐒𝐎 𓆪
-↳ ${aviso}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐃𝐄𝐓𝐀𝐋𝐇𝐄𝐒 𓆪
-↳ ${detalhes}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${rodape ? `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐍𝐎𝐓𝐀 𓆪
-↳ ${rodape}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-` : ""}${boxFim(nomeBot, "Verifique e tente novamente.")}`
-}
-function msgErro(titulo, aviso, detalhes, rodape, nomeBot) {
-  return `${boxTop(titulo)}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐄𝐑𝐑𝐎 𓆪
-↳ ${aviso}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐃𝐄𝐓𝐀𝐋𝐇𝐄𝐒 𓆪
-↳ ${detalhes}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${rodape ? `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐍𝐎𝐓𝐀 𓆪
-↳ ${rodape}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-` : ""}${boxFim(nomeBot, "Algo deu errado.")}`
-}
-function secao(t) { return `╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 ${t} 𓆪` }
-function item(c) { return `↳ \`${c}\`` }
-function fimSecao() { return `╰┈┈┈┈୨୧┈┈┈┈╯` }
 
 /* ---------- TIPOS ---------- */
 const TIPOS = {
@@ -221,7 +156,7 @@ function bloquearSeOff(sock, msg, db, prefixoAtivo) {
   if (sistemaPokemonAtivo(db, jid)) return false
   const nomeBot = nomeBotDb(db)
   const p = prefixoAtivo || "+"
-  sock.sendMessage(jid, { text: msgErro("𝐏𝐎𝐊𝐄́𝐌𝐎𝐍 𝐎𝐅𝐅", "O sistema Pokémon está desativado.", "Peça a um admin para ativar.", `Use \`${p}pokemon on\``, nomeBot) }, { quoted: msg }).catch(() => {})
+  sock.sendMessage(jid, { text: msgErro("𝑷𝑶𝑲𝑬́𝑴𝑶𝑵 𝑶𝑭𝑭", "O sistema Pokémon está desativado.", `Use \`${p}pokemon on\``) }, { quoted: msg }).catch(() => {})
   return true
 }
 
@@ -277,20 +212,13 @@ function getLobby(jid) { return dbLer("pokemonlobby.json", {})[jid] || null }
 function setLobby(jid, dados) { const l = dbLer("pokemonlobby.json", {}); l[jid] = dados; dbSalvar("pokemonlobby.json", l) }
 function delLobby(jid) { const l = dbLer("pokemonlobby.json", {}); delete l[jid]; dbSalvar("pokemonlobby.json", l) }
 
-function getCargoETextoSimplificado({ sender, config, db, isDono, isSubDono, isAdmin, msg }) {
-  const pushName = msg.pushName || "Treinador"
-  let cargo = "👤 𝐓𝐑𝐄𝐈𝐍𝐀𝐃𝐎𝐑"
-  if (isDono) cargo = "👑 𝐌𝐄𝐒𝐓𝐑𝐄"
-  else if (isSubDono) cargo = "💠 𝐋𝐔𝐀"
-  else if (isAdmin) cargo = "⚔️ 𝐂𝐎𝐌𝐀𝐍𝐃𝐀𝐍𝐓𝐄"
-  return { pushName, cargo, nomeBot: nomeBotDb(db) }
-}
-
 module.exports = {
   menu: "menu-pokemon",
   grupoOnly: false,
   adminOnly: false,
-  donoOnly: false,  async rendaAutomatica(sock, db) {
+  donoOnly: false,
+
+  async rendaAutomatica(sock, db) {
     const agora = Date.now()
     const cfg = getPokeCfg()
     const gruposAtivos = Object.keys(cfg.grupos || {}).filter(j => cfg.grupos[j]?.ativo === true)
@@ -300,7 +228,7 @@ module.exports = {
       if (sel && sel.expiraEm > agora) continue
       if (sel && sel.expiraEm <= agora) {
         delSelvagem(jid)
-        try { await sock.sendMessage(jid, { text: msgAviso("𝐏𝐎𝐊𝐄́𝐌𝐎𝐍 𝐅𝐔𝐆𝐈𝐔", "Ninguém capturou a tempo.", "Aguarde o próximo (30min)", null, nomeBotDb(db)) }) } catch (_) {}
+        try { await sock.sendMessage(jid, { text: msgAviso("𝑷𝑶𝑲𝑬́𝑴𝑶𝑵 𝑭𝑼𝑮𝑰𝑼", "Ninguém capturou a tempo.", "Aguarde o próximo.") }) } catch (_) {}
         continue
       }
 
@@ -317,27 +245,11 @@ module.exports = {
       setSelvagem(jid, { pokemon, expiraEm: agora + 3 * 60 * 1000, criadoEm: agora })
 
       const emojiRar = { Comum: "🟢", Incomum: "🔵", Raro: "🟣", Épico: "🟡", Lendário: "🔴", Mítico: "💀" }[raridade]
-      const shinyTxt = shiny ? "\n✨✨✨ **SHINY!** ✨✨✨" : ""
+      const shinyTxt = shiny ? "\n✨ *SHINY!* ✨" : ""
 
       try {
         await sock.sendMessage(jid, {
-          text: `${boxTop("𝐏𝐎𝐊𝐄́𝐌𝐎𝐍 𝐒𝐄𝐋𝐕𝐀𝐆𝐄𝐌")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 ${pokemon.emoji} ${pokemon.nome} 𓆪
-↳ ${emojiRar} Raridade: ${raridade}
-↳ 🎚️ Nível: ${nivel}
-↳ ${TIPOS[pokemon.tipo]?.emoji || "❓"} Tipo: ${pokemon.tipo}
-↳ ❤️ HP: ${pokemon.hpMax}${shinyTxt}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐓𝐄𝐌𝐏𝐎 𓆪
-↳ 3 minutos para capturar!
-↳ \`+pokecapturar\`
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${boxFim(nomeBotDb(db), "Corre que ele foge!")}`
+          text: `𝑷𝑶𝑲𝑬́𝑴𝑶𝑵 𝑺𝑬𝑳𝑽𝑨𝑮𝑬𝑴\n\n${pokemon.emoji} ${pokemon.nome}\n${emojiRar} Raridade: ${raridade}\n🎚️ Nível: ${nivel}\n${TIPOS[pokemon.tipo]?.emoji || "❓"} Tipo: ${pokemon.tipo}\n❤️ HP: ${pokemon.hpMax}${shinyTxt}\n\nUse \`+pokecapturar\` em 3 minutos!`
         })
       } catch (_) {}
     }
@@ -347,69 +259,57 @@ ${boxFim(nomeBotDb(db), "Corre que ele foge!")}`
 
     menupokemon: {
       aliases: ["pokemon", "menup", "comandospokemon"],
-      async executar({ sock, msg, prefixoAtivo, db, sender, config, isDono, isSubDono, isAdmin, groupMetadata }) {
+      async executar({ sock, msg, prefixoAtivo, db, sender, isDono, isSubDono, isAdmin }) {
         const jid = msg.key.remoteJid
         const p = prefixoAtivo || "+"
-        const cfg = getCfg(db)
+        const nomeBot = nomeBotDb(db)
         const num = soNumero(sender)
         const { u } = getTreinador(num)
-        const { pushName, cargo, nomeBot } = getCargoETextoSimplificado({ sender, config, db, isDono, isSubDono, isAdmin, msg })
         await reagir(sock, msg, "🌸")
 
-        const texto = `${boxTop("𝐏 𝐎 𝐊 𝐄́ 𝐌 𝐎 𝐍")}
+        const texto = `𝑷𝑶𝑲𝑬́𝑴𝑶𝑵
 
-┏━━━〔 𝐓𝐑𝐄𝐈𝐍𝐀𝐃𝐎𝐑 〕━━━┓
-𖤐 Usuário » ${pushName}
-𖤐 Nível » ${u.nivel}
-𖤐 XP » ${u.xp}/${u.nivel * 100}
-𖤐 PokéCoins » ${u.pokecoins}
-𖤐 Vitórias » ${u.vitorias}
-𖤐 Derrotas » ${u.derrotas}
-┗━━━━━━━━━━━━━━━━━━┛
+Usuário: ${msg.pushName || "Treinador"}
+Nível: ${u.nivel}
+XP: ${u.xp}/${u.nivel * 100}
+PokéCoins: ${u.pokecoins}
+Vitórias: ${u.vitorias}
+Derrotas: ${u.derrotas}
 
-${secao("𝐂𝐀𝐏𝐓𝐔𝐑𝐀")}
-${item(`${p}pokecapturar`)}
-${item(`${p}pokebola <tipo> <qtd>`)}
-${item(`${p}pokebolas`)}
-${fimSecao()}
+𝑪𝑨𝑷𝑻𝑼𝑹𝑨
+${p}pokecapturar
+${p}pokebola <tipo> <qtd>
+${p}pokebolas
 
-${secao("𝐌𝐄𝐔 𝐓𝐈𝐌𝐄")}
-${item(`${p}poketime`)}
-${item(`${p}pokebox`)}
-${item(`${p}pokedex`)}
-${item(`${p}pokever <nome>`)}
-${item(`${p}pokemover <slot>`)}
-${item(`${p}pokearmazenar <nome>`)}
-${item(`${p}pokelibertar <nome>`)}
-${fimSecao()}
+𝑴𝑬𝑼 𝑻𝑰𝑴𝑬
+${p}poketime
+${p}pokebox
+${p}pokedex
+${p}pokever <nome>
+${p}pokemover <slot>
+${p}pokearmazenar <nome>
+${p}pokelibertar <nome>
 
-${secao("𝐏𝐯𝐏")}
-${item(`${p}pvppoke`)}
-${item(`${p}entrarpvp`)}
-${item(`${p}escolherpkm <nº>`)}
-${item(`${p}recusar`)}
-${fimSecao()}
+𝑷𝒗𝑷
+${p}pvppoke
+${p}entrarpvp
+${p}escolherpkm <nº>
+${p}recusar
 
-${secao("𝐋𝐎𝐉𝐀 & 𝐂𝐀𝐑𝐓𝐄𝐈𝐑𝐀")}
-${item(`${p}pokeloja`)}
-${item(`${p}pokecarteira`)}
-${item(`${p}pokemissao`)}
-${item(`${p}rankingpkc`)}
-${fimSecao()}
+𝑳𝑶𝑱𝑨 & 𝑪𝑨𝑹𝑻𝑬𝑰𝑹𝑨
+${p}pokeloja
+${p}pokecarteira
+${p}pokemissao
+${p}rankingpkc
 
-${secao("𝐀𝐃𝐌𝐈𝐍")}
-${item(`${p}pokemon on/off`)}
-${item(`${p}gerarkeypkc <qtd>`)}
-${item(`${p}keypkc <key>`)}
-${fimSecao()}
+𝑨𝑫𝑴𝑰𝑵
+${p}pokemon on/off
+${p}gerarkeypkc <qtd>
+${p}keypkc <key>
 
-╔═══ஓ๑♡๑ஓ═══╗
-𓆩 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 𓆪
-↳ \`${p}\`
-╚═══ஓ๑♡๑ஓ═══╝
+> _Prefixo: ${p}_`
 
-${boxFim(nomeBot, "Gotta catch 'em all!")}`
-
+        const cfg = getCfg(db)
         if (cfg.fotoMenu) {
           let buf = null
           try {
@@ -429,6 +329,7 @@ ${boxFim(nomeBot, "Gotta catch 'em all!")}`
 
     pokemon: {
       aliases: ["pokemonon", "pokemonoff", "ativarpokemon"],
+      adminOnly: true, grupoOnly: true,
       async executar({ sock, msg, args, db, prefixoAtivo, isDono, isSubDono, isAdmin }) {
         const jid = msg.key.remoteJid
         const p = prefixoAtivo || "+"
@@ -436,8 +337,8 @@ ${boxFim(nomeBot, "Gotta catch 'em all!")}`
         const op = (args[0] || "").toLowerCase()
 
         if (!isDono && !isSubDono && !isAdmin) {
-          await reagir(sock, msg, "💨")
-          return sock.sendMessage(jid, { text: msgErro("𝐀𝐕𝐈𝐒𝐎", "Apenas admins podem ativar.", `Use \`${p}menuadm\``, null, nomeBot) }, { quoted: msg })
+          await reagir(sock, msg, "🚫")
+          return sock.sendMessage(jid, { text: msgErro("𝑨𝑽𝑰𝑺𝑶", "Apenas admins podem ativar.") }, { quoted: msg })
         }
 
         const cfg = getPokeCfg()
@@ -446,14 +347,14 @@ ${boxFim(nomeBot, "Gotta catch 'em all!")}`
         if (!["on", "off"].includes(op)) {
           const s = cfg.grupos[jid].ativo ? "ON ✅" : "OFF ❌"
           await reagir(sock, msg, "🌸")
-          return sock.sendMessage(jid, { text: msgAviso("𝐏𝐎𝐊𝐄́𝐌𝐎𝐍", `Sistema atualmente: ${s}`, `Use \`${p}pokemon on\` ou \`${p}pokemon off\``, null, nomeBot) }, { quoted: msg })
+          return sock.sendMessage(jid, { text: msgAviso("𝑷𝑶𝑲𝑬́𝑴𝑶𝑵", `Status atual: ${s}`, `Use \`${p}pokemon on/off\``) }, { quoted: msg })
         }
 
         cfg.grupos[jid].ativo = op === "on"
         salvarPokeCfg(cfg)
 
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐎𝐊𝐄́𝐌𝐎𝐍", `Sistema ${op.toUpperCase()}`, op === "on" ? "Os comandos voltaram!" : "O modo Pokémon está desativado.", null, nomeBot) }, { quoted: msg })
+        await reagir(sock, msg, op === "on" ? "✅" : "🗑️")
+        await sock.sendMessage(jid, { text: op === "on" ? msgSucesso("", "Sistema ativado.") : msgAviso("𝑷𝑶𝑲𝑬́𝑴𝑶𝑵", "Sistema desativado.") }, { quoted: msg })
       }
     },
 
@@ -462,26 +363,25 @@ ${boxFim(nomeBot, "Gotta catch 'em all!")}`
       async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
         const num = soNumero(sender)
         const { u } = getTreinador(num)
         const tipo = (args[0] || "").toLowerCase()
         const qtd = parseInt(args[1]) || 1
 
-        if (!BOLAS[tipo]) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐏𝐎𝐊𝐄𝐁𝐎𝐋𝐀", "Tipo inválido.", `Use: \`${p}pokebola pokebola 10\`\nTipos: pokebola, greatball, ultraball, masterball`, null, nomeBot) }, { quoted: msg }) }
-        if (qtd < 1 || qtd > 50) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐏𝐎𝐊𝐄𝐁𝐎𝐋𝐀", "Qtd inválida.", "1 a 50", null, nomeBot) }, { quoted: msg }) }
+        if (!BOLAS[tipo]) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑷𝑶𝑲𝑬𝑩𝑶𝑳𝑨", "Tipo inválido.", `Use: \`${p}pokebola pokebola 10\``) }, { quoted: msg }) }
+        if (qtd < 1 || qtd > 50) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑷𝑶𝑲𝑬𝑩𝑶𝑳𝑨", "Qtd inválida.", "1 a 50") }, { quoted: msg }) }
 
         const bola = BOLAS[tipo]
         const total = bola.preco * qtd
-        if (u.pokecoins < total) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐏𝐎𝐊𝐄𝐁𝐎𝐋𝐀", "PokéCoins insuficiente.", `Faltam ${total - u.pokecoins}`, null, nomeBot) }, { quoted: msg }) }
+        if (u.pokecoins < total) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑷𝑶𝑲𝑬𝑩𝑶𝑳𝑨", "PokéCoins insuficiente.", `Faltam ${total - u.pokecoins}`) }, { quoted: msg }) }
 
         u.pokecoins -= total
         u.pokebolas[tipo] = (u.pokebolas[tipo] || 0) + qtd
         salvarTreinadorUser(num, u)
 
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐎𝐊𝐄𝐁𝐎𝐋𝐀", "Comprada!", `${bola.emoji} ${bola.nome} x${qtd}\nPago: -${total} PokéCoins`, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "✅")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Comprada!", `${bola.emoji} ${bola.nome} x${qtd}\n-${total} PokéCoins`) }, { quoted: msg })
       }
     },
 
@@ -490,16 +390,14 @@ ${boxFim(nomeBot, "Gotta catch 'em all!")}`
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const num = soNumero(sender)
         const { u } = getTreinador(num)
         await reagir(sock, msg, "🌸")
 
-        let txt = `${boxTop("𝐒𝐔𝐀𝐒 𝐏𝐎𝐊𝐄𝐁𝐎𝐋𝐀𝐒")}\n\n`
+        let txt = `𝑺𝑼𝑨𝑺 𝑷𝑶𝑲𝑬𝑩𝑶𝑳𝑨𝑺\n\n`
         for (const [id, bola] of Object.entries(BOLAS)) {
-          txt += `╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 ${bola.emoji} ${bola.nome} 𓆪\n↳ Quantidade: ${u.pokebolas[id] || 0}\n╰┈┈┈┈୨୧┈┈┈┈╯\n`
+          txt += `${bola.emoji} ${bola.nome}: ${u.pokebolas[id] || 0}\n`
         }
-        txt += `\n${boxFim(nomeBot, "Boa sorte na captura!")}`
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
@@ -509,21 +407,19 @@ ${boxFim(nomeBot, "Gotta catch 'em all!")}`
       async executar({ sock, msg, db, sender, args, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
         const num = soNumero(sender)
         const { u } = getTreinador(num)
 
         const sel = getSelvagem(jid)
-        if (!sel) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐂𝐀𝐏𝐓𝐔𝐑𝐀𝐑", "Nenhum Pokémon selvagem.", "Aguarde um aparecer no grupo.", null, nomeBot) }, { quoted: msg }) }
-        if (sel.expiraEm <= Date.now()) { delSelvagem(jid); await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐂𝐀𝐏𝐓𝐔𝐑𝐀𝐑", "O Pokémon fugiu.", "Aguarde o próximo.", null, nomeBot) }, { quoted: msg }) }
+        if (!sel) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑪𝑨𝑷𝑻𝑼𝑹𝑨𝑹", "Nenhum Pokémon selvagem.", "Aguarde um aparecer.") }, { quoted: msg }) }
+        if (sel.expiraEm <= Date.now()) { delSelvagem(jid); await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑪𝑨𝑷𝑻𝑼𝑹𝑨𝑹", "O Pokémon fugiu.") }, { quoted: msg }) }
 
         const tipoBola = (args[0] || "pokebola").toLowerCase()
-        if (!BOLAS[tipoBola]) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐂𝐀𝐏𝐓𝐔𝐑𝐀𝐑", "Bola inválida.", `Use: \`${p}pokecapturar pokebola\``, null, nomeBot) }, { quoted: msg }) }
-        if ((u.pokebolas[tipoBola] || 0) < 1) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐂𝐀𝐏𝐓𝐔𝐑𝐀𝐑", "Sem essa bola.", `Compre com \`${p}pokebola ${tipoBola} 10\``, null, nomeBot) }, { quoted: msg }) }
+        if (!BOLAS[tipoBola]) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑪𝑨𝑷𝑻𝑼𝑹𝑨𝑹", "Bola inválida.", `Use: \`${p}pokecapturar pokebola\``) }, { quoted: msg }) }
+        if ((u.pokebolas[tipoBola] || 0) < 1) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑪𝑨𝑷𝑻𝑼𝑹𝑨𝑹", "Sem essa bola.", `Compre com \`${p}pokebola ${tipoBola} 10\``) }, { quoted: msg }) }
 
         u.pokebolas[tipoBola] -= 1
-
         const chance = calcularChanceCaptura(sel.pokemon, u, tipoBola)
         const sorteio = Math.random() * 100
         const pegou = sorteio < chance
@@ -532,7 +428,7 @@ ${boxFim(nomeBot, "Gotta catch 'em all!")}`
 
         if (!pegou) {
           salvarTreinadorUser(num, u)
-          await sock.sendMessage(jid, { text: msgErro("𝐅𝐔𝐆𝐈𝐔", "O Pokémon escapou!", `${sel.pokemon.emoji} ${sel.pokemon.nome}\nChance era: ${chance.toFixed(1)}%\nTente com uma bola melhor.`, null, nomeBot) }, { quoted: msg })
+          await sock.sendMessage(jid, { text: msgErro("𝑭𝑼𝑮𝑰𝑼", "O Pokémon escapou!", `${sel.pokemon.emoji} ${sel.pokemon.nome}\nChance era: ${chance.toFixed(1)}%`) }, { quoted: msg })
           return
         }
 
@@ -546,9 +442,9 @@ ${boxFim(nomeBot, "Gotta catch 'em all!")}`
         delSelvagem(jid)
 
         const destino = u.time.length <= 6 ? "Time" : "Box"
-        const shinyTxt = sel.pokemon.shiny ? "\n✨✨✨ **SHINY!** ✨✨✨" : ""
+        const shinyTxt = sel.pokemon.shiny ? "\n✨ *SHINY!* ✨" : ""
 
-        await sock.sendMessage(jid, { text: msgSucesso("𝐂𝐀𝐏𝐓𝐔𝐑𝐀𝐃𝐎!", `Você capturou ${sel.pokemon.emoji} ${sel.pokemon.nome}!`, `Raridade: ${sel.pokemon.raridade}\nNível: ${sel.pokemon.nivel}\nTipo: ${sel.pokemon.tipo}\nHP: ${sel.pokemon.hpMax}${shinyTxt}\n\nDestino: ${destino}`, `+20 XP${upou ? `\n⭐ Subiu para nível ${u.nivel}!` : ""}`, nomeBot), mentions: [sender] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("", "Pokémon capturado!", `${sel.pokemon.emoji} ${sel.pokemon.nome}\nRaridade: ${sel.pokemon.raridade}\nNível: ${sel.pokemon.nivel}\nTipo: ${sel.pokemon.tipo}\nHP: ${sel.pokemon.hpMax}${shinyTxt}\nDestino: ${destino}`), mentions: [sender] }, { quoted: msg })
       }
     },
 
@@ -557,20 +453,17 @@ ${boxFim(nomeBot, "Gotta catch 'em all!")}`
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
         const num = soNumero(sender)
         const { u } = getTreinador(num)
-        if (!u.time.length) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgAviso("𝐓𝐈𝐌𝐄", "Seu time está vazio.", `Capture com \`${p}pokecapturar\``, null, nomeBot) }, { quoted: msg }) }
+        if (!u.time.length) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑻𝑰𝑴𝑬", "Seu time está vazio.", `Capture com \`${p}pokecapturar\``) }, { quoted: msg }) }
 
         await reagir(sock, msg, "🌸")
-        let txt = `${boxTop(`𝐓𝐈𝐌𝐄 (${u.time.length}/6)`)}\n\n`
+        let txt = `𝑻𝑰𝑴𝑬 (${u.time.length}/6)\n\n`
         u.time.forEach((pkm, i) => {
-          const emojiRar = { Comum: "🟢", Incomum: "🔵", Raro: "🟣", Épico: "🟡", Lendário: "🔴", Mítico: "💀" }[pkm.raridade]
           const shiny = pkm.shiny ? " ✨" : ""
-          txt += `╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 #${i + 1} ${pkm.emoji} ${pkm.nome}${shiny} 𓆪\n↳ ${emojiRar} ${pkm.raridade}\n↳ 🎚️ Nível: ${pkm.nivel}\n↳ ${TIPOS[pkm.tipo]?.emoji || "❓"} ${pkm.tipo}\n↳ ❤️ ${pkm.hp}/${pkm.hpMax}\n╰┈┈┈┈୨୧┈┈┈┈╯\n`
+          txt += `#${i + 1} ${pkm.emoji} ${pkm.nome}${shiny}\nNível: ${pkm.nivel} | ${pkm.raridade}\nTipo: ${pkm.tipo} | HP: ${pkm.hp}/${pkm.hpMax}\n\n`
         })
-        txt += `\n${boxFim(nomeBot, "Pronto pra batalha!")}`
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
@@ -580,20 +473,18 @@ ${boxFim(nomeBot, "Gotta catch 'em all!")}`
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
         const num = soNumero(sender)
         const { u } = getTreinador(num)
-        if (!u.box.length) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgAviso("𝐁𝐎𝐗", "Seu box está vazio.", `Capture mais com \`${p}pokecapturar\``, null, nomeBot) }, { quoted: msg }) }
+        if (!u.box.length) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑩𝑶𝑿", "Seu box está vazio.", `Capture mais com \`${p}pokecapturar\``) }, { quoted: msg }) }
 
         await reagir(sock, msg, "🌸")
-        let txt = `${boxTop(`𝐁𝐎𝐗 (${u.box.length})`)}\n\n`
+        let txt = `𝑩𝑶𝑿 (${u.box.length})\n\n`
         u.box.slice(0, 20).forEach((pkm, i) => {
           const shiny = pkm.shiny ? " ✨" : ""
-          txt += `#${i + 1}. ${pkm.emoji} ${pkm.nome}${shiny} — Nv ${pkm.nivel}\n`
+          txt += `${i + 1}. ${pkm.emoji} ${pkm.nome}${shiny} — Nv ${pkm.nivel}\n`
         })
-        if (u.box.length > 20) txt += `\n... e mais ${u.box.length - 20} Pokémon`
-        txt += `\n${boxFim(nomeBot)}`
+        if (u.box.length > 20) txt += `\n... e mais ${u.box.length - 20}`
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
@@ -603,19 +494,16 @@ ${boxFim(nomeBot, "Gotta catch 'em all!")}`
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const num = soNumero(sender)
         const { u } = getTreinador(num)
         await reagir(sock, msg, "🌸")
 
-        let txt = `${boxTop("𝐏𝐎𝐊𝐄́𝐃𝐄𝐗")}\n\n`
-        txt += `╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 𝐓𝐎𝐓𝐀𝐋 𓆪\n↳ ${u.pokedex.length} / ${POKEMONS.length}\n╰┈┈┈┈୨୧┈┈┈┈╯\n\n`
+        let txt = `𝑷𝑶𝑲𝑬́𝑫𝑬𝑿\n\nTotal: ${u.pokedex.length} / ${POKEMONS.length}\n\n`
         for (const raridade of RARIDADES) {
           const total = POKEMONS.filter(x => x.raridade === raridade).length
           const capturados = u.pokedex.filter(id => POKEMONS.find(x => x.id === id && x.raridade === raridade)).length
-          txt += `↳ ${raridade}: ${capturados}/${total}\n`
+          txt += `${raridade}: ${capturados}/${total}\n`
         }
-        txt += `\n${boxFim(nomeBot)}`
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
@@ -625,19 +513,17 @@ ${boxFim(nomeBot, "Gotta catch 'em all!")}`
       async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const num = soNumero(sender)
         const { u } = getTreinador(num)
         const busca = normalizar(args.join(" "))
-        if (!busca) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐕𝐄𝐑", "Informe o nome.", "Use `+pokever pikachu`", null, nomeBot) }, { quoted: msg }) }
+        if (!busca) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgErro("𝑽𝑬𝑹", "Informe o nome.", "Use `+pokever pikachu`") }, { quoted: msg }) }
 
         const pkm = u.time.find(p2 => normalizar(p2.nome) === busca || p2.id === busca) || u.box.find(p2 => normalizar(p2.nome) === busca || p2.id === busca)
-        if (!pkm) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐕𝐄𝐑", "Você não tem esse Pokémon.", busca, null, nomeBot) }, { quoted: msg }) }
+        if (!pkm) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑽𝑬𝑹", "Você não tem esse Pokémon.", busca) }, { quoted: msg }) }
 
         await reagir(sock, msg, "🌸")
-        const emojiRar = { Comum: "🟢", Incomum: "🔵", Raro: "🟣", Épico: "🟡", Lendário: "🔴", Mítico: "💀" }[pkm.raridade]
         const shiny = pkm.shiny ? " ✨" : ""
-        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐎𝐊𝐄́𝐌𝐎𝐍", `${pkm.emoji} ${pkm.nome}${shiny}`, `${emojiRar} ${pkm.raridade}\n🎚️ Nível: ${pkm.nivel}\n${TIPOS[pkm.tipo]?.emoji || "❓"} ${pkm.tipo}\n\n❤️ HP: ${pkm.hp}/${pkm.hpMax}\n⚔️ ATK: ${pkm.atk}\n🛡️ DEF: ${pkm.def}\n💨 SPD: ${pkm.spd}`, null, nomeBot) }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("", `${pkm.emoji} ${pkm.nome}${shiny}`, `${pkm.raridade} | Nv ${pkm.nivel}\nTipo: ${pkm.tipo}\nHP: ${pkm.hp}/${pkm.hpMax}\nATK: ${pkm.atk} | DEF: ${pkm.def} | SPD: ${pkm.spd}`) }, { quoted: msg })
       }
     },
 
@@ -646,17 +532,16 @@ ${boxFim(nomeBot, "Gotta catch 'em all!")}`
       async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const num = soNumero(sender)
         const { u } = getTreinador(num)
         const idx = parseInt(args[0]) - 1
-        if (isNaN(idx) || idx < 0 || idx >= u.box.length) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐌𝐎𝐕𝐄𝐑", "Índice inválido.", "Use `+pokemover <nº>`", null, nomeBot) }, { quoted: msg }) }
-        if (u.time.length >= 6) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐌𝐎𝐕𝐄𝐑", "Time cheio.", "Armazene um primeiro.", null, nomeBot) }, { quoted: msg }) }
+        if (isNaN(idx) || idx < 0 || idx >= u.box.length) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgErro("𝑴𝑶𝑽𝑬𝑹", "Índice inválido.", "Use `+pokemover <nº>`") }, { quoted: msg }) }
+        if (u.time.length >= 6) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑴𝑶𝑽𝑬𝑹", "Time cheio.", "Armazene um primeiro.") }, { quoted: msg }) }
         const pkm = u.box.splice(idx, 1)[0]
         u.time.push(pkm)
         salvarTreinadorUser(num, u)
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐌𝐎𝐕𝐈𝐃𝐎", "Pokémon no time!", `${pkm.emoji} ${pkm.nome}`, null, nomeBot) }, { quoted: msg })
+        await reagir(sock, msg, "✅")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Pokémon no time!", `${pkm.emoji} ${pkm.nome}`) }, { quoted: msg })
       }
     },
 
@@ -665,19 +550,18 @@ ${boxFim(nomeBot, "Gotta catch 'em all!")}`
       async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const num = soNumero(sender)
         const { u } = getTreinador(num)
         const busca = normalizar(args.join(" "))
-        if (!busca) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐀𝐑𝐌𝐀𝐙𝐄𝐍𝐀𝐑", "Informe o nome.", "Use `+pokearmazenar pikachu`", null, nomeBot) }, { quoted: msg }) }
+        if (!busca) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgErro("𝑨𝑹𝑴𝑨𝒁𝑬𝑵𝑨𝑹", "Informe o nome.", "Use `+pokearmazenar pikachu`") }, { quoted: msg }) }
         const idx = u.time.findIndex(p2 => normalizar(p2.nome) === busca || p2.id === busca)
-        if (idx === -1) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐀𝐑𝐌𝐀𝐙𝐄𝐍𝐀𝐑", "Não está no time.", busca, null, nomeBot) }, { quoted: msg }) }
-        if (u.time.length <= 1) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐀𝐑𝐌𝐀𝐙𝐄𝐍𝐀𝐑", "Precisa ter ao menos 1 no time.", "—", null, nomeBot) }, { quoted: msg }) }
+        if (idx === -1) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑨𝑹𝑴𝑨𝒁𝑬𝑵𝑨𝑹", "Não está no time.", busca) }, { quoted: msg }) }
+        if (u.time.length <= 1) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑨𝑹𝑴𝑨𝒁𝑬𝑵𝑨𝑹", "Precisa ter ao menos 1 no time.") }, { quoted: msg }) }
         const pkm = u.time.splice(idx, 1)[0]
         u.box.push(pkm)
         salvarTreinadorUser(num, u)
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐑𝐌𝐀𝐙𝐄𝐍𝐀𝐃𝐎", "Pokémon no box!", `${pkm.emoji} ${pkm.nome}`, null, nomeBot) }, { quoted: msg })
+        await reagir(sock, msg, "✅")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Pokémon no box!", `${pkm.emoji} ${pkm.nome}`) }, { quoted: msg })
       }
     },
 
@@ -686,60 +570,42 @@ ${boxFim(nomeBot, "Gotta catch 'em all!")}`
       async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const num = soNumero(sender)
         const { u } = getTreinador(num)
         const busca = normalizar(args.join(" "))
-        if (!busca) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐋𝐈𝐁𝐄𝐑𝐓𝐀𝐑", "Informe o nome.", "Use `+pokelibertar pikachu`", null, nomeBot) }, { quoted: msg }) }
+        if (!busca) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgErro("𝑳𝑰𝑩𝑬𝑹𝑻𝑨𝑹", "Informe o nome.", "Use `+pokelibertar pikachu`") }, { quoted: msg }) }
         const idx = u.box.findIndex(p2 => normalizar(p2.nome) === busca || p2.id === busca)
-        if (idx === -1) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐋𝐈𝐁𝐄𝐑𝐓𝐀𝐑", "Não está no box.", busca, null, nomeBot) }, { quoted: msg }) }
+        if (idx === -1) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑳𝑰𝑩𝑬𝑹𝑻𝑨𝑹", "Não está no box.", busca) }, { quoted: msg }) }
         const pkm = u.box.splice(idx, 1)[0]
         const upou = darXpTreinador(u, 10)
         u.pokecoins += 50
         salvarTreinadorUser(num, u)
         await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐈𝐁𝐄𝐑𝐓𝐀𝐃𝐎", "Pokémon voltou à natureza.", `${pkm.emoji} ${pkm.nome}\n+10 XP\n+50 PokéCoins${upou ? `\n⭐ Subiu de nível!` : ""}`, null, nomeBot) }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("", "Pokémon liberado.", `${pkm.emoji} ${pkm.nome}\n+10 XP\n+50 PokéCoins${upou ? `\n⭐ Subiu de nível!` : ""}`) }, { quoted: msg })
       }
-    },    pvppoke: {
+    },
+
+    pvppoke: {
       aliases: ["pvppokemon", "lobbypoke", "lobby"],
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
         const num = soNumero(sender)
-
         const { u } = getTreinador(num)
-        if (!u.time.length) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐏𝐯𝐏", "Você não tem Pokémon.", `Capture com \`${p}pokecapturar\``, null, nomeBot) }, { quoted: msg }) }
+        if (!u.time.length) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑷𝒗𝑷", "Você não tem Pokémon.", `Capture com \`${p}pokecapturar\``) }, { quoted: msg }) }
 
         const lobbyAtual = getLobby(jid)
         if (lobbyAtual) {
-          if (lobbyAtual.jogador1 === num) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgAviso("𝐋𝐎𝐁𝐁𝐘", "Você já tem um lobby aberto.", "Aguarde alguém entrar.", null, nomeBot) }, { quoted: msg }) }
-          await reagir(sock, msg, "💨")
-          return sock.sendMessage(jid, { text: msgErro("𝐋𝐎𝐁𝐁𝐘", "Já tem um lobby aberto neste grupo.", "Aguarde ele fechar.", null, nomeBot) }, { quoted: msg })
+          if (lobbyAtual.jogador1 === num) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgAviso("𝑳𝑶𝑩𝑩𝒀", "Você já tem um lobby aberto.", "Aguarde alguém entrar.") }, { quoted: msg }) }
+          await reagir(sock, msg, "❌")
+          return sock.sendMessage(jid, { text: msgErro("𝑳𝑶𝑩𝑩𝒀", "Já tem um lobby aberto neste grupo.") }, { quoted: msg })
         }
 
         setLobby(jid, { jogador1: num, jogador2: null, estado: "esperando", criadoEm: Date.now(), escolha1: null, escolha2: null, pokemon1: null, pokemon2: null })
 
         await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, {
-          text: `${boxTop("𝐋𝐎𝐁𝐁𝐘 𝐏𝐯𝐏")}
-
-╭┈┈┈┈୨┈┈┈┈╮
-𓆩 𝐉𝐎𝐆𝐀𝐃𝐎𝐑 𝟏 𓆪
-↳ @${num}
-↳ ${u.time.length} Pokémon no time
-╰┈┈┈┈୨┈┈┈┈╯
-
-╭┈┈┈┈୨┈┈┈┈╮
-𓆩 𝐀𝐆𝐔𝐀𝐑𝐃𝐀𝐍𝐃𝐎 𓆪
-↳ Aguardando oponente...
-↳ \`${p}entrarpvp\` para entrar
-╰┈┈┈┈୨┈┈┈┈╯
-
-${boxFim(nomeBot, "Entre quem tiver coragem!")}`,
-          mentions: [`${num}@s.whatsapp.net`]
-        }, { quoted: msg })
+        await sock.sendMessage(jid, { text: `𝑳𝑶𝑩𝑩𝒀 𝑷𝒗𝑷\n\n@${num} abriu um lobby!\n\nUse \`${p}entrarpvp\` para entrar.`, mentions: [`${num}@s.whatsapp.net`] }, { quoted: msg })
       }
     },
 
@@ -748,17 +614,16 @@ ${boxFim(nomeBot, "Entre quem tiver coragem!")}`,
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
         const num = soNumero(sender)
 
         const lobby = getLobby(jid)
-        if (!lobby) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐋𝐎𝐁𝐁𝐘", "Nenhum lobby aberto.", `Use \`${p}pvppoke\` pra abrir um.`, null, nomeBot) }, { quoted: msg }) }
-        if (lobby.jogador1 === num) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐋𝐎𝐁𝐁𝐘", "Você é o jogador 1.", "Aguarde alguém entrar.", null, nomeBot) }, { quoted: msg }) }
-        if (lobby.jogador2) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐋𝐎𝐁𝐁𝐘", "Lobby já está cheio.", "Aguarde o próximo.", null, nomeBot) }, { quoted: msg }) }
+        if (!lobby) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑳𝑶𝑩𝑩𝒀", "Nenhum lobby aberto.", `Use \`${p}pvppoke\``) }, { quoted: msg }) }
+        if (lobby.jogador1 === num) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgErro("𝑳𝑶𝑩𝑩𝒀", "Você é o jogador 1.", "Aguarde alguém entrar.") }, { quoted: msg }) }
+        if (lobby.jogador2) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑳𝑶𝑩𝑩𝒀", "Lobby já está cheio.") }, { quoted: msg }) }
 
         const { u: u2 } = getTreinador(num)
-        if (!u2.time.length) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐏𝐯𝐏", "Você não tem Pokémon.", `Capture com \`${p}pokecapturar\``, null, nomeBot) }, { quoted: msg }) }
+        if (!u2.time.length) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑷𝒗𝑷", "Você não tem Pokémon.") }, { quoted: msg }) }
 
         lobby.jogador2 = num
         lobby.estado = "escolhendo"
@@ -766,27 +631,11 @@ ${boxFim(nomeBot, "Entre quem tiver coragem!")}`,
 
         const { u: u1 } = getTreinador(lobby.jogador1)
 
-        let txt = `${boxTop("𝐁𝐀𝐓𝐀𝐋𝐇𝐀 𝐏𝐯𝐏")}
-
-╭┈┈┈┈୨┈┈┈┈╮
-𓆩 @${lobby.jogador1} 𓆪
-`
-        u1.time.forEach((pk, i) => { txt += `↳ #${i + 1} ${pk.emoji} ${pk.nome} (Nv ${pk.nivel}) — ${pk.tipo}\n` })
-        txt += `╰┈┈┈┈୨┈┈┈┈╯\n\n`
-
-        txt += `╭┈┈┈┈୨┈┈┈┈╮
-𓆩 @${num} 𓆪
-`
-        u2.time.forEach((pk, i) => { txt += `↳ #${i + 1} ${pk.emoji} ${pk.nome} (Nv ${pk.nivel}) — ${pk.tipo}\n` })
-        txt += `╰┈┈┈┈୨┈┈┈┈╯\n\n`
-
-        txt += `╭┈┈┈┈୨┈┈┈┈╮
-𓆩 𝐄𝐒𝐂𝐎𝐋𝐇𝐀𝐌 𓆪
-↳ @${lobby.jogador1}: \`${p}escolherpkm <nº>\`
-↳ @${num}: \`${p}escolherpkm <nº>\`
-╰┈┈┈┈୨┈┈┈┈╯
-
-${boxFim(nomeBot, "Escolham seus campeões!")}`
+        let txt = `𝑩𝑨𝑻𝑨𝑳𝑯𝑨 𝑷𝒗𝑷\n\n@${lobby.jogador1}:\n`
+        u1.time.forEach((pk, i) => { txt += `${i + 1}. ${pk.emoji} ${pk.nome} (Nv ${pk.nivel})\n` })
+        txt += `\n@${num}:\n`
+        u2.time.forEach((pk, i) => { txt += `${i + 1}. ${pk.emoji} ${pk.nome} (Nv ${pk.nivel})\n` })
+        txt += `\nEscolham:\n${p}escolherpkm <nº>`
 
         await reagir(sock, msg, "🌸")
         await sock.sendMessage(jid, { text: txt, mentions: [`${lobby.jogador1}@s.whatsapp.net`, `${num}@s.whatsapp.net`] }, { quoted: msg })
@@ -798,14 +647,13 @@ ${boxFim(nomeBot, "Escolham seus campeões!")}`
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const num = soNumero(sender)
         const lobby = getLobby(jid)
-        if (!lobby) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐑𝐄𝐂𝐔𝐒𝐀𝐑", "Nenhum lobby aberto.", "—", null, nomeBot) }, { quoted: msg }) }
-        if (lobby.jogador1 !== num && lobby.jogador2 !== num) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐑𝐄𝐂𝐔𝐒𝐀𝐑", "Você não está nesse lobby.", "—", null, nomeBot) }, { quoted: msg }) }
+        if (!lobby) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑹𝑬𝑪𝑼𝑺𝑨𝑹", "Nenhum lobby aberto.") }, { quoted: msg }) }
+        if (lobby.jogador1 !== num && lobby.jogador2 !== num) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑹𝑬𝑪𝑼𝑺𝑨𝑹", "Você não está nesse lobby.") }, { quoted: msg }) }
         delLobby(jid)
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐑𝐄𝐂𝐔𝐒𝐀𝐃𝐎", "Lobby cancelado.", `@${num} cancelou.`, null, nomeBot), mentions: [`${num}@s.whatsapp.net`] }, { quoted: msg })
+        await reagir(sock, msg, "🗑️")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Lobby cancelado.", `@${num}`), mentions: [`${num}@s.whatsapp.net`] }, { quoted: msg })
       }
     },
 
@@ -814,33 +662,32 @@ ${boxFim(nomeBot, "Escolham seus campeões!")}`
       async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
         const num = soNumero(sender)
 
         const lobby = getLobby(jid)
-        if (!lobby) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐒𝐂𝐎𝐋𝐇𝐄𝐑", "Nenhuma batalha ativa.", `Use \`${p}pvppoke\``, null, nomeBot) }, { quoted: msg }) }
-        if (lobby.estado !== "escolhendo") { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐒𝐂𝐎𝐋𝐇𝐄𝐑", "Batalha não está na fase de escolha.", "—", null, nomeBot) }, { quoted: msg }) }
-        if (num !== lobby.jogador1 && num !== lobby.jogador2) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐒𝐂𝐎𝐋𝐇𝐄𝐑", "Você não está nessa batalha.", "—", null, nomeBot) }, { quoted: msg }) }
+        if (!lobby) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑬𝑺𝑪𝑶𝑳𝑯𝑬𝑹", "Nenhuma batalha ativa.", `Use \`${p}pvppoke\``) }, { quoted: msg }) }
+        if (lobby.estado !== "escolhendo") { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑬𝑺𝑪𝑶𝑳𝑯𝑬𝑹", "Batalha não está na fase de escolha.") }, { quoted: msg }) }
+        if (num !== lobby.jogador1 && num !== lobby.jogador2) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑬𝑺𝑪𝑶𝑳𝑯𝑬𝑹", "Você não está nessa batalha.") }, { quoted: msg }) }
 
         const idx = parseInt(args[0]) - 1
-        if (isNaN(idx) || idx < 0) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐒𝐂𝐎𝐋𝐇𝐄𝐑", "Índice inválido.", `Use \`${p}escolherpkm 1\``, null, nomeBot) }, { quoted: msg }) }
+        if (isNaN(idx) || idx < 0) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgErro("𝑬𝑺𝑪𝑶𝑳𝑯𝑬𝑹", "Índice inválido.", `Use \`${p}escolherpkm 1\``) }, { quoted: msg }) }
 
         const { u } = getTreinador(num)
-        if (idx >= u.time.length) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐒𝐂𝐎𝐋𝐇𝐄𝐑", "Pokémon não existe.", "—", null, nomeBot) }, { quoted: msg }) }
+        if (idx >= u.time.length) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑬𝑺𝑪𝑶𝑳𝑯𝑬𝑹", "Pokémon não existe.") }, { quoted: msg }) }
         const pkm = u.time[idx]
 
         if (num === lobby.jogador1) {
-          if (lobby.escolha1 !== null) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐒𝐂𝐎𝐋𝐇𝐄𝐑", "Você já escolheu.", `${lobby.pokemon1?.emoji} ${lobby.pokemon1?.nome}`, null, nomeBot) }, { quoted: msg }) }
+          if (lobby.escolha1 !== null) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgErro("𝑬𝑺𝑪𝑶𝑳𝑯𝑬𝑹", "Você já escolheu.", `${lobby.pokemon1?.emoji} ${lobby.pokemon1?.nome}`) }, { quoted: msg }) }
           lobby.escolha1 = idx; lobby.pokemon1 = pkm
         } else {
-          if (lobby.escolha2 !== null) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐒𝐂𝐎𝐋𝐇𝐄𝐑", "Você já escolheu.", `${lobby.pokemon2?.emoji} ${lobby.pokemon2?.nome}`, null, nomeBot) }, { quoted: msg }) }
+          if (lobby.escolha2 !== null) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgErro("𝑬𝑺𝑪𝑶𝑳𝑯𝑬𝑹", "Você já escolheu.", `${lobby.pokemon2?.emoji} ${lobby.pokemon2?.nome}`) }, { quoted: msg }) }
           lobby.escolha2 = idx; lobby.pokemon2 = pkm
         }
         setLobby(jid, lobby)
 
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐄𝐒𝐂𝐎𝐋𝐇𝐈𝐃𝐎", "Pokémon pronto!", `${pkm.emoji} ${pkm.nome} (Nv ${pkm.nivel})`, null, nomeBot) }, { quoted: msg })
+        await reagir(sock, msg, "✅")
+        await sock.sendMessage(jid, { text: msgSucesso("", "Pokémon pronto!", `${pkm.emoji} ${pkm.nome} (Nv ${pkm.nivel})`) }, { quoted: msg })
 
         if (lobby.escolha1 !== null && lobby.escolha2 !== null) {
           const p1 = lobby.pokemon1
@@ -881,31 +728,7 @@ ${boxFim(nomeBot, "Escolham seus campeões!")}`
           salvarTreinadorUser(lobby.jogador1, u1)
           salvarTreinadorUser(lobby.jogador2, u2)
 
-          const resultadoTxt = `${boxTop("𝐁𝐀𝐓𝐀𝐋𝐇𝐀 𝐏𝐯𝐏")}
-
-╭┈┈┈┈୨┈┈┈┈╮
-𓆩 ${p1.emoji} ${p1.nome} 𓆪
-↳ Dano: ${dano1}
-↳ HP: ${p1.hp} → ${Math.max(0, hp1Restante)}
-╰┈┈┈┈୨┈┈┈┈╯
-
-╭┈┈┈┈୨┈┈┈┈╮
-𓆩 ${p2.emoji} ${p2.nome} 𓆪
-↳ Dano: ${dano2}
-↳ HP: ${p2.hp} → ${Math.max(0, hp2Restante)}
-╰┈┈┈┈୨┈┈┈┈╯
-
-╭┈┈┈┈୨┈┈┈┈╮
-𓆩 𝐕𝐄𝐍𝐂𝐄𝐃𝐎𝐑 𓆪
-↳ ${vencedor === "empate" ? "🤝 Empate!" : `🏆 @${vencedor}`}
-╰┈┈┈┈୨┈┈┈┈╯
-
-╭┈┈┈┈୨┈┈┈┈╮
-𓆩 𝐑𝐄𝐂𝐎𝐌𝐏𝐄𝐍𝐒𝐀 𓆪
-↳ ${recompensaTxt}
-╰┈┈┈┈୨┈┈┈┈╯
-
-${boxFim(nomeBot, "GG!")}`
+          const resultadoTxt = `𝑩𝑨𝑻𝑨𝑳𝑯𝑨 𝑷𝒗𝑷\n\n${p1.emoji} ${p1.nome}\nDano: ${dano1} | HP: ${p1.hp} → ${Math.max(0, hp1Restante)}\n\n${p2.emoji} ${p2.nome}\nDano: ${dano2} | HP: ${p2.hp} → ${Math.max(0, hp2Restante)}\n\n${vencedor === "empate" ? "🤝 Empate!" : `🏆 @${vencedor}`}\n\n${recompensaTxt}`
 
           await sock.sendMessage(jid, { text: resultadoTxt, mentions: [`${lobby.jogador1}@s.whatsapp.net`, `${lobby.jogador2}@s.whatsapp.net`] }, { quoted: msg })
         }
@@ -917,22 +740,14 @@ ${boxFim(nomeBot, "GG!")}`
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const num = soNumero(sender)
         const { u } = getTreinador(num)
         await reagir(sock, msg, "🌸")
 
-        let txt = `${boxTop("𝐋𝐎𝐉𝐀 𝐏𝐎𝐊𝐄́𝐌𝐎𝐍")}
-
-╭┈┈┈┈୨┈┈┈┈╮
-𓆩 𝐒𝐄𝐔 𝐒𝐀𝐋𝐃𝐎 𓆪
-↳ ${u.pokecoins} PokéCoins
-╰┈┈┈┈୨┈┈┈┈╯
-`
+        let txt = `𝑳𝑶𝑱𝑨 𝑷𝑶𝑲𝑬́𝑴𝑶𝑵\n\nSeu saldo: ${u.pokecoins} PokéCoins\n\n`
         for (const [id, bola] of Object.entries(BOLAS)) {
-          txt += `\n╭┈┈┈┈୨┈┈┈┈╮\n𓆩 ${bola.emoji} ${bola.nome} 𓆪\n↳ 💰 ${bola.preco} PokéCoins\n↳ 🎯 Bônus: +${bola.bonus}%\n↳ 🛒 \`+pokebola ${id} <qtd>\`\n╰┈┈┈┈୨┈┈┈┈╯`
+          txt += `${bola.emoji} ${bola.nome}\n${bola.preco} PokéCoins | +${bola.bonus}%\n${p}pokebola ${id} <qtd>\n\n`
         }
-        txt += `\n\n${boxFim(nomeBot, "Compre e capture!")}`
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
@@ -942,11 +757,10 @@ ${boxFim(nomeBot, "GG!")}`
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const num = soNumero(sender)
         const { u } = getTreinador(num)
         await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐂𝐀𝐑𝐓𝐄𝐈𝐑𝐀", "Seu saldo Pokémon.", `💎 PokéCoins: *${u.pokecoins}*\n🏆 Vitórias: ${u.vitorias}\n💀 Derrotas: ${u.derrotas}\n🎚️ Nível: ${u.nivel}`, null, nomeBot) }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("𝑪𝑨𝑹𝑻𝑬𝑰𝑹𝑨", "Seu saldo Pokémon.", `PokéCoins: ${u.pokecoins}\nVitórias: ${u.vitorias}\nDerrotas: ${u.derrotas}\nNível: ${u.nivel}`) }, { quoted: msg })
       }
     },
 
@@ -955,7 +769,6 @@ ${boxFim(nomeBot, "GG!")}`
       async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const num = soNumero(sender)
         const { u } = getTreinador(num)
         const agora = Date.now()
@@ -964,7 +777,7 @@ ${boxFim(nomeBot, "GG!")}`
           const falta = 30 * 60 * 1000 - (agora - u.ultimaMissao)
           const min = Math.floor(falta / 60000), seg = Math.floor((falta % 60000) / 1000)
           await reagir(sock, msg, "⏰")
-          return sock.sendMessage(jid, { text: msgAviso("𝐌𝐈𝐒𝐒𝐀̃𝐎", "Aguarde para nova missão.", `${min}min ${seg}s`, null, nomeBot) }, { quoted: msg })
+          return sock.sendMessage(jid, { text: msgAviso("𝑴𝑰𝑺𝑺𝑨𝑶", "Aguarde para nova missão.", `${min}min ${seg}s`) }, { quoted: msg })
         }
 
         const missoes = [
@@ -981,7 +794,7 @@ ${boxFim(nomeBot, "GG!")}`
         salvarTreinadorUser(num, u)
 
         await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐌𝐈𝐒𝐒𝐀̃𝐎 𝐂𝐎𝐍𝐂𝐋𝐔𝐈́𝐃𝐀", m.nome, `+${m.xp} XP\n+${m.coins} PokéCoins${upou ? `\n⭐ Subiu para nível ${u.nivel}!` : ""}`, null, nomeBot) }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("𝑴𝑰𝑺𝑺𝑨𝑶 𝑪𝑶𝑵𝑪𝑳𝑼𝑰́𝑫𝑨", m.nome, `+${m.xp} XP\n+${m.coins} PokéCoins${upou ? `\n⭐ Subiu para nível ${u.nivel}!` : ""}`) }, { quoted: msg })
       }
     },
 
@@ -990,20 +803,17 @@ ${boxFim(nomeBot, "GG!")}`
       async executar({ sock, msg, db, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const t = dbLer("pokemon.json", { treinadores: {} })
         const treinadores = t.treinadores || {}
         const lista = Object.entries(treinadores).map(([num, u]) => ({ num, coins: u.pokecoins || 0, nivel: u.nivel || 1, vitorias: u.vitorias || 0 }))
-        if (!lista.length) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgAviso("𝐑𝐀𝐍𝐊𝐈𝐍𝐆", "Ninguém jogou ainda.", "—", null, nomeBot) }, { quoted: msg }) }
+        if (!lista.length) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgAviso("𝑹𝑨𝑵𝑲𝑰𝑵𝑮", "Ninguém jogou ainda.") }, { quoted: msg }) }
         lista.sort((a, b) => b.coins - a.coins)
         const top10 = lista.slice(0, 10)
 
-        let txt = `${boxTop("𝐑𝐀𝐍𝐊𝐈𝐍𝐆 𝐏𝐎𝐊𝐄́𝐌𝐎𝐍")}\n\n`
+        let txt = `𝑹𝑨𝑵𝑲𝑰𝑵𝑮 𝑷𝑶𝑲𝑬́𝑴𝑶𝑵\n\n`
         top10.forEach((t2, i) => {
-          const medalha = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "🌸"
-          txt += `╭┈┈┈┈୨┈┈┈┈╮\n𓆩 ${medalha} #${i + 1} 𓆪\n↳ @${t2.num}\n↳ 💎 ${t2.coins} PokéCoins\n↳ 🏆 ${t2.vitorias} vitórias\n↳ 🎚️ Nível ${t2.nivel}\n╰┈┈┈┈୨┈┈┈┈╯\n`
+          txt += `${i + 1}. @${t2.num} — ${t2.coins} PokéCoins | Nv ${t2.nivel} | ${t2.vitorias}🏆\n`
         })
-        txt += `\n${boxFim(nomeBot, "TOP 10 PokéCoins.")}`
         await reagir(sock, msg, "🌸")
         await sock.sendMessage(jid, { text: txt, mentions: top10.map(t2 => t2.num + "@s.whatsapp.net") }, { quoted: msg })
       }
@@ -1013,11 +823,10 @@ ${boxFim(nomeBot, "GG!")}`
       aliases: ["gerarkeypokemon", "criarkeypkc"],
       donoOnly: true,
       async executar({ sock, msg, args, db, isDono, isSubDono, prefixoAtivo }) {
-        if (!isDono && !isSubDono) { await reagir(sock, msg, "💨"); return }
+        if (!isDono && !isSubDono) { await reagir(sock, msg, "🚫"); return }
         const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
         const qtd = parseInt(args[0])
-        if (!qtd || qtd <= 0) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐊𝐄𝐘 𝐏𝐊𝐂", "Quantidade inválida.", "Use `+gerarkeypkc <qtd>`", null, nomeBot) }, { quoted: msg }) }
+        if (!qtd || qtd <= 0) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgErro("𝑲𝑬𝒀 𝑷𝑲𝑪", "Quantidade inválida.", "Use `+gerarkeypkc <qtd>`") }, { quoted: msg }) }
 
         const dbKeys = dbLer("keyspkc.json", { keys: {} })
         const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -1028,7 +837,7 @@ ${boxFim(nomeBot, "GG!")}`
         dbSalvar("keyspkc.json", dbKeys)
 
         await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐊𝐄𝐘 𝐏𝐊𝐂", "Nova key criada!", `Key: \`${novaKey}\`\nValor: *${qtd} PokéCoins*\n\nUso único.`, `Entregue com \`+keypkc ${novaKey}\``, nomeBot) }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("𝑲𝑬𝒀 𝑷𝑲𝑪", "Nova key criada!", `Key: \`${novaKey}\`\nValor: ${qtd} PokéCoins\n\nUso único.`) }, { quoted: msg })
       }
     },
 
@@ -1037,18 +846,17 @@ ${boxFim(nomeBot, "GG!")}`
       async executar({ sock, msg, args, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
         if (bloquearSeOff(sock, msg, db, prefixoAtivo)) return
-        const nomeBot = nomeBotDb(db)
         const num = soNumero(sender)
         const keyInserida = (args[0] || "").toUpperCase().trim()
-        if (!keyInserida) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐊𝐄𝐘 𝐏𝐊𝐂", "Key em falta.", "Use `+keypkc <key>`", null, nomeBot) }, { quoted: msg }) }
+        if (!keyInserida) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgErro("𝑲𝑬𝒀 𝑷𝑲𝑪", "Key em falta.", "Use `+keypkc <key>`") }, { quoted: msg }) }
 
         const dbKeys = dbLer("keyspkc.json", { keys: {} })
         let keyReal = null
         for (const k in dbKeys.keys) { if (k.toUpperCase() === keyInserida) { keyReal = k; break } }
-        if (!keyReal || !dbKeys.keys[keyReal]) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐊𝐄𝐘 𝐏𝐊𝐂", "Key inválida.", "—", null, nomeBot) }, { quoted: msg }) }
+        if (!keyReal || !dbKeys.keys[keyReal]) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑲𝑬𝒀 𝑷𝑲𝑪", "Key inválida.") }, { quoted: msg }) }
 
         const dataKey = dbKeys.keys[keyReal]
-        if (dataKey.usado) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐊𝐄𝐘 𝐏𝐊𝐂", "Key já resgatada.", "—", null, nomeBot) }, { quoted: msg }) }
+        if (dataKey.usado) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑲𝑬𝒀 𝑷𝑲𝑪", "Key já resgatada.") }, { quoted: msg }) }
 
         const { u } = getTreinador(num)
         u.pokecoins += dataKey.pokecoins
@@ -1059,7 +867,7 @@ ${boxFim(nomeBot, "GG!")}`
         dbSalvar("keyspkc.json", dbKeys)
 
         await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐊𝐄𝐘 𝐏𝐊𝐂", "Key resgatada!", `+${dataKey.pokecoins} PokéCoins\nSaldo: ${u.pokecoins}`, null, nomeBot), mentions: [`${num}@s.whatsapp.net`] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("𝑲𝑬𝒀 𝑷𝑲𝑪", "Key resgatada!", `+${dataKey.pokecoins} PokéCoins\nSaldo: ${u.pokecoins}`), mentions: [`${num}@s.whatsapp.net`] }, { quoted: msg })
       }
     }
 
