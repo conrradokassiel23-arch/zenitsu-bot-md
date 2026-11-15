@@ -44,6 +44,9 @@ const rl = readline.createInterface({ input: process.stdin, output: process.stdo
 const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 const groupCache = new NodeCache({ stdTTL: 5 * 60, useClones: false });
 
+// 🔥 MEMÓRIA GLOBAL DE ÁUDIO
+global.esperandoAudio = new Set();
+
 function bootstrap() {
   const pastas = [DATA_DIR, MENUS_DIR, path.join(MENUS_DIR, "menu-adm"), path.join(MENUS_DIR, "menu-dono"), path.join(MENUS_DIR, "menu-vip"), path.join(MENUS_DIR, "menu-rpg"), path.join(MENUS_DIR, "menu-fazenda"), path.join(MENUS_DIR, "menu-fnaf"), path.join(MENUS_DIR, "menu-cidade"), path.join(MENUS_DIR, "menu-util"), path.join(MENUS_DIR, "menu-dragao"), path.join(MENUS_DIR, "menu-pokemon"), path.join(MENUS_DIR, "menu-membros")];
   for (const pasta of pastas) { if (!fs.existsSync(pasta)) { try { fs.mkdirSync(pasta, { recursive: true }); } catch (e) {} } }
@@ -101,9 +104,44 @@ const db = {
   blockcmd: () => dbLer("blockcmd.json", {}), salvarBlockcmd: (d) => dbSalvar("blockcmd.json", d)
 };
 
-function getAlvo(msg) { const ctx = (msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.contextInfo) || (msg.message && msg.message.imageMessage && msg.message.imageMessage.contextInfo) || (msg.message && msg.message.videoMessage && msg.message.videoMessage.contextInfo) || {}; const mentions = ctx.mentionedJid || []; if (mentions.length) return mentions[0]; if (ctx.participant) return ctx.participant; return null; }
-function soNumero(jid) { if (!jid) return ""; if (typeof jid === "object") jid = jid.phoneNumber || jid.id || ""; return String(jid).split("@")[0].split(":")[0].replace(/\D/g, ""); }
-function getTexto(msg) { return (msg.message && msg.message.conversation) || (msg.message && msg.message.extendedTextMessage && msg.message.extendedTextMessage.text) || (msg.message && msg.message.imageMessage && msg.message.imageMessage.caption) || (msg.message && msg.message.videoMessage && msg.message.videoMessage.caption) || ""; }
+function getAlvo(msg) {
+  if (!msg || !msg.message) return null;
+  const m = msg.message;
+  const ctx = m.extendedTextMessage?.contextInfo || 
+              m.imageMessage?.contextInfo || 
+              m.videoMessage?.contextInfo || 
+              m.audioMessage?.contextInfo || 
+              m.documentMessage?.contextInfo || 
+              m.stickerMessage?.contextInfo || 
+              m.buttonsResponseMessage?.contextInfo ||
+              m.listResponseMessage?.contextInfo ||
+              m.templateButtonReplyMessage?.contextInfo || {};
+
+  const mentions = ctx.mentionedJid || [];
+  if (mentions.length > 0) return mentions[0];
+  if (ctx.participant) return ctx.participant;
+
+  const textoAlvo = m.conversation || (m.extendedTextMessage && m.extendedTextMessage.text) || (m.imageMessage && m.imageMessage.caption) || (m.videoMessage && m.videoMessage.caption) || "";
+  const achou = String(textoAlvo).match(/@(\d{7,16})/);
+  if (achou) return achou[1] + "@s.whatsapp.net";
+  return null;
+}
+
+function getTexto(msg) { 
+  if (!msg || !msg.message) return "";
+  const m = msg.message;
+  return (
+    m.conversation ||
+    (m.extendedTextMessage && m.extendedTextMessage.text) ||
+    (m.imageMessage && m.imageMessage.caption) ||
+    (m.videoMessage && m.videoMessage.caption) ||
+    (m.documentMessage && m.documentMessage.caption) ||
+    (m.audioMessage && m.audioMessage.caption) ||
+    (m.ptvMessage && m.ptvMessage.caption) ||
+    (msg.body && typeof msg.body === 'string' ? msg.body : "") ||
+    ""
+  );
+}
 function getTextoBotao(msg) { try { if (msg.message && msg.message.buttonsResponseMessage) return msg.message.buttonsResponseMessage.selectedButtonId || ""; if (msg.message && msg.message.templateButtonReplyMessage) return msg.message.templateButtonReplyMessage.selectedId || ""; if (msg.message && msg.message.listResponseMessage) return msg.message.listResponseMessage.singleSelectReply && msg.message.listResponseMessage.singleSelectReply.selectedRowId || ""; } catch (_) {} return ""; }
 function naListaNegra(jidGrupo, jidOuNum) { const num = soNumero(jidOuNum); if (!num) return false; return (db.listanegra()[jidGrupo] || []).includes(num); }
 function aluguelAtivo() { return db.aluguel().ativo === true; }
@@ -115,6 +153,7 @@ function ehSubAdmin(jidGrupo, jidUser) { const subs = db.subadmins()[jidGrupo] |
 function botEhAdmin(meta, sock) { if (!meta) return false; const botIds = [sock.user && sock.user.id, sock.user && sock.user.lid, sock.user && sock.user.jid].filter(Boolean).map(soNumero); const botPart = meta.participants.find(p => { const ids = [p.id, p.lid, p.phoneNumber].filter(Boolean).map(soNumero); return ids.some(id => botIds.includes(id)); }); return botPart && (botPart.admin === "admin" || botPart.admin === "superadmin"); }
 function dataBrasil() { return new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).split("/").reverse().join("-"); }
 function horaBrasil() { return new Date().toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hour12: false }); }
+function soNumero(jid) { if (!jid) return ""; if (typeof jid === "object") jid = jid.phoneNumber || jid.id || ""; return String(jid).split("@")[0].split(":")[0].replace(/\D/g, ""); }
 
 function boxTop(titulo) {
   return `╔═══ஓ๑♡๑ஓ═══╗
@@ -189,35 +228,31 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
   const texto = getTexto(msg); 
   if (!texto) return false;
 
-  const botNum = soNumero(sock.user?.id); 
+  const prefixoIA = (conf.multiprefixo && conf.prefixo) ? conf.prefixo : (db.config().prefixoGlobal || config.prefixo || "+");
+  if (prefixoIA && texto.startsWith(prefixoIA)) return false;
+
+  const botIds = [soNumero(sock.user?.id), soNumero(sock.user?.lid)].filter(Boolean);
   const botNome = (db.config().nomeBot || "Rimuru").toLowerCase();
   
-  // 🔍 BUSCA O CONTEXTO EM TODOS OS LUGARES POSSÍVEIS (CORREÇÃO DO REPLY)
   let ctx = {};
   if (msg.message?.extendedTextMessage?.contextInfo) ctx = msg.message.extendedTextMessage.contextInfo;
   else if (msg.message?.imageMessage?.contextInfo) ctx = msg.message.imageMessage.contextInfo;
   else if (msg.message?.videoMessage?.contextInfo) ctx = msg.message.videoMessage.contextInfo;
   else if (msg.message?.audioMessage?.contextInfo) ctx = msg.message.audioMessage.contextInfo;
   
-  // Junta todas as menções possíveis
   const mentionedJid = ctx.mentionedJid || [];
   
-  // Verifica se o bot foi marcado de todas as formas
-  const mencionadoPorId = mentionedJid.some(j => soNumero(j) === botNum);
+  const mencionadoPorId = mentionedJid.some(j => botIds.includes(soNumero(j)));
   const mencionadoPorTexto = texto.toLowerCase().includes("@" + botNome);
   
-  // Verifica se respondeu a mensagem do bot
   let respondendoBot = false;
-  if (ctx.participant && soNumero(ctx.participant) === botNum) respondendoBot = true;
-  if (ctx.remoteJid && soNumero(ctx.remoteJid) === botNum) respondendoBot = true;
-  if (sender === botNum) respondendoBot = true;
+  if (ctx.participant && botIds.includes(soNumero(ctx.participant))) respondendoBot = true;
+  if (ctx.remoteJid && botIds.includes(soNumero(ctx.remoteJid))) respondendoBot = true;
 
-  // Verifica se digitou o nome do bot no começo
   const digitouNome = texto.toLowerCase().trim().startsWith(botNome) || texto.toLowerCase().trim().startsWith("@" + botNome);
 
   if (!mencionadoPorId && !mencionadoPorTexto && !respondendoBot && !digitouNome) return false;
 
-  // Limpa a pergunta tirando @ e o nome do bot
   let pergunta = texto
     .replace(/@\d+/g, "")
     .replace(new RegExp("@" + botNome, "gi"), "")
@@ -234,19 +269,16 @@ async function processarIA(sock, msg, remetente, sender, isGrupo, db) {
     const obanaiToken = require('./config').obanaiToken || "rj8SpI";
     const obanaiBase = require('./config').obanaiApiBase || "https://obanai-apis.eu.cc";
     
-    // Usando a rota "axis" que é mais limpa
     const r = await fetch(`${obanaiBase}/api/ias/axis?q=${encodeURIComponent(pergunta)}&apitoken=${obanaiToken}`, { signal: AbortSignal.timeout(30000) });
     const data = await r.json();
     
     let respostaLimpa = "";
     
-    // Verifica as duas formas que a API pode responder
     if (data?.success && data?.data?.texto) respostaLimpa = data.data.texto;
     else if (data?.success && data?.data?.response) respostaLimpa = data.data.response;
     else if (data?.success && data?.response) respostaLimpa = data.response;
 
     if (respostaLimpa) {
-      // 🔥 FILTRO BRUTAL PARA TIRAR TEXTOS INDESEJADOS DA API
       respostaLimpa = respostaLimpa
         .replace(/Olá! Eu sou o UnlimitedAI\.Chat, criado pela equipe do UnlimitedAI\.Chat\./gi, "")
         .replace(/Olá! Eu sou o .*?, criado pela equipe do .*?\./gi, "")
@@ -501,6 +533,86 @@ function iniciarVerificadorDivs() {
   }, 60000)
 }
 
+/* ============================================================
+   PARCERIA - processa links de grupo
+   ============================================================ */
+async function processarParceria(sock, msg, remetente, sender, isGrupo, isDono, isSubDono) {
+  if (!isGrupo) return false;
+  if (msg.key.fromMe) return false;
+  if (isDono || isSubDono) return false;
+
+  const texto = getTexto(msg);
+  if (!texto) return false;
+
+  const matchLink = texto.match(/chat\.whatsapp\.com\/[A-Za-z0-9]+/i);
+  if (!matchLink) return false;
+
+  const parcerias = dbLer("parcerias.json", {});
+  const conf = parcerias[remetente];
+  if (!conf || !conf.ativo) return false;
+
+  const numSender = soNumero(sender);
+  const parceiros = conf.parceiros || {};
+
+  let chaveParceiro = null;
+  for (const [jidP, info] of Object.entries(parceiros)) {
+    if (soNumero(jidP) === numSender || jidP === sender) { 
+      chaveParceiro = jidP; 
+      break; 
+    }
+  }
+
+  const ehAdminGrupo = async () => {
+    try {
+      const meta = await sock.groupMetadata(remetente);
+      const p = meta.participants.find(x => soNumero(x.id) === numSender || soNumero(x.lid) === numSender);
+      return p && (p.admin === "admin" || p.admin === "superadmin");
+    } catch (_) { return false }
+  };
+
+  if (!chaveParceiro) {
+    if (await ehAdminGrupo()) return false;
+    try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+    await sock.sendMessage(remetente, {
+      text: `⚠️ *𝑷𝑨𝑹𝑪𝑬𝑹𝑰𝑨*\n\n🔸 Você não é parceiro.\n\n📌 @${numSender} — Link removido.`,
+      mentions: [sender]
+    });
+    try { await sock.sendMessage(remetente, { react: { text: "🚫", key: msg.key } }) } catch (_) {}
+    return true;
+  }
+
+  const info = parceiros[chaveParceiro];
+  if (info.usados >= info.total) {
+    try { await sock.sendMessage(remetente, { delete: msg.key }) } catch (_) {}
+    await sock.sendMessage(remetente, {
+      text: `⚠️ *𝑷𝑨𝑹𝑪𝑬𝑹𝑰𝑨*\n\n🔸 Sem links disponíveis.\n\n📌 @${numSender} — Limite atingido (${info.total}/${info.total}).`,
+      mentions: [sender]
+    });
+    try { await sock.sendMessage(remetente, { react: { text: "🚫", key: msg.key } }) } catch (_) {}
+    return true;
+  }
+
+  info.usados += 1;
+  dbSalvar("parcerias.json", parcerias);
+
+  const restantes = info.total - info.usados;
+  try { await sock.sendMessage(remetente, { react: { text: "🤝", key: msg.key } }) } catch (_) {}
+
+  if (restantes === 0) {
+    await sock.sendMessage(remetente, {
+      text: `⚠️ *𝑼𝑳𝑻𝑰𝑴𝑶 𝑳𝑰𝑵𝑲*\n\n🔸 Você atingiu o limite.\n\n📌 @${numSender} — ${info.usados}/${info.total}`,
+      mentions: [sender]
+    });
+  } else if (restantes === 1) {
+    await sock.sendMessage(remetente, {
+      text: `⚠️ *𝑨𝑻𝑬𝑵𝑪𝑨𝑶*\n\n🔸 Falta apenas 1 link.\n\n📌 @${numSender} — ${info.usados}/${info.total}`,
+      mentions: [sender]
+    });
+  }
+
+  return true;
+}
+
 async function iniciarBot() {
   carregarMenus();
   iniciarAgendamentos();
@@ -557,7 +669,9 @@ async function iniciarBot() {
   global.sockGlobal = sock;
   recarregarCanal();
   envolverSendMessage(sock);
-  try { require("./sistemas/dragon-spawn").iniciar(global.sockGlobal); } catch (e) { console.log("❌ Dragão spawn:", e.message); }  sock.ev.on('groups.upsert', async (grupos) => {
+  try { require("./sistemas/dragon-spawn").iniciar(global.sockGlobal); } catch (e) { console.log("❌ Dragão spawn:", e.message); }
+
+  sock.ev.on('groups.upsert', async (grupos) => {
     try {
       const gruposDB = db.grupos(); let alterou = false;
       for (const g of grupos) { if (!gruposDB[g.id]) { gruposDB[g.id] = {}; alterou = true; } try { groupCache.set(g.id, await sock.groupMetadata(g.id)); } catch (_) {} }
@@ -662,6 +776,61 @@ async function iniciarBot() {
       if (!msg.message) return;
 
       const remetente = msg.key.remoteJid;
+
+      // 🔥 DEBUG DE MENSAGEM
+      console.log("\n📩 [DEBUG] Nova mensagem recebida de:", remetente);
+      console.log("📩 [DEBUG] Tipo de mensagem:", Object.keys(msg.message)[0]);
+      
+      // 🔥 ESCUTANDO O ÁUDIO DO MENU AQUI
+      const isAudio = msg.message?.audioMessage || msg.message?.ptvMessage;
+      if (isAudio) {
+        // Pega o ID exato de quem mandou (LID ou número real)
+        const senderExato = msg.key.participant || msg.key.remoteJid;
+        
+        console.log("🎵 [DEBUG] Detectado ÁUDIO de:", senderExato);
+        console.log("📩 [DEBUG] Está na lista de espera de áudio?", global.esperandoAudio.has(senderExato));
+
+        if (global.esperandoAudio && global.esperandoAudio.has(senderExato)) {
+          console.log("🎵 [DEBUG] Dono está na lista de espera! Baixando áudio...");
+          try {
+            const buffer = await downloadMediaMessage(msg, "buffer", {}, { logger: console, reuploadRequest: sock.updateMediaMessage });
+            console.log("🎵 [DEBUG] Áudio baixado! Tamanho:", buffer.length);
+            
+            const cfg = db.config();
+            cfg.audioMenu = buffer.toString("base64");
+            db.salvarConfig(cfg);
+            console.log("🎵 [DEBUG] Áudio salvo no config.json!");
+            
+            global.esperandoAudio.delete(senderExato);
+            console.log("🎵 [DEBUG] Removido da lista de espera.");
+            
+            await sock.sendMessage(remetente, { text: `✨ *AUDIOMENU*\n\n✅ Áudio salvo com sucesso!\n📌 Ele será enviado quando alguém usar o menu.` }, { quoted: msg });
+          } catch (e) {
+            console.error("🎵 [DEBUG] Erro ao baixar/salvar áudio:", e.message);
+            await sock.sendMessage(remetente, { text: `❌ *ERRO*\n\n🚫 Falha ao salvar o áudio.\n📌 ${e.message}` }, { quoted: msg });
+          }
+          return; // Para o processamento aqui, não deixa o resto do bot ler
+        } else {
+          console.log("🎵 [DEBUG] Áudio recebido, mas o remetente NÃO está na lista de espera.");
+        }
+      }
+
+      const m = msg.message || {};
+      if (m.groupStatusMessageV2 || m.groupStatusMessage) {
+        const jidGrupo = m.groupStatusMessageV2?.contextInfo?.remoteJid || m.groupStatusMessage?.contextInfo?.remoteJid || remetente;
+        const autor = m.groupStatusMessageV2?.contextInfo?.participant || m.groupStatusMessage?.contextInfo?.participant || msg.key.participant;
+        if (jidGrupo && jidGrupo.endsWith('@g.us') && autor) {
+          const admsettings = dbLer("admsettings.json", {});
+          if (admsettings[jidGrupo]?.antistatus === true) {
+            try {
+              await sock.groupParticipantsUpdate(jidGrupo, [autor], "remove").catch(() => {});
+              try { await sock.sendMessage(jidGrupo, { delete: msg.key }) } catch (_) {}
+              await sock.sendMessage(jidGrupo, { text: `📵 *𝑨𝑵𝑻𝑰𝑺𝑻𝑨𝑻𝑼𝑺*\n\n🚨 Status detectado.\n\n📌 @${soNumero(autor)} removido.`, mentions: [autor] }).catch(() => {});
+            } catch (_) {}
+          }
+        }
+      }
+
       const isGrupo = remetente.endsWith('@g.us');
       if (!isGrupo) return;
 
@@ -687,7 +856,6 @@ async function iniciarBot() {
       const numerosSub = (cfgSub.subdonos || []).map(soNumero).filter(n => n.length >= 10);
       const isSubDono = senderNums.some(n => numerosSub.includes(n)) && !isDono;
 
-      /* 🌐 BOTOFF GLOBAL — bloqueia tudo em todos os grupos, exceto +boton */
       if (cfgSub.botGlobalOff === true && !isDono && !isSubDono) {
         const textoCheck = getTexto(msg).trim()
         const cmdCheck = textoCheck.split(/\s+/)[0]?.replace(/^[^a-zA-Z0-9]+/, "").toLowerCase() || ""
@@ -712,7 +880,6 @@ async function iniciarBot() {
          return p?.admin === "admin" || p?.admin === "superadmin" || isDono || isSubDono;
       };
 
-      /* 🔞 ANTI-PORN */
       const antiCfg = dbLer("antiporn.json", {});
       if (antiCfg[remetente]?.ativo && !isDono && !isSubDono && !(await isAdminUser())) {
         if (contemTermo18(textoMensagem)) {
@@ -733,6 +900,9 @@ async function iniciarBot() {
         if (!(await isAdminUser())) { await sock.sendMessage(remetente, { delete: msg.key }); return; }
       }
 
+      const parceriaProcessou = await processarParceria(sock, msg, remetente, sender, isGrupo, isDono, isSubDono);
+      if (parceriaProcessou) return;
+
       if (!msg.key.fromMe) { const respondeuIA = await processarIA(sock, msg, remetente, sender, isGrupo, db); if (respondeuIA) return; }
       if (!msg.key.fromMe && isGrupo) { const respondeuFig = await processarFigCmd(sock, msg, remetente, sender, isGrupo, isDono, isSubDono); if (respondeuFig) return; }
       if (!msg.key.fromMe && isGrupo) { await processarAutoFig(sock, msg, remetente, isGrupo); await processarAutoTtk(sock, msg, remetente, isGrupo); }
@@ -751,6 +921,12 @@ async function iniciarBot() {
       let texto = getTexto(msg);
       const btnId2 = getTextoBotao(msg);
       if (btnId2) texto = btnId2.replace(new RegExp("^\\" + prefixoGlobal + "+"), prefixoGlobal);
+
+      // 🔥 CORREÇÃO PARA FOTO/ÁUDIO SEM LEGENDA
+      if (!texto && !msg.key.fromMe) {
+        const isMidia = (msg.message && (msg.message.imageMessage || msg.message.audioMessage || msg.message.videoMessage || msg.message.ptvMessage || msg.message.documentMessage));
+        if (isMidia) texto = " "; // Coloca espaço para o sistema processar o comando
+      }
 
       let prefixoUsado = prefixosAtivos.find(p => texto.startsWith(p));
       let cmdName = "";
@@ -802,7 +978,6 @@ async function iniciarBot() {
         return;
       }
 
-      /* 🔒 BLOQUEIO DINÂMICO */
       const blocklist = dbLer("blockcmd.json", {});
       const cmdNomeLower = cmd.nome.toLowerCase();
       const cmdAliasesLower = (cmd.aliases || []).map(a => a.toLowerCase());
@@ -816,7 +991,6 @@ async function iniciarBot() {
         }, { quoted: msg });
       }
 
-      /* ⚠️ SOADM CORRIGIDO — só responde se o comando EXISTE */
       if (admsCfg.soadm === true && !(await isAdminUser())) {
         await sock.sendMessage(remetente, { text: "⛔ Apenas administradores podem usar comandos neste grupo!" }, { quoted: msg });
         return;
@@ -838,7 +1012,6 @@ async function iniciarBot() {
       if (cmd.adminOnly && !podeAdmin) return sock.sendMessage(remetente, { text: "🌸 Esse comando é de admin!" }, { quoted: msg });
       if (cmd.grupoOnly && !isGrupo) return sock.sendMessage(remetente, { text: "🌸 Só em grupo!" }, { quoted: msg });
 
-      /* 📸 FOTO/GIF DO COMANDO ENCONTRADO (fotocmdc) — antes de executar */
       const cfgFoto = db.config();
       if (cfgFoto.fotoCmdEncontrado && !msg.key.fromMe) {
         let bufFoto = null;
