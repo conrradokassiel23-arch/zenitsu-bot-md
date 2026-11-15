@@ -1,5 +1,5 @@
 /* ============================================================
-   🌸 MENU FAZENDA - TEMA FLORAL
+   MENU FAZENDA - ESTILO ADM
    ============================================================ */
 
 const fs = require("fs")
@@ -23,128 +23,22 @@ function nomeBotDb(db) { try { return db.config?.()?.nomeBot || "Rimuru" } catch
 function getCfg(db) { try { return db.config?.() || {} } catch { return {} } }
 function soNumero(jid) { if (!jid) return ""; if (typeof jid === "object") jid = jid.phoneNumber || jid.id || ""; return String(jid).split("@")[0].split(":")[0].replace(/\D/g, "") }
 
-/* ---------- TEMPLATES FLORAIS ---------- */
-function boxTop(titulo) {
-  return `╔═══ஓ๑♡๑ஓ═══╗
-𓆩 ${titulo} 𓆪
-╚═══ஓ๑♡๑ஓ═══╝`
+/* ---------- RESPOSTAS PADRONIZADAS ---------- */
+function msgSucesso(titulo, aviso, detalhes) {
+  return `✨ *${titulo || "𝑺𝑼𝑪𝑬𝑺𝑺𝑶"}*\n\n✅ ${aviso}${detalhes ? `\n\n📌 ${detalhes}` : ""}`
 }
-function boxFim(nomeBot, frase = "Concluído com sucesso.") {
-  return `╔═══ஓ๑♡๑ஓ═══╗
-𓆩 ${String(nomeBot).toUpperCase()} 𓆪
-❝ ${frase} ❞
-╚═══ஓ๑♡๑ஓ═══╝`
+function msgAviso(titulo, aviso, detalhes) {
+  return `⚠️ *${titulo}*\n\n🔸 ${aviso}${detalhes ? `\n\n📌 ${detalhes}` : ""}`
 }
-function msgSucesso(titulo, aviso, detalhes, rodape, nomeBot) {
-  return `${boxTop(titulo)}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐒𝐓𝐀𝐓𝐔𝐒 𓆪
-↳ ${aviso}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐃𝐄𝐓𝐀𝐋𝐇𝐄𝐒 𓆪
-↳ ${detalhes}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${rodape ? `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐍𝐎𝐓𝐀 𓆪
-↳ ${rodape}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-` : ""}${boxFim(nomeBot, "Concluído com sucesso.")}`
-}
-function msgAviso(titulo, aviso, detalhes, rodape, nomeBot) {
-  return `${boxTop(titulo)}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐀𝐕𝐈𝐒𝐎 𓆪
-↳ ${aviso}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐃𝐄𝐓𝐀𝐋𝐇𝐄𝐒 𓆪
-↳ ${detalhes}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${rodape ? `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐍𝐎𝐓𝐀 𓆪
-↳ ${rodape}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-` : ""}${boxFim(nomeBot, "Verifique e tente novamente.")}`
-}
-function msgErro(titulo, aviso, detalhes, rodape, nomeBot) {
-  return `${boxTop(titulo)}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐄𝐑𝐑𝐎 𓆪
-↳ ${aviso}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐃𝐄𝐓𝐀𝐋𝐇𝐄𝐒 𓆪
-↳ ${detalhes}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${rodape ? `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐍𝐎𝐓𝐀 𓆪
-↳ ${rodape}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-` : ""}${boxFim(nomeBot, "Algo deu errado.")}`
-}
-function secao(t) { return `╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 ${t} 𓆪` }
-function item(c) { return `↳ \`${c}\`` }
-function fimSecao() { return `╰┈┈┈┈୨୧┈┈┈┈╯` }
-
-function cardPerfil({ nomeBot, nomeUsuario, cargo, dono }) {
-  return `${boxTop("𝐅 𝐀 𝐙 𝐄 𝐍 𝐃 𝐀")}
-
-┏━━━〔 𝐏𝐑𝐎𝐅𝐈𝐋𝐄 〕━━━┓
-𖤐 Bot » ${nomeBot}
-𖤐 Usuário » ${nomeUsuario}
-𖤐 Cargo » ${cargo}
-𖤐 Dono » ${dono}
-┗━━━━━━━━━━━━━━━━━━┛`
-}
-
-function detectarCargo({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin }) {
-  const num = String(sender || "").split("@")[0].split(":")[0].replace(/\D/g, "")
-  const donos = (Array.isArray(config?.dono) ? config.dono : [config?.dono]).map(n => String(n).split("@")[0].split(":")[0].replace(/\D/g, "")).filter(Boolean)
-  if (isDono || donos.includes(num)) return "👑 𝐆𝐑𝐀𝐍𝐃𝐄 𝐒𝐀́𝐁𝐈𝐎"
-  try { const subs = (db.config?.().subdonos || []).map(n => String(n).split("@")[0].split(":")[0].replace(/\D/g, "")); if (isSubDono || subs.includes(num)) return "💠 𝐋𝐔𝐀 𝐒𝐔𝐏𝐄𝐑𝐈𝐎𝐑" } catch (_) {}
-  try {
-    const vips = (db.vips?.() || {}).vips || {}
-    for (const [j, info] of Object.entries(vips)) {
-      const jn = String(j).split("@")[0].split(":")[0].replace(/\D/g, "")
-      if (jn === num && (info.expira === "inf" || info.expira > Date.now())) return "❄️ 𝐍𝐎𝐁𝐑𝐄 𝐀𝐋𝐈𝐀𝐃𝐎"
-    }
-  } catch (_) {}
-  if (isAdmin) return "⚔️ 𝐂𝐎𝐌𝐀𝐍𝐃𝐀𝐍𝐓𝐄"
-  try {
-    const subsAdm = (db.subadmins?.() || {})[groupMetadata?.id] || []
-    if (subsAdm.some(s => String(s).split("@")[0].split(":")[0].replace(/\D/g, "") === num)) return "🛡️ 𝐆𝐔𝐀𝐑𝐃𝐀 𝐑𝐄𝐀𝐋"
-  } catch (_) {}
-  return "👤 𝐒𝐋𝐈𝐌𝐄 𝐂𝐎𝐌𝐔𝐌"
-}
-
-function getCargoETexto(ctx) {
-  const { sender, config, db, groupMetadata, isDono, isSubDono, isAdmin, msg } = ctx
-  const pushName = msg.pushName || "Slime"
-  const donoArr = Array.isArray(config && config.dono) ? config.dono : [config && config.dono || "Chefe"]
-  const nomeDono = String(donoArr[0] || "Chefe").split("@")[0].split(":")[0].replace(/\D/g, "") || "Chefe"
-  const cargo = detectarCargo({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin })
-  const nomeBot = (config && config.nomeBot) || nomeBotDb(db)
-  return { pushName, nomeDono, cargo, nomeBot }
+function msgErro(titulo, aviso, detalhes) {
+  return `❌ *${titulo}*\n\n🚫 ${aviso}${detalhes ? `\n\n📌 ${detalhes}` : ""}`
 }
 
 function gerarKeyAleatoria() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let key = 'KEYFZ-';
-  for (let i = 0; i < 8; i++) key += chars.charAt(Math.floor(Math.random() * chars.length));
-  return key;
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+  let key = "KEYFZ-"
+  for (let i = 0; i < 8; i++) key += chars.charAt(Math.floor(Math.random() * chars.length))
+  return key
 }
 
 /* ---------- GOLD FZ ---------- */
@@ -169,7 +63,7 @@ function removeGoldFZ(num, qtd) {
   return { ok: true, saldo: g.usuarios[num] }
 }
 
-/* ---------- MUTAÇÕES (todas permanentes) ---------- */
+/* ---------- MUTAÇÕES ---------- */
 const MUTACOES = {
   flamejante: { id: "flamejante", nome: "Flamejante", emoji: "🔥", bonus: 2.0, peso: 15, raridade: "Raro" },
   gold:       { id: "gold",       nome: "Gold",       emoji: "🟡", bonus: 3.0, peso: 8,  raridade: "Épico" },
@@ -227,7 +121,6 @@ const PRECO_AGUA = 50
 const AGUA_POR_REGA = 1
 const GALAO_AGUA = 10
 
-/* Animais só de fazenda */
 const ANIMAIS = [
   { id: "galinha", nome: "Galinha", emoji: "🐔", preco: 100, producaoHora: 5, raridade: "Comum" },
   { id: "galo", nome: "Galo", emoji: "🐓", preco: 150, producaoHora: 8, raridade: "Comum" },
@@ -254,12 +147,7 @@ const SEMENTES = [
 ]
 
 const STOCK_MAX = {
-  sementes: {
-    milho: 8, trigo: 8, arroz: 6, feijao: 6, batata: 6, cenoura: 6,
-    soja: 3, tomate: 3,
-    melancia: 2, morango: 2,
-    uva: 1, cafe: 1
-  },
+  sementes: { milho: 8, trigo: 8, arroz: 6, feijao: 6, batata: 6, cenoura: 6, soja: 3, tomate: 3, melancia: 2, morango: 2, uva: 1, cafe: 1 },
   animais: { galinha: 5, galo: 4, porco: 2, ovelha: 2, vaca: 1, boi: 1, cavalo: 1 }
 }
 
@@ -355,6 +243,7 @@ function calcularRenda(user) {
 }
 
 function nivelFazenda(user) { const total = user.limiteAnimais || 0; if (total === 0) return 0; return Math.floor(total / CAP_UPGRADE) }
+
 function qualidadePlanta(p) {
   const regas = p.regas || 0
   let q = Math.min(100, Math.floor(regas * 15 + (p.qualidadeBase || 50)))
@@ -382,43 +271,33 @@ function valorPlanta(p) {
   return valor
 }
 
-function sistemaFazendaAtivo(db, jid) {
+function sistemaFazendaAtivo(jid) {
   const cfg = dbLer("fazendacfg.json", { grupos: {} })
   return cfg.grupos[jid]?.ativo === true
 }
+
+/* 🔒 REGRAS DE DUPLICATA */
+function jaTemSemente(u, sementeId) { return (u.sementes && u.sementes[sementeId] && u.sementes[sementeId] > 0) }
+function jaTemPlanta(u, sementeId) { return (u.plantacoes || []).some(p => p.id === sementeId) }
 
 module.exports = {
   menu: "menu-fazenda",
   grupoOnly: false,
   adminOnly: false,
-  donoOnly: false,  async rendaAutomatica(sock, db) {
+  donoOnly: false,
+
+  async rendaAutomatica(sock, db) {
     const f = dbLer("fazenda.json", { usuarios: {} })
     let alterou = false
     const agora = Date.now()
-
     const restockAgora = restockLoja()
-
     const cfgFaz = dbLer("fazendacfg.json", { grupos: {} })
     const gruposAtivos = Object.keys(cfgFaz.grupos || {}).filter(j => cfgFaz.grupos[j]?.ativo === true)
 
     if (restockAgora) {
       for (const jid of gruposAtivos) {
         try {
-          await sock.sendMessage(jid, { text: `${boxTop("𝐋𝐎𝐉𝐀 𝐀𝐓𝐔𝐀𝐋𝐈𝐙𝐀𝐃𝐀")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐀𝐕𝐈𝐒𝐎 𓆪
-↳ O estoque da loja foi reabastecido!
-↳ Sementes raras têm estoque baixo!
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐂𝐎𝐌𝐀𝐍𝐃𝐎𝐒 𓆪
-↳ \`+sementes\`
-↳ \`+animais\`
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${boxFim(nomeBotDb(db), "Corre que acaba!")}` })
+          await sock.sendMessage(jid, { text: msgAviso("𝑳𝑶𝑱𝑨 𝑨𝑻𝑼𝑨𝑳𝑰𝒁𝑨𝑫𝑨", "O estoque foi reabastecido!", "Sementes raras têm estoque baixo. Use +sementes") })
           await new Promise(r => setTimeout(r, 1500))
         } catch (_) {}
       }
@@ -426,86 +305,38 @@ ${boxFim(nomeBotDb(db), "Corre que acaba!")}` })
 
     if (gruposAtivos.length > 0) {
       const v = getVendedores()
-
       if (agora - (v.ultimoSemente || 0) >= INTERVALO_VENDEDOR_SEMENTE) {
         v.sementes = { ativo: true, expiraEm: agora + DURACAO_VENDEDOR, chegouEm: agora, itens: gerarOfertasSementes() }
         v.ultimoSemente = agora
         for (const jid of gruposAtivos) {
           try {
-            await sock.sendMessage(jid, { text: `${boxTop("𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑 𝐃𝐄 𝐒𝐄𝐌𝐄𝐍𝐓𝐄𝐒")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐀𝐕𝐈𝐒𝐎 𓆪
-↳ Vendedor ambulante chegou!
-↳ Sementes com -30%
-↳ Janela: 30 minutos
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐂𝐎𝐌𝐀𝐍𝐃𝐎𝐒 𓆪
-↳ \`+vendedorsementes\`
-↳ \`+comprarvendedor <nome>\`
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${boxFim(nomeBotDb(db), "Corre que é por tempo limitado!")}` })
+            await sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹 𝑫𝑬 𝑺𝑬𝑴𝑬𝑵𝑻𝑬𝑺", "Vendedor ambulante chegou!", "Sementes com -30%\nJanela: 30 minutos\nUse +vendedorsementes") })
             await new Promise(r => setTimeout(r, 1500))
           } catch (_) {}
         }
         alterou = true
       }
-
       if (agora - (v.ultimoAnimal || 0) >= INTERVALO_VENDEDOR_ANIMAL) {
         v.animais = { ativo: true, expiraEm: agora + DURACAO_VENDEDOR, chegouEm: agora, itens: gerarOfertasAnimais() }
         v.ultimoAnimal = agora
         for (const jid of gruposAtivos) {
           try {
-            await sock.sendMessage(jid, { text: `${boxTop("𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑 𝐃𝐄 𝐀𝐍𝐈𝐌𝐀𝐈𝐒")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐀𝐕𝐈𝐒𝐎 𓆪
-↳ Vendedor de animais chegou!
-↳ Animais com -25%
-↳ Janela: 30 minutos
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐂𝐎𝐌𝐀𝐍𝐃𝐎𝐒 𓆪
-↳ \`+vendedoranimais\`
-↳ \`+comprarvendedoranimal <nome>\`
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${boxFim(nomeBotDb(db), "Aproveite enquanto há!")}` })
+            await sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹 𝑫𝑬 𝑨𝑵𝑰𝑴𝑨𝑰𝑺", "Vendedor de animais chegou!", "Animais com -25%\nJanela: 30 minutos\nUse +vendedoranimais") })
             await new Promise(r => setTimeout(r, 1500))
           } catch (_) {}
         }
         alterou = true
       }
-
       if (agora - (v.ultimoEventoAgua || 0) >= INTERVALO_EVENTO_AGUA) {
         v.ultimoEventoAgua = agora
         for (const jid of gruposAtivos) {
           try {
-            await sock.sendMessage(jid, { text: `${boxTop("𝐄𝐕𝐄𝐍𝐓𝐎 𝐀́𝐆𝐔𝐀")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐏𝐑𝐎𝐌𝐎𝐂̧𝐀̃𝐎 𓆪
-↳ 3 galões de água por 60 GoldFZ!
-↳ Normal: 150 GoldFZ
-↳ Janela: 30 minutos
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐂𝐎𝐌𝐀𝐍𝐃𝐎 𓆪
-↳ \`+eventoagua\`
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${boxFim(nomeBotDb(db), "Corre que acaba!")}` })
+            await sock.sendMessage(jid, { text: msgAviso("𝑬𝑽𝑬𝑵𝑻𝑶 𝑨𝑮𝑼𝑨", "3 galões por 60 GoldFZ!", "Normal: 150 GoldFZ\nJanela: 30 minutos\nUse +eventoagua") })
             await new Promise(r => setTimeout(r, 1500))
           } catch (_) {}
         }
         alterou = true
       }
-
       if (alterou) salvarVendedores(v)
     }
 
@@ -537,73 +368,64 @@ ${boxFim(nomeBotDb(db), "Corre que acaba!")}` })
   commands: {
 
     menufazenda: {
-      aliases: ["fazenda", "menuf", "comandosfazenda"],
-      async executar({ sock, msg, prefixoAtivo, db, sender, config, isDono, isSubDono, isAdmin, groupMetadata }) {
+      aliases: ["menuf", "comandosfazenda"],
+      async executar({ sock, msg, prefixoAtivo, db }) {
         const jid = msg.key.remoteJid
         const p = prefixoAtivo || "+"
         const cfg = getCfg(db)
-        const { pushName, nomeDono, cargo, nomeBot } = getCargoETexto({ sender, config, db, groupMetadata, isDono, isSubDono, isAdmin, msg })
+        const nomeBot = nomeBotDb(db)
         await reagir(sock, msg, "🌸")
 
-        const texto = `${cardPerfil({ nomeBot, nomeUsuario: pushName, cargo, dono: nomeDono })}
+        const texto = `𝑴𝑬𝑵𝑼 𝑭𝑨𝒁𝑬𝑵𝑫𝑨
 
-${secao("𝐆𝐎𝐋𝐃 𝐅𝐙")}
-${item(`${p}saldofz`)}
-${item(`${p}gerarkeyfz <qtd>`)}
-${item(`${p}keygoldfz <key>`)}
-${fimSecao()}
+🤖 Bot: ${nomeBot}
+⚡ Prefixo: ${p}
+🟢 Status: Online
 
-${secao("𝐑𝐄𝐒𝐆𝐀𝐓𝐀𝐑")}
-${item(`${p}resgatarfazenda`)}
-${fimSecao()}
+𝑮𝑶𝑳𝑫 𝑭𝒁
+${p}saldofz
+${p}gerarkeyfz <qtd>
+${p}keygoldfz <key>
 
-${secao("𝐀𝐍𝐈𝐌𝐀𝐈𝐒")}
-${item(`${p}animais`)}
-${item(`${p}compraranimal <nome>`)}
-${item(`${p}venderanimal <nome>`)}
-${item(`${p}statusanimais`)}
-${fimSecao()}
+𝑹𝑬𝑺𝑮𝑨𝑻𝑨𝑹
+${p}resgatarfazenda
 
-${secao("𝐒𝐄𝐌𝐄𝐍𝐓𝐄𝐒")}
-${item(`${p}sementes`)}
-${item(`${p}comprarsemente <nome> <qtd>`)}
-${item(`${p}plantarsemente <nome>`)}
-${item(`${p}regarsementes`)}
-${item(`${p}regarplanta <nome>`)}
-${item(`${p}venderplanta <nome>`)}
-${item(`${p}statusplanta`)}
-${fimSecao()}
+𝑨𝑵𝑰𝑴𝑨𝑰𝑺
+${p}animais
+${p}compraranimal <nome>
+${p}venderanimal <nome>
+${p}statusanimais
 
-${secao("𝐂𝐄𝐑𝐂𝐀𝐒 & 𝐓𝐄𝐑𝐑𝐀𝐒")}
-${item(`${p}comprarcercado`)}
-${item(`${p}comprarterra`)}
-${item(`${p}compraragua <qtd>`)}
-${fimSecao()}
+𝑺𝑬𝑴𝑬𝑵𝑻𝑬𝑺
+${p}sementes
+${p}comprarsemente <nome>
+${p}plantarsemente <nome>
+${p}regarsementes
+${p}regarplanta <nome>
+${p}venderplanta <nome>
+${p}statusplanta
 
-${secao("𝐂𝐔𝐈𝐃𝐀𝐃𝐎𝐒")}
-${item(`${p}alimentaranimais`)}
-${item(`${p}banhoanimais`)}
-${item(`${p}limparfazenda`)}
-${fimSecao()}
+𝑪𝑬𝑹𝑪𝑨𝑺 𝑬 𝑻𝑬𝑹𝑹𝑨𝑺
+${p}comprarcercado
+${p}comprarterra
+${p}compraragua <qtd>
 
-${secao("𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑𝐄𝐒")}
-${item(`${p}vendedorsementes`)}
-${item(`${p}comprarvendedor <nome>`)}
-${item(`${p}vendedoranimais`)}
-${item(`${p}comprarvendedoranimal <nome>`)}
-${item(`${p}eventoagua`)}
-${fimSecao()}
+𝑪𝑼𝑰𝑫𝑨𝑫𝑶𝑺
+${p}alimentaranimais
+${p}banhoanimais
+${p}limparfazenda
 
-${secao("𝐒𝐓𝐀𝐓𝐔𝐒")}
-${item(`${p}statusfazenda`)}
-${fimSecao()}
+𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹𝑬𝑺
+${p}vendedorsementes
+${p}comprarvendedor <nome>
+${p}vendedoranimais
+${p}comprarvendedoranimal <nome>
+${p}eventoagua
 
-╔═══ஓ๑♡๑ஓ═══╗
-𓆩 𝐏𝐑𝐄𝐅𝐈𝐗𝐎 𓆪
-↳ \`${p}\`
-╚═══ஓ๑♡๑ஓ═══╝
+𝑺𝑻𝑨𝑻𝑼𝑺
+${p}statusfazenda
 
-${boxFim(nomeBot, "A renda acumula de 3h em 3h!")}`
+> _Prefixo atual: ${p}_`
 
         if (cfg.fotoMenu) {
           let buf = null
@@ -624,533 +446,402 @@ ${boxFim(nomeBot, "A renda acumula de 3h em 3h!")}`
 
     fazenda: {
       aliases: ["fazendaon", "fazendaoff", "ativarfazenda"],
-      async executar({ sock, msg, args, db, prefixoAtivo, isDono, isSubDono, isAdmin }) {
+      async executar({ sock, msg, args, prefixoAtivo, isDono, isSubDono, isAdmin }) {
         const jid = msg.key.remoteJid
         const p = prefixoAtivo || "+"
-        const nomeBot = nomeBotDb(db)
         const op = (args[0] || "").toLowerCase()
-
         if (!isDono && !isSubDono && !isAdmin) {
-          await reagir(sock, msg, "💨")
-          return sock.sendMessage(jid, { text: msgErro("𝐀𝐕𝐈𝐒𝐎", "Apenas admins podem ativar.", `Use \`${p}menuadm\` para ver os comandos.`, null, nomeBot) }, { quoted: msg })
+          await reagir(sock, msg, "🚫")
+          return sock.sendMessage(jid, { text: msgErro("𝑺𝑬𝑴 𝑷𝑬𝑹𝑴𝑰𝑺𝑺𝑨𝑶", "Apenas admins podem ativar.", `Use ${p}menuadm`) }, { quoted: msg })
         }
-
         const cfg = dbLer("fazendacfg.json", { grupos: {} })
         cfg.grupos[jid] = cfg.grupos[jid] || {}
-
         if (!["on", "off"].includes(op)) {
           const s = cfg.grupos[jid].ativo ? "ON ✅" : "OFF ❌"
-          await reagir(sock, msg, "🌸")
-          return sock.sendMessage(jid, { text: msgAviso("𝐅𝐀𝐙𝐄𝐍𝐃𝐀", `Sistema atualmente: ${s}`, `Use \`${p}fazenda on\` ou \`${p}fazenda off\``, null, nomeBot) }, { quoted: msg })
+          await reagir(sock, msg, "⚙️")
+          return sock.sendMessage(jid, { text: msgAviso("𝑭𝑨𝒁𝑬𝑵𝑫𝑨", `Sistema atualmente: ${s}`, `Use ${p}fazenda on ou ${p}fazenda off`) }, { quoted: msg })
         }
-
         cfg.grupos[jid].ativo = op === "on"
         dbSalvar("fazendacfg.json", cfg)
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐅𝐀𝐙𝐄𝐍𝐃𝐀", `Sistema ${op.toUpperCase()}`, op === "on" ? "Os comandos voltaram!" : "O modo fazenda está desativado.", null, nomeBot) }, { quoted: msg })
+        await reagir(sock, msg, "⚙️")
+        await sock.sendMessage(jid, { text: op === "on" ? msgSucesso("𝑭𝑨𝒁𝑬𝑵𝑫𝑨", "Sistema ativado.", "Os comandos voltaram!") : msgAviso("𝑭𝑨𝒁𝑬𝑵𝑫𝑨", "Sistema desativado.", "O modo fazenda está off.") }, { quoted: msg })
       }
     },
 
     saldofz: {
       aliases: ["goldfz", "meugoldfz", "meusaldo"],
-      async executar({ sock, msg, db, sender }) {
+      async executar({ sock, msg, sender }) {
         const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
         const num = soNumero(sender)
         const { saldo } = getGoldFZ(num)
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, {
-          text: msgSucesso("𝐆𝐎𝐋𝐃𝐅𝐙", "Saldo da fazenda.", `Você tem *${saldo} GoldFZ*`, "Use `+keygoldfz <key>` para adicionar.", nomeBot)
-        }, { quoted: msg })
+        await reagir(sock, msg, "💰")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑮𝑶𝑳𝑫𝑭𝒁", "Saldo da fazenda.", `Você tem *${saldo} GoldFZ*`) }, { quoted: msg })
       }
     },
 
     resgatarfazenda: {
       aliases: ["resgatar", "coletar", "coletarfazenda"],
-      async executar({ sock, msg, db, utils, sender, prefixoAtivo }) {
+      async executar({ sock, msg, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, `Use \`${prefixoAtivo || "+"}fazenda on\``, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
+        const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { f, u } = getFazenda(num)
         const pendente = u.rendaPendente || 0
-        if (pendente <= 0) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐒𝐆𝐀𝐓𝐀𝐑", "Nada pra resgatar.", "Renda acumula a cada 3h", null, nomeBot) }, { quoted: msg }) }
-
+        if (pendente <= 0) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑹𝑬𝑺𝑮𝑨𝑻𝑨𝑹", "Nada pra resgatar.", "Renda acumula a cada 3h.") }, { quoted: msg }) }
         addGoldFZ(num, pendente)
         u.rendaPendente = 0
         dbSalvar("fazenda.json", f)
         const { saldo } = getGoldFZ(num)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐑𝐄𝐒𝐆𝐀𝐓𝐄", "Renda coletada", `+${pendente} GoldFZ\nSaldo: ${saldo}`, null, nomeBot), mentions: [`${num}@s.whatsapp.net`] }, { quoted: msg })
+        await reagir(sock, msg, "💰")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑹𝑬𝑺𝑮𝑨𝑻𝑬", "Renda coletada.", `+${pendente} GoldFZ\nSaldo: ${saldo}`), mentions: [`${num}@s.whatsapp.net`] }, { quoted: msg })
       }
     },
 
     animais: {
       aliases: ["listaanimais", "lojaanimais"],
-      async executar({ sock, msg, db, prefixoAtivo }) {
+      async executar({ sock, msg, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const loja = getLoja()
-        await reagir(sock, msg, "🌸")
-        let txt = `${boxTop("𝐋𝐎𝐉𝐀 𝐃𝐄 𝐀𝐍𝐈𝐌𝐀𝐈𝐒")}\n\n`
+        let txt = `🐾 *𝑳𝑶𝑱𝑨 𝑫𝑬 𝑨𝑵𝑰𝑴𝑨𝑰𝑺*\n\n`
         for (const a of ANIMAIS) {
           const stock = loja.animais[a.id] || 0
-          txt += `${secao(a.emoji + " " + a.nome.toUpperCase())}\n↳ 💰 ${a.preco} GoldFZ\n↳ 📈 +${a.producaoHora}/h\n↳ 📦 Stock: ${stock}\n${fimSecao()}\n`
+          txt += `${a.emoji} *${a.nome}*\n💰 ${a.preco} GoldFZ | 📈 +${a.producaoHora}/h\n📦 Stock: ${stock}\n\n`
         }
-        txt += `\n╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 𝐂𝐎𝐌𝐏𝐑𝐀𝐑 𓆪\n↳ \`${p}compraranimal <nome>\`\n╰┈┈┈┈୨୧┈┈┈┈╯\n\n${boxFim(nomeBot, "Stock reabastece a cada 1h.")}`
+        txt += `📌 Use ${p}compraranimal <nome>\n\n> _Stock reabastece a cada 1h._`
+        await reagir(sock, msg, "🐾")
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
 
     comprarcercado: {
       aliases: ["cercado", "buycercado"],
-      async executar({ sock, msg, db, utils, sender }) {
+      async executar({ sock, msg, db, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
+        const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { f, u } = getFazenda(num)
-        if (u.upgrades >= MAX_UPGRADES) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐂𝐄𝐑𝐂𝐀𝐃𝐎", "Máximo atingido.", `Upgrades: ${u.upgrades}/${MAX_UPGRADES}`, null, nomeBot) }, { quoted: msg }) }
-
+        if (u.upgrades >= MAX_UPGRADES) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑪𝑬𝑹𝑪𝑨𝑫𝑶", "Máximo atingido.", `Upgrades: ${u.upgrades}/${MAX_UPGRADES}`) }, { quoted: msg }) }
         const { saldo } = getGoldFZ(num)
         const preco = u.upgrades === 0 ? 0 : PRECO_CERCADO
-        if (saldo < preco) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐂𝐄𝐑𝐂𝐀𝐃𝐎", "GoldFZ insuficiente.", `Faltam ${preco - saldo} GoldFZ`, null, nomeBot) }, { quoted: msg }) }
-
+        if (saldo < preco) { await reagir(sock, msg, "💸"); return sock.sendMessage(jid, { text: msgErro("𝑪𝑬𝑹𝑪𝑨𝑫𝑶", "GoldFZ insuficiente.", `Faltam ${preco - saldo} GoldFZ`) }, { quoted: msg }) }
         if (preco > 0) removeGoldFZ(num, preco)
         u.upgrades += 1; u.cercados += 1
         u.limiteAnimais = CAP_BASE + (u.upgrades - 1) * CAP_UPGRADE
         dbSalvar("fazenda.json", f)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐂𝐄𝐑𝐂𝐀𝐃𝐎", "Mais espaço pros animais.", `Capacidade: ${u.limiteAnimais}\nUpgrades: ${u.upgrades}/${MAX_UPGRADES}`, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🏠")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑪𝑬𝑹𝑪𝑨𝑫𝑶", "Mais espaço pros animais.", `Capacidade: ${u.limiteAnimais}\nUpgrades: ${u.upgrades}/${MAX_UPGRADES}`), mentions: [sender] }, { quoted: msg })
       }
     },
 
     compraranimal: {
       aliases: ["buyanimal", "adotaranimal"],
-      async executar({ sock, msg, args, db, utils, sender, prefixoAtivo }) {
+      async executar({ sock, msg, args, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { f, u } = getFazenda(num)
-        if (u.cercados === 0) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐀𝐍𝐈𝐌𝐀𝐋", "Compre cercado primeiro.", `Use \`${p}comprarcercado\``, null, nomeBot) }, { quoted: msg }) }
-        if (u.animais.length >= u.limiteAnimais) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐀𝐍𝐈𝐌𝐀𝐋", "Cercado cheio.", `Ocupado: ${u.animais.length}/${u.limiteAnimais}`, null, nomeBot) }, { quoted: msg }) }
-
+        if (u.cercados === 0) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑨𝑵𝑰𝑴𝑨𝑳", "Compre cercado primeiro.", `Use ${p}comprarcercado`) }, { quoted: msg }) }
+        if (u.animais.length >= u.limiteAnimais) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑨𝑵𝑰𝑴𝑨𝑳", "Cercado cheio.", `Ocupado: ${u.animais.length}/${u.limiteAnimais}`) }, { quoted: msg }) }
         const animal = acharAnimal(args.join(" "))
-        if (!animal) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐀𝐍𝐈𝐌𝐀𝐋", "Não achei.", `Veja \`${p}animais\``, null, nomeBot) }, { quoted: msg }) }
-
+        if (!animal) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑨𝑵𝑰𝑴𝑨𝑳", "Não achei.", `Veja ${p}animais`) }, { quoted: msg }) }
         const loja = getLoja()
-        if ((loja.animais[animal.id] || 0) < 1) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐀𝐍𝐈𝐌𝐀𝐋", "Esgotado na loja.", `Stock: 0\nReabastece a cada 1h`, null, nomeBot) }, { quoted: msg }) }
-
+        if ((loja.animais[animal.id] || 0) < 1) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑨𝑵𝑰𝑴𝑨𝑳", "Esgotado na loja.", "Reabastece a cada 1h") }, { quoted: msg }) }
         const { saldo } = getGoldFZ(num)
-        if (saldo < animal.preco) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐀𝐍𝐈𝐌𝐀𝐋", "GoldFZ insuficiente.", `Faltam ${animal.preco - saldo} GoldFZ`, null, nomeBot) }, { quoted: msg }) }
-
+        if (saldo < animal.preco) { await reagir(sock, msg, "💸"); return sock.sendMessage(jid, { text: msgErro("𝑨𝑵𝑰𝑴𝑨𝑳", "GoldFZ insuficiente.", `Faltam ${animal.preco - saldo} GoldFZ`) }, { quoted: msg }) }
         removeGoldFZ(num, animal.preco)
         u.animais.push({ id: animal.id, nome: animal.nome, emoji: animal.emoji, fome: 0, sujo: 0, compradoEm: Date.now() })
         loja.animais[animal.id] -= 1
         dbSalvar("fazenda.json", f); salvarLoja(loja)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐍𝐈𝐌𝐀𝐋", "Novo animal.", `${animal.emoji} ${animal.nome}\nProdução: +${animal.producaoHora}/h\nStock restante: ${loja.animais[animal.id]}`, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🐾")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑨𝑵𝑰𝑴𝑨𝑳", "Novo animal.", `${animal.emoji} ${animal.nome}\nProdução: +${animal.producaoHora}/h\nStock: ${loja.animais[animal.id]}`), mentions: [sender] }, { quoted: msg })
       }
     },
 
     venderanimal: {
       aliases: ["vendaranimal", "sellanimal"],
-      async executar({ sock, msg, args, db, utils, sender, prefixoAtivo }) {
+      async executar({ sock, msg, args, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { f, u } = getFazenda(num)
         const busca = normalizar(args.join(" "))
         const idx = u.animais.findIndex(a => normalizar(a.nome) === busca || a.id === busca)
-        if (idx === -1) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐕𝐄𝐍𝐃𝐄𝐑", "Você não tem esse.", `Veja \`${p}statusanimais\``, null, nomeBot) }, { quoted: msg }) }
-
+        if (idx === -1) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑽𝑬𝑵𝑫𝑬𝑹", "Você não tem esse.", `Veja ${p}statusanimais`) }, { quoted: msg }) }
         const a = u.animais[idx]
         const info = ANIMAIS.find(x => x.id === a.id)
         const valor = Math.floor((info?.preco || 100) * 0.5)
         u.animais.splice(idx, 1)
         addGoldFZ(num, valor)
         dbSalvar("fazenda.json", f)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐕𝐄𝐍𝐃𝐈𝐃𝐎", "Animal vendido.", `${a.emoji} ${a.nome}\n+${valor} GoldFZ`, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "💵")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑽𝑬𝑵𝑫𝑰𝑫𝑶", "Animal vendido.", `${a.emoji} ${a.nome}\n+${valor} GoldFZ`), mentions: [sender] }, { quoted: msg })
       }
-    },    alimentaranimais: {
-      aliases: ["alimentaranimal", "feedanimais"],
-      async executar({ sock, msg, db, utils, sender, prefixoAtivo }) {
-        const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
+    },
 
-        const nomeBot = nomeBotDb(db)
+    alimentaranimais: {
+      aliases: ["alimentaranimal", "feedanimais"],
+      async executar({ sock, msg, sender, prefixoAtivo }) {
+        const jid = msg.key.remoteJid
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { f, u } = getFazenda(num)
-        if (!u.animais.length) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐀𝐋𝐈𝐌𝐄𝐍𝐓𝐀𝐑", "Sem animais.", `Use \`${p}compraranimal\``, null, nomeBot) }, { quoted: msg }) }
-
+        if (!u.animais.length) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑨𝑳𝑰𝑴𝑬𝑵𝑻𝑨𝑹", "Sem animais.", `Use ${p}compraranimal`) }, { quoted: msg }) }
         const { saldo } = getGoldFZ(num)
-        if (saldo < PRECO_ALIMENTAR) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐀𝐋𝐈𝐌𝐄𝐍𝐓𝐀𝐑", "GoldFZ insuficiente.", `Precisa ${PRECO_ALIMENTAR} GoldFZ`, null, nomeBot) }, { quoted: msg }) }
-
+        if (saldo < PRECO_ALIMENTAR) { await reagir(sock, msg, "💸"); return sock.sendMessage(jid, { text: msgErro("𝑨𝑳𝑰𝑴𝑬𝑵𝑻𝑨𝑹", "GoldFZ insuficiente.", `Precisa ${PRECO_ALIMENTAR} GoldFZ`) }, { quoted: msg }) }
         removeGoldFZ(num, PRECO_ALIMENTAR)
         let n = 0
         for (const a of u.animais) { if ((a.fome || 0) > 0) { a.fome = 0; n++ } }
         dbSalvar("fazenda.json", f)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐀𝐋𝐈𝐌𝐄𝐍𝐓𝐀𝐃𝐎𝐒", "Todos alimentados.", `Animais: ${n}\nPago: -${PRECO_ALIMENTAR} GoldFZ`, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🍎")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑨𝑳𝑰𝑴𝑬𝑵𝑻𝑨𝑫𝑶𝑺", "Todos alimentados.", `Animais: ${n}\nPago: -${PRECO_ALIMENTAR} GoldFZ`), mentions: [sender] }, { quoted: msg })
       }
     },
 
     banhoanimais: {
       aliases: ["banhoanimal", "lavaranimais"],
-      async executar({ sock, msg, db, utils, sender, prefixoAtivo }) {
+      async executar({ sock, msg, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
+        const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { f, u } = getFazenda(num)
-        if (!u.animais.length) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐁𝐀𝐍𝐇𝐎", "Sem animais.", `Use \`+compraranimal\``, null, nomeBot) }, { quoted: msg }) }
-
+        if (!u.animais.length) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑩𝑨𝑵𝑯𝑶", "Sem animais.", `Use ${p}compraranimal`) }, { quoted: msg }) }
         const { saldo } = getGoldFZ(num)
-        if (saldo < PRECO_BANHO) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐁𝐀𝐍𝐇𝐎", "GoldFZ insuficiente.", `Precisa ${PRECO_BANHO} GoldFZ`, null, nomeBot) }, { quoted: msg }) }
-
+        if (saldo < PRECO_BANHO) { await reagir(sock, msg, "💸"); return sock.sendMessage(jid, { text: msgErro("𝑩𝑨𝑵𝑯𝑶", "GoldFZ insuficiente.", `Precisa ${PRECO_BANHO} GoldFZ`) }, { quoted: msg }) }
         removeGoldFZ(num, PRECO_BANHO)
         let n = 0
         for (const a of u.animais) { if ((a.sujo || 0) > 0) { a.sujo = 0; n++ } }
         dbSalvar("fazenda.json", f)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐀𝐕𝐀𝐃𝐎𝐒", "Todos lavados.", `Animais: ${n}\nPago: -${PRECO_BANHO} GoldFZ`, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🛁")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑳𝑨𝑽𝑨𝑫𝑶𝑺", "Todos lavados.", `Animais: ${n}\nPago: -${PRECO_BANHO} GoldFZ`), mentions: [sender] }, { quoted: msg })
       }
     },
 
     limparfazenda: {
       aliases: ["limparfaz"],
-      async executar({ sock, msg, utils, sender, db }) {
+      async executar({ sock, msg, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
+        const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { f, u } = getFazenda(num)
-        if ((u.sujeira || 0) === 0) { await reagir(sock, msg, "🌸"); return sock.sendMessage(jid, { text: msgSucesso("𝐋𝐈𝐌𝐏𝐄𝐙𝐀", "Já tá limpa.", "Nada a fazer", null, nomeBot) }, { quoted: msg }) }
+        if ((u.sujeira || 0) === 0) { await reagir(sock, msg, "🧹"); return sock.sendMessage(jid, { text: msgSucesso("𝑳𝑰𝑴𝑷𝑬𝒁𝑨", "Já tá limpa.", "Nada a fazer.") }, { quoted: msg }) }
         u.sujeira = 0
         dbSalvar("fazenda.json", f)
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐋𝐈𝐌𝐏𝐀", "Sujeira removida.", "Tudo brilhando!", null, nomeBot), mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🧹")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑳𝑰𝑴𝑷𝑨", "Sujeira removida.", "Tudo brilhando!") }, { quoted: msg })
       }
     },
 
     statusfazenda: {
       aliases: ["fazendastatus", "minhafazenda"],
-      async executar({ sock, msg, utils, sender, db, prefixoAtivo }) {
+      async executar({ sock, msg, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { u } = getFazenda(num)
-        if (u.cercados === 0 && u.terras === 0) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐒𝐓𝐀𝐓𝐔𝐒", "Você não tem fazenda.", `Use \`${p}comprarcercado\``, null, nomeBot) }, { quoted: msg }) }
-
+        if (u.cercados === 0 && u.terras === 0) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑺𝑻𝑨𝑻𝑼𝑺", "Você não tem fazenda.", `Use ${p}comprarcercado`) }, { quoted: msg }) }
         const { saldo } = getGoldFZ(num)
         const nivel = nivelFazenda(u)
         const rendaHora = Math.floor(calcularRenda(u))
         const restante = Math.max(0, INTERVALO_RENDA - (Date.now() - (u.ultimaRenda || Date.now())))
         const h = Math.floor(restante / 3600000), m = Math.floor((restante % 3600000) / 60000)
         const tempo = h > 0 ? `${h}h ${m}min` : `${m}min`
-        const cheio = Math.min(10, Math.floor(u.animais.length / Math.max(1, u.limiteAnimais) * 10))
-        const barra = "🌸".repeat(cheio) + "⬛".repeat(10 - cheio)
-        const statusSujeira = u.sujeira > 70 ? "🚨" : u.sujeira > 40 ? "❄️" : "✅"
         const prontas = (u.plantacoes || []).filter(p2 => p2.pronta).length
+        const texto = `📊 *𝑺𝑻𝑨𝑻𝑼𝑺 𝑭𝑨𝒁𝑬𝑵𝑫𝑨*
 
-        const texto = `${boxTop("𝐒𝐓𝐀𝐓𝐔𝐒")}
+👤 Usuário: @${num}
+💰 Saldo: ${saldo} GoldFZ
 
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐔𝐒𝐔𝐀́𝐑𝐈𝐎 𓆪
-↳ @${num}
-↳ ${saldo} GoldFZ
-╰┈┈┈┈୨୧┈┈┈┈╯
+🏠 *ESTRUTURA*
+Nível: ${nivel}
+Cercados: ${u.cercados}
+Terras: ${u.terras}
+Água: ${u.agua}L
 
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐄𝐒𝐓𝐑𝐔𝐓𝐔𝐑𝐀 𓆪
-↳ Nível: ${nivel}
-↳ Cercados: ${u.cercados}
-↳ Terras: ${u.terras}
-↳ Água: ${u.agua}L
-╰┈┈┈┈୨୧┈┈┈┈╯
+🐾 *ANIMAIS*
+Total: ${u.animais.length}/${u.limiteAnimais}
 
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐀𝐍𝐈𝐌𝐀𝐈𝐒 𓆪
-↳ ${u.animais.length}/${u.limiteAnimais}
-↳ ${barra}
-╰┈┈┈┈୨୧┈┈┈┈╯
+🌱 *PLANTAÇÕES*
+Total: ${u.plantacoes.length}
+Prontas: ${prontas}
 
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐏𝐋𝐀𝐍𝐓𝐀𝐂̧𝐎̃𝐄𝐒 𓆪
-↳ Total: ${u.plantacoes.length}
-↳ Prontas: ${prontas}
-╰┈┈┈┈୨୧┈┈┈┈╯
+🧹 *SUJEIRA*
+${u.sujeira}%
 
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐒𝐔𝐉𝐄𝐈𝐑𝐀 𓆪
-↳ ${u.sujeira}% ${statusSujeira}
-╰┈┈┈┈୨୧┈┈┈┈╯
+📈 *RENDA*
+Por hora: ${rendaHora}/h
+Pendente: ${u.rendaPendente || 0}
+Próxima: ${tempo}
+Total: ${u.rendaTotal || 0}
+Upgrades: ${u.upgrades}/${MAX_UPGRADES}
 
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐑𝐄𝐍𝐃𝐀 𓆪
-↳ ${rendaHora}/h
-↳ Pendente: ${u.rendaPendente || 0}
-↳ Próxima: ${tempo}
-↳ Total: ${u.rendaTotal || 0}
-↳ Upgrades: ${u.upgrades}/${MAX_UPGRADES}
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${boxFim(nomeBot, "Use resgatarfazenda.")}`
-
-        await reagir(sock, msg, "🌸")
+📌 Use ${p}resgatarfazenda`
+        await reagir(sock, msg, "📊")
         await sock.sendMessage(jid, { text: texto, mentions: [`${num}@s.whatsapp.net`] }, { quoted: msg })
       }
     },
 
     statusanimais: {
       aliases: ["meusanimais", "veranimais"],
-      async executar({ sock, msg, utils, sender, db, prefixoAtivo }) {
+      async executar({ sock, msg, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { u } = getFazenda(num)
-        if (!u.animais.length) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐀𝐍𝐈𝐌𝐀𝐈𝐒", "Você não tem animais.", `Use \`${p}compraranimal\``, null, nomeBot) }, { quoted: msg }) }
-
-        let txt = `${boxTop(`𝐀𝐍𝐈𝐌𝐀𝐈𝐒 (${u.animais.length}/${u.limiteAnimais})`)}\n\n`
+        if (!u.animais.length) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑨𝑵𝑰𝑴𝑨𝑰𝑺", "Você não tem animais.", `Use ${p}compraranimal`) }, { quoted: msg }) }
+        let txt = `🐾 *𝑴𝑬𝑼𝑺 𝑨𝑵𝑰𝑴𝑨𝑰𝑺* (${u.animais.length}/${u.limiteAnimais})\n\n`
         for (const a of u.animais) {
           const fomeIco = a.fome > 70 ? "🚨" : a.fome > 40 ? "❄️" : "✅"
           const sujoIco = a.sujo > 70 ? "🚨" : a.sujo > 40 ? "❄️" : "✅"
-          txt += `╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 ${a.emoji} ${a.nome} 𓆪\n↳ Fome: ${fomeIco} ${a.fome}%\n↳ Sujo: ${sujoIco} ${a.sujo}%\n╰┈┈┈┈୨୧┈┈┈┈╯\n`
+          txt += `${a.emoji} *${a.nome}*\n🍖 Fome: ${fomeIco} ${a.fome}%\n🧼 Sujo: ${sujoIco} ${a.sujo}%\n\n`
         }
-        txt += `\n${boxFim(nomeBot)}`
-        await reagir(sock, msg, "🌸")
+        await reagir(sock, msg, "🐾")
         await sock.sendMessage(jid, { text: txt, mentions: [sender] }, { quoted: msg })
       }
     },
 
     sementes: {
       aliases: ["lojasementes", "listarsementes"],
-      async executar({ sock, msg, db, prefixoAtivo }) {
+      async executar({ sock, msg, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const loja = getLoja()
-        await reagir(sock, msg, "🌸")
-
-        const grupos = { Comum: [], Raro: [], Épico: [], Lendário: [] }
-        for (const s of SEMENTES) { if (!grupos[s.raridade]) grupos[s.raridade] = []; grupos[s.raridade].push(s) }
         const emojiRar = { Comum: "🟢", Raro: "💙", Épico: "💜", Lendário: "🌟" }
-
-        let txt = `${boxTop("𝐋𝐎𝐉𝐀 𝐃𝐄 𝐒𝐄𝐌𝐄𝐍𝐓𝐄𝐒")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐈𝐍𝐅𝐎 𓆪
-↳ Stock reabastece a cada 1h
-↳ Sementes raras têm stock baixo
-↳ \`${p}comprarsemente <nome> <qtd>\`
-╰┈┈┈┈୨୧┈┈┈┈╯
-`
+        let txt = `🌱 *𝑳𝑶𝑱𝑨 𝑫𝑬 𝑺𝑬𝑴𝑬𝑵𝑻𝑬𝑺*\n\n📌 Use ${p}comprarsemente <nome>\n\n`
         for (const raridade of ["Comum", "Raro", "Épico", "Lendário"]) {
-          const lista = grupos[raridade] || []
+          const lista = SEMENTES.filter(s => s.raridade === raridade)
           if (!lista.length) continue
-          txt += `\n${secao(`${emojiRar[raridade]} ${raridade.toUpperCase()}`)}\n`
+          txt += `${emojiRar[raridade]} *${raridade.toUpperCase()}*\n`
           for (const s of lista) {
             const stock = loja.sementes[s.id] || 0
             const stockTxt = stock === 0 ? "🚫 ESGOTADO" : `📦 ${stock}`
-            txt += `╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 ${s.emoji} ${s.nome} 𓆪\n↳ 💰 ${s.preco} GoldFZ\n↳ ⏰ ${s.tempo}min\n↳ 💵 ~${s.vendaBase}/h\n↳ ${stockTxt}\n╰┈┈┈┈୨୧┈┈┈┈╯\n`
+            txt += `${s.emoji} *${s.nome}* — ${s.preco} GoldFZ | ⏰ ${s.tempo}min | ${stockTxt}\n`
           }
-          txt += `${fimSecao()}\n`
+          txt += `\n`
         }
-        txt += `\n${boxFim(nomeBot, "Corre que o stock acaba!")}`
+        txt += `> _Stock reabastece a cada 1h._`
+        await reagir(sock, msg, "🌱")
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
 
     comprarsemente: {
       aliases: ["buysemente"],
-      async executar({ sock, msg, args, db, utils, sender, prefixoAtivo }) {
+      async executar({ sock, msg, args, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { f, u } = getFazenda(num)
-        if (u.terras === 0) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐒𝐄𝐌𝐄𝐍𝐓𝐄", "Compre terra primeiro.", `Use \`${p}comprarterra\``, null, nomeBot) }, { quoted: msg }) }
-
-        let qtd = 1
-        const ultimo = args[args.length - 1]
-        if (/^\d+$/.test(ultimo)) { qtd = parseInt(ultimo); args.pop() }
+        if (u.terras === 0) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑺𝑬𝑴𝑬𝑵𝑻𝑬", "Compre terra primeiro.", `Use ${p}comprarterra`) }, { quoted: msg }) }
         const sem = acharSemente(args.join(" "))
-        if (!sem) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌𝐄𝐍𝐓𝐄", "Não achei.", `Veja \`${p}sementes\``, null, nomeBot) }, { quoted: msg }) }
-
+        if (!sem) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑺𝑬𝑴𝑬𝑵𝑻𝑬", "Não achei.", `Veja ${p}sementes`) }, { quoted: msg }) }
+        if (jaTemSemente(u, sem.id)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑱𝑨 𝑻𝑬𝑴 𝑬𝑺𝑺𝑨 𝑺𝑬𝑴𝑬𝑵𝑻𝑬", "Você já tem essa semente.", `Plante a que você tem antes de comprar outra.\nUse ${p}plantarsemente ${sem.nome}`) }, { quoted: msg }) }
+        if (jaTemPlanta(u, sem.id)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑱𝑨 𝑻𝑬𝑴 𝑷𝑳𝑨𝑵𝑻𝑨", "Você já tem uma plantação dessa.", `Venda a plantação antes de comprar outra semente.\nUse ${p}venderplanta ${sem.nome}`) }, { quoted: msg }) }
         const loja = getLoja()
-        if ((loja.sementes[sem.id] || 0) < qtd) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌𝐄𝐍𝐓𝐄", "Stock insuficiente.", `Stock: ${loja.sementes[sem.id] || 0}`, null, nomeBot) }, { quoted: msg }) }
-
-        const total = sem.preco * qtd
+        if ((loja.sementes[sem.id] || 0) < 1) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑺𝑬𝑴𝑬𝑵𝑻𝑬", "Esgotado na loja.", `Stock: ${loja.sementes[sem.id] || 0}`) }, { quoted: msg }) }
         const { saldo } = getGoldFZ(num)
-        if (saldo < total) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐒𝐄𝐌𝐄𝐍𝐓𝐄", "GoldFZ insuficiente.", `Faltam ${total - saldo} GoldFZ`, null, nomeBot) }, { quoted: msg }) }
-
-        removeGoldFZ(num, total)
-        u.sementes[sem.id] = (u.sementes[sem.id] || 0) + qtd
-        loja.sementes[sem.id] -= qtd
+        if (saldo < sem.preco) { await reagir(sock, msg, "💸"); return sock.sendMessage(jid, { text: msgErro("𝑺𝑬𝑴𝑬𝑵𝑻𝑬", "GoldFZ insuficiente.", `Faltam ${sem.preco - saldo} GoldFZ`) }, { quoted: msg }) }
+        removeGoldFZ(num, sem.preco)
+        u.sementes[sem.id] = 1
+        loja.sementes[sem.id] -= 1
         dbSalvar("fazenda.json", f); salvarLoja(loja)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐒𝐄𝐌𝐄𝐍𝐓𝐄", "Adicionada ao estoque.", `${sem.emoji} ${sem.nome} x${qtd}\nPago: -${total} GoldFZ`, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌱")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑺𝑬𝑴𝑬𝑵𝑻𝑬", "Adicionada ao estoque.", `${sem.emoji} ${sem.nome}\nPago: -${sem.preco} GoldFZ`) }, { quoted: msg })
       }
     },
 
     comprarterra: {
       aliases: ["terra", "buyterra"],
-      async executar({ sock, msg, db, utils, sender, prefixoAtivo }) {
+      async executar({ sock, msg, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
+        const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { f, u } = getFazenda(num)
-        if (u.terras >= 20) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐓𝐄𝐑𝐑𝐀", "Máximo 20 terras.", `Terras: ${u.terras}`, null, nomeBot) }, { quoted: msg }) }
-
+        if (u.terras >= 20) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑻𝑬𝑹𝑹𝑨", "Máximo 20 terras.", `Terras: ${u.terras}`) }, { quoted: msg }) }
         const { saldo } = getGoldFZ(num)
         const preco = PRECO_TERRA + u.terras * 200
-        if (saldo < preco) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐓𝐄𝐑𝐑𝐀", "GoldFZ insuficiente.", `Precisa ${preco} | Faltam ${preco - saldo}`, null, nomeBot) }, { quoted: msg }) }
-
+        if (saldo < preco) { await reagir(sock, msg, "💸"); return sock.sendMessage(jid, { text: msgErro("𝑻𝑬𝑹𝑹𝑨", "GoldFZ insuficiente.", `Precisa ${preco} | Faltam ${preco - saldo}`) }, { quoted: msg }) }
         removeGoldFZ(num, preco)
         u.terras += 1
         dbSalvar("fazenda.json", f)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐓𝐄𝐑𝐑𝐀", "Mais espaço pra plantação.", `Total: ${u.terras}\nPago: -${preco} GoldFZ`, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🏞️")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑻𝑬𝑹𝑹𝑨", "Mais espaço pra plantação.", `Total: ${u.terras}\nPago: -${preco} GoldFZ`) }, { quoted: msg })
       }
     },
 
     compraragua: {
       aliases: ["agua", "buyagua"],
-      async executar({ sock, msg, args, db, utils, sender, prefixoAtivo }) {
+      async executar({ sock, msg, args, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { f, u } = getFazenda(num)
         const qtd = parseInt(args[0]) || 10
-        if (qtd < 1 || qtd > 100) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐀́𝐆𝐔𝐀", "Qtd inválida.", `Use \`${p}compraragua <1-100>\``, null, nomeBot) }, { quoted: msg }) }
-
+        if (qtd < 1 || qtd > 100) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑨𝑮𝑼𝑨", "Qtd inválida.", `Use ${p}compraragua <1-100>`) }, { quoted: msg }) }
         const total = PRECO_AGUA * qtd
         const { saldo } = getGoldFZ(num)
-        if (saldo < total) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐀́𝐆𝐔𝐀", "GoldFZ insuficiente.", `Faltam ${total - saldo} GoldFZ`, null, nomeBot) }, { quoted: msg }) }
-
+        if (saldo < total) { await reagir(sock, msg, "💸"); return sock.sendMessage(jid, { text: msgErro("𝑨𝑮𝑼𝑨", "GoldFZ insuficiente.", `Faltam ${total - saldo} GoldFZ`) }, { quoted: msg }) }
         removeGoldFZ(num, total)
         u.agua += qtd
         dbSalvar("fazenda.json", f)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐀́𝐆𝐔𝐀", "Estoque atualizado.", `+${qtd}L\nTotal: ${u.agua}L\nPago: -${total} GoldFZ`, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "💧")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑨𝑮𝑼𝑨", "Estoque atualizado.", `+${qtd}L\nTotal: ${u.agua}L\nPago: -${total} GoldFZ`) }, { quoted: msg })
       }
     },
 
     plantarsemente: {
       aliases: ["plantar", "plant"],
-      async executar({ sock, msg, args, db, utils, sender, prefixoAtivo }) {
+      async executar({ sock, msg, args, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { f, u } = getFazenda(num)
-        if (u.terras === 0) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐏𝐋𝐀𝐍𝐓𝐀𝐑", "Sem terra!", `Use \`${p}comprarterra\``, null, nomeBot) }, { quoted: msg }) }
-        if (u.plantacoes.length >= u.terras) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐏𝐋𝐀𝐍𝐓𝐀𝐑", "Terras ocupadas.", `Ocupadas: ${u.plantacoes.length}/${u.terras}`, null, nomeBot) }, { quoted: msg }) }
-
+        if (u.terras === 0) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑷𝑳𝑨𝑵𝑻𝑨𝑹", "Sem terra!", `Use ${p}comprarterra`) }, { quoted: msg }) }
+        if (u.plantacoes.length >= u.terras) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑷𝑳𝑨𝑵𝑻𝑨𝑹", "Terras ocupadas.", `Ocupadas: ${u.plantacoes.length}/${u.terras}`) }, { quoted: msg }) }
         const sem = acharSemente(args.join(" "))
-        if (!sem) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐏𝐋𝐀𝐍𝐓𝐀𝐑", "Não achei.", `Veja \`${p}sementes\``, null, nomeBot) }, { quoted: msg }) }
-        if ((u.sementes[sem.id] || 0) < 1) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐏𝐋𝐀𝐍𝐓𝐀𝐑", "Não tem essa semente.", `Semente: ${sem.nome}`, null, nomeBot) }, { quoted: msg }) }
-
+        if (!sem) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑷𝑳𝑨𝑵𝑻𝑨𝑹", "Não achei.", `Veja ${p}sementes`) }, { quoted: msg }) }
+        if ((u.sementes[sem.id] || 0) < 1) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑷𝑳𝑨𝑵𝑻𝑨𝑹", "Não tem essa semente.", `Compre em ${p}comprarsemente ${sem.nome}`) }, { quoted: msg }) }
+        if (jaTemPlanta(u, sem.id)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑱𝑨 𝑻𝑬𝑴 𝑷𝑳𝑨𝑵𝑻𝑨", "Você já tem uma plantação dessa.", `Venda antes de plantar outra.\nUse ${p}venderplanta ${sem.nome}`) }, { quoted: msg }) }
         u.sementes[sem.id] -= 1
         if (u.sementes[sem.id] === 0) delete u.sementes[sem.id]
-
         const mutacoes = sortearMutacoes()
-
-        u.plantacoes.push({
-          id: sem.id, nome: sem.nome, emoji: sem.emoji,
-          plantadaEm: Date.now(),
-          regas: 0,
-          qualidadeBase: 30,
-          pronta: false,
-          prontaEm: null,
-          mutacoes: mutacoes
-        })
+        u.plantacoes.push({ id: sem.id, nome: sem.nome, emoji: sem.emoji, plantadaEm: Date.now(), regas: 0, qualidadeBase: 30, pronta: false, prontaEm: null, mutacoes: mutacoes })
         dbSalvar("fazenda.json", f)
-
         let avisoMut = ""
         if (mutacoes.length > 0) {
-          avisoMut = `\n\n`
-          for (const mId of mutacoes) {
-            const mut = MUTACOES[mId]
-            if (mut) avisoMut += `${mut.emoji} *MUTAÇÃO ${mut.nome.toUpperCase()}!*\nBônus: x${mut.bonus}\n`
-          }
+          avisoMut = "\n\n"
+          for (const mId of mutacoes) { const mut = MUTACOES[mId]; if (mut) avisoMut += `${mut.emoji} MUTAÇÃO ${mut.nome.toUpperCase()}! Bônus: x${mut.bonus}\n` }
         }
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐏𝐋𝐀𝐍𝐓𝐀𝐃𝐀", "Semente no chão.", `${sem.emoji} ${sem.nome}\nTempo: ~${sem.tempo}min${avisoMut}\n\nUse \`${p}regarplanta ${sem.nome}\``, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🌱")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑷𝑳𝑨𝑵𝑻𝑨𝑫𝑨", "Semente no chão.", `${sem.emoji} ${sem.nome}\nTempo: ~${sem.tempo}min${avisoMut}\n\nUse ${p}regarplanta ${sem.nome}`) }, { quoted: msg })
       }
     },
 
     regarsementes: {
       aliases: ["regartudo", "regartodas"],
-      async executar({ sock, msg, db, utils, sender, prefixoAtivo }) {
+      async executar({ sock, msg, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { f, u } = getFazenda(num)
-        if (!u.plantacoes.length) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐆𝐀𝐑", "Sem plantações.", `Use \`${p}plantarsemente\``, null, nomeBot) }, { quoted: msg }) }
-        if (u.agua < AGUA_POR_REGA) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐑𝐄𝐆𝐀𝐑", "Sem água.", `Use \`${p}compraragua\``, null, nomeBot) }, { quoted: msg }) }
-
+        if (!u.plantacoes.length) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑹𝑬𝑮𝑨𝑹", "Sem plantações.", `Use ${p}plantarsemente`) }, { quoted: msg }) }
+        if (u.agua < AGUA_POR_REGA) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑹𝑬𝑮𝑨𝑹", "Sem água.", `Use ${p}compraragua`) }, { quoted: msg }) }
         let regadas = 0
         for (const p2 of u.plantacoes) {
           if (u.agua < AGUA_POR_REGA) break
@@ -1161,96 +852,72 @@ ${boxFim(nomeBot, "Use resgatarfazenda.")}`
           regadas++
         }
         dbSalvar("fazenda.json", f)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐑𝐄𝐆𝐀𝐃𝐀𝐒", "Rega em massa.", `Regadas: ${regadas}\nÁgua: ${u.agua}L`, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "💦")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑹𝑬𝑮𝑨𝑫𝑨𝑺", "Rega em massa.", `Regadas: ${regadas}\nÁgua: ${u.agua}L`) }, { quoted: msg })
       }
     },
 
     regarplanta: {
       aliases: ["regar"],
-      async executar({ sock, msg, args, db, utils, sender, prefixoAtivo }) {
+      async executar({ sock, msg, args, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { f, u } = getFazenda(num)
-        if (u.agua < AGUA_POR_REGA) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐑𝐄𝐆𝐀𝐑", "Sem água.", `Use \`${p}compraragua\``, null, nomeBot) }, { quoted: msg }) }
-
+        if (u.agua < AGUA_POR_REGA) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑹𝑬𝑮𝑨𝑹", "Sem água.", `Use ${p}compraragua`) }, { quoted: msg }) }
         const busca = normalizar(args.join(" "))
         const planta = u.plantacoes.find(x => normalizar(x.nome) === busca || x.id === busca || normalizar(x.nome).includes(busca))
-        if (!planta) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐑𝐄𝐆𝐀𝐑", "Planta não encontrada.", `Veja \`${p}statusplanta\``, null, nomeBot) }, { quoted: msg }) }
-        if (planta.pronta) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐑𝐄𝐆𝐀𝐑", "Já está pronta.", `Use ${p}venderplanta ${planta.nome}`, null, nomeBot) }, { quoted: msg }) }
-
+        if (!planta) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑹𝑬𝑮𝑨𝑹", "Planta não encontrada.", `Veja ${p}statusplanta`) }, { quoted: msg }) }
+        if (planta.pronta) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑹𝑬𝑮𝑨𝑹", "Já está pronta.", `Use ${p}venderplanta ${planta.nome}`) }, { quoted: msg }) }
         u.agua -= AGUA_POR_REGA
         planta.regas = (planta.regas || 0) + 1
         planta.qualidadeBase = Math.min(100, (planta.qualidadeBase || 30) + 5)
         dbSalvar("fazenda.json", f)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐑𝐄𝐆𝐀𝐃𝐀", "Planta regada.", `${planta.emoji} ${planta.nome}\nÁgua: ${u.agua}L\nRegas: ${planta.regas}`, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "💦")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑹𝑬𝑮𝑨𝑫𝑨", "Planta regada.", `${planta.emoji} ${planta.nome}\nÁgua: ${u.agua}L\nRegas: ${planta.regas}`) }, { quoted: msg })
       }
     },
 
     venderplanta: {
       aliases: ["vender", "colher"],
-      async executar({ sock, msg, args, db, utils, sender, prefixoAtivo }) {
+      async executar({ sock, msg, args, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { f, u } = getFazenda(num)
         const busca = normalizar(args.join(" "))
-        if (!busca) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐕𝐄𝐍𝐃𝐄𝐑", "Informe o nome.", `\`${p}venderplanta <nome>\``, null, nomeBot) }, { quoted: msg }) }
-
+        if (!busca) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑹", "Informe o nome.", `${p}venderplanta <nome>`) }, { quoted: msg }) }
         const idx = u.plantacoes.findIndex(x => normalizar(x.nome) === busca || x.id === busca || normalizar(x.nome).includes(busca))
-        if (idx === -1) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐕𝐄𝐍𝐃𝐄𝐑", "Você não tem.", `Veja \`${p}statusplanta\``, null, nomeBot) }, { quoted: msg }) }
-
+        if (idx === -1) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑽𝑬𝑵𝑫𝑬𝑹", "Você não tem.", `Veja ${p}statusplanta`) }, { quoted: msg }) }
         const planta = u.plantacoes[idx]
-        if (!planta.pronta) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐕𝐄𝐍𝐃𝐄𝐑", "Ainda não está pronta.", `Planta: ${planta.nome}`, null, nomeBot) }, { quoted: msg }) }
-
+        if (!planta.pronta) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑹", "Ainda não está pronta.", `Planta: ${planta.nome}`) }, { quoted: msg }) }
         const valor = valorPlanta(planta)
         const qualidade = qualidadePlanta(planta)
         u.plantacoes.splice(idx, 1)
         addGoldFZ(num, valor)
         dbSalvar("fazenda.json", f)
-
         let mutTxt = ""
         if (Array.isArray(planta.mutacoes) && planta.mutacoes.length > 0) {
-          for (const mId of planta.mutacoes) {
-            const mut = MUTACOES[mId]
-            if (mut) mutTxt += `\n${mut.emoji} ${mut.nome} (x${mut.bonus})`
-          }
+          for (const mId of planta.mutacoes) { const mut = MUTACOES[mId]; if (mut) mutTxt += `\n${mut.emoji} ${mut.nome} (x${mut.bonus})` }
         }
-
-        const estrelas = qualidade >= 90 ? "💧💧" : qualidade >= 70 ? "💧" : ""
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐕𝐄𝐍𝐃𝐈𝐃𝐀", "Colheita vendida.", `${planta.emoji} ${planta.nome}${mutTxt}\nQualidade: ${qualidade}% ${estrelas}\n+${valor} GoldFZ`, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "💵")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑽𝑬𝑵𝑫𝑰𝑫𝑨", "Colheita vendida.", `${planta.emoji} ${planta.nome}${mutTxt}\nQualidade: ${qualidade}%\n+${valor} GoldFZ`) }, { quoted: msg })
       }
     },
 
     statusplanta: {
       aliases: ["minhasplantas", "plantacoes"],
-      async executar({ sock, msg, utils, sender, db, prefixoAtivo }) {
+      async executar({ sock, msg, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { u } = getFazenda(num)
-        if (!u.plantacoes.length) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐏𝐋𝐀𝐍𝐓𝐀𝐒", "Sem plantações.", `Use \`${p}plantarsemente\``, null, nomeBot) }, { quoted: msg }) }
-
+        if (!u.plantacoes.length) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑷𝑳𝑨𝑵𝑻𝑨𝑺", "Sem plantações.", `Use ${p}plantarsemente`) }, { quoted: msg }) }
         const agora = Date.now()
-        let txt = `${boxTop(`𝐏𝐋𝐀𝐍𝐓𝐀𝐂̧𝐎̃𝐄𝐒 (${u.plantacoes.length}/${u.terras})`)}\n\n`
-
+        let txt = `🌱 *𝑷𝑳𝑨𝑵𝑻𝑨𝑪𝑶𝑬𝑺* (${u.plantacoes.length}/${u.terras})\n\n`
         for (const planta of u.plantacoes) {
           const s = SEMENTES.find(x => x.id === planta.id)
           if (!s) continue
@@ -1264,252 +931,170 @@ ${boxFim(nomeBot, "Use resgatarfazenda.")}`
           const seg = Math.floor((restante % 60000) / 1000)
           const tempoTxt = planta.pronta ? "✅ Pronta!" : `${min}min ${seg}s`
           const q = qualidadePlanta(planta)
-          const estrelas = q >= 90 ? "💧💧" : q >= 70 ? "💧" : ""
           let mutTxt = ""
           if (Array.isArray(planta.mutacoes) && planta.mutacoes.length > 0) {
             for (const mId of planta.mutacoes) { const mut = MUTACOES[mId]; if (mut) mutTxt += ` ${mut.emoji}` }
           }
-          txt += `╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 ${planta.emoji} ${planta.nome}${mutTxt} 𓆪
-↳ ${planta.pronta ? "✅ Pronta" : `⏰ ${tempoTxt}`}
-↳ 🌱 Crescimento: ${progresso}%
-↳ 💧 Qualidade: ${q}% ${estrelas}
-↳ 🚿 Regas: ${planta.regas || 0}
-╰┈┈┈┈୨୧┈┈┈┈╯
-`
+          txt += `${planta.emoji} *${planta.nome}*${mutTxt}\n⏰ ${tempoTxt} | 🌱 ${progresso}%\n💧 Qualidade: ${q}% | 🚿 Regas: ${planta.regas || 0}\n\n`
         }
-        txt += `\n${boxFim(nomeBot)}`
-        await reagir(sock, msg, "🌸")
+        await reagir(sock, msg, "🌱")
         await sock.sendMessage(jid, { text: txt, mentions: [sender] }, { quoted: msg })
       }
     },
 
     vendedorsementes: {
       aliases: ["vsementes", "vendorsementes"],
-      async executar({ sock, msg, db, prefixoAtivo }) {
+      async executar({ sock, msg, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const v = getVendedores()
-        if (!v.sementes.ativo || Date.now() > v.sementes.expiraEm) {
-          await reagir(sock, msg, "💧")
-          return sock.sendMessage(jid, { text: msgAviso("𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑", "O vendedor de sementes foi embora.", "Aguarde o próximo (4h)", null, nomeBot) }, { quoted: msg })
-        }
+        if (!v.sementes.ativo || Date.now() > v.sementes.expiraEm) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "O vendedor de sementes foi embora.", "Aguarde o próximo (4h).") }, { quoted: msg }) }
         const restante = Math.max(0, v.sementes.expiraEm - Date.now())
         const min = Math.floor(restante / 60000), seg = Math.floor((restante % 60000) / 1000)
-        let txt = `${boxTop("𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑 𝐃𝐄 𝐒𝐄𝐌𝐄𝐍𝐓𝐄𝐒")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐉𝐀𝐍𝐄𝐋𝐀 𓆪
-↳ ${min}min ${seg}s restantes
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-`
+        let txt = `🛒 *𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹 𝑫𝑬 𝑺𝑬𝑴𝑬𝑵𝑻𝑬𝑺*\n\n⏰ Janela: ${min}min ${seg}s\n\n`
         v.sementes.itens.forEach((it, i) => {
           const desc = Math.round((1 - it.preco / it.precoOriginal) * 100)
-          txt += `╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 #${i + 1} ${it.emoji} ${it.nome} 𓆪\n↳ ${it.preco} GoldFZ (-${desc}%)\n↳ Rende: ~${it.vendaBase}/h\n↳ ${it.raridade}\n╰┈┈┈┈୨୧┈┈┈┈╯\n`
+          txt += `${i + 1}. ${it.emoji} *${it.nome}*\n💰 ${it.preco} GoldFZ (-${desc}%)\n📈 Rende: ~${it.vendaBase}/h | ${it.raridade}\n\n`
         })
-        txt += `\n╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 𝐂𝐎𝐌𝐏𝐑𝐀𝐑 𓆪\n↳ \`${p}comprarvendedor <nome>\`\n╰┈┈┈┈୨୧┈┈┈┈╯\n\n${boxFim(nomeBot)}`
-        await reagir(sock, msg, "🌸")
+        txt += `📌 Use ${p}comprarvendedor <nome>`
+        await reagir(sock, msg, "🛒")
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
 
     comprarvendedor: {
       aliases: ["buyvendedor", "comprarvendedorsemente"],
-      async executar({ sock, msg, args, db, utils, sender, prefixoAtivo }) {
+      async executar({ sock, msg, args, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { f, u } = getFazenda(num)
-        if (u.terras === 0) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑", "Compre terra primeiro.", `Use \`${p}comprarterra\``, null, nomeBot) }, { quoted: msg }) }
-
+        if (u.terras === 0) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "Compre terra primeiro.", `Use ${p}comprarterra`) }, { quoted: msg }) }
         const v = getVendedores()
-        if (!v.sementes.ativo || Date.now() > v.sementes.expiraEm) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑", "Vendedor foi embora.", "Aguarde o próximo (4h)", null, nomeBot) }, { quoted: msg }) }
-
-        let qtd = 1
-        const ultimo = args[args.length - 1]
-        if (/^\d+$/.test(ultimo)) { qtd = parseInt(ultimo); args.pop() }
+        if (!v.sementes.ativo || Date.now() > v.sementes.expiraEm) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "Vendedor foi embora.", "Aguarde o próximo (4h).") }, { quoted: msg }) }
         const busca = normalizar(args.join(" "))
         const oferta = v.sementes.itens.find(x => normalizar(x.nome) === busca || x.id === busca || normalizar(x.nome).includes(busca))
-        if (!oferta) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑", "Oferta não encontrada.", `Veja \`${p}vendedorsementes\``, null, nomeBot) }, { quoted: msg }) }
-
-        const total = oferta.preco * qtd
+        if (!oferta) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "Oferta não encontrada.", `Veja ${p}vendedorsementes`) }, { quoted: msg }) }
+        if (jaTemSemente(u, oferta.id)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑱𝑨 𝑻𝑬𝑴 𝑬𝑺𝑺𝑨 𝑺𝑬𝑴𝑬𝑵𝑻𝑬", "Você já tem essa semente.", `Plante antes de comprar outra.\nUse ${p}plantarsemente ${oferta.nome}`) }, { quoted: msg }) }
+        if (jaTemPlanta(u, oferta.id)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑱𝑨 𝑻𝑬𝑴 𝑷𝑳𝑨𝑵𝑻𝑨", "Você já tem uma plantação dessa.", `Venda antes.\nUse ${p}venderplanta ${oferta.nome}`) }, { quoted: msg }) }
         const { saldo } = getGoldFZ(num)
-        if (saldo < total) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑", "GoldFZ insuficiente.", `Faltam ${total - saldo} GoldFZ`, null, nomeBot) }, { quoted: msg }) }
-
-        removeGoldFZ(num, total)
-        u.sementes[oferta.id] = (u.sementes[oferta.id] || 0) + qtd
+        if (saldo < oferta.preco) { await reagir(sock, msg, "💸"); return sock.sendMessage(jid, { text: msgErro("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "GoldFZ insuficiente.", `Faltam ${oferta.preco - saldo} GoldFZ`) }, { quoted: msg }) }
+        removeGoldFZ(num, oferta.preco)
+        u.sementes[oferta.id] = 1
         dbSalvar("fazenda.json", f)
-
         await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐎𝐅𝐄𝐑𝐓𝐀", "Semente do vendedor!", `${oferta.emoji} ${oferta.nome} x${qtd}\nPago: -${total} GoldFZ`, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        await sock.sendMessage(jid, { text: msgSucesso("𝑶𝑭𝑬𝑹𝑻𝑨", "Semente do vendedor!", `${oferta.emoji} ${oferta.nome}\nPago: -${oferta.preco} GoldFZ`) }, { quoted: msg })
       }
     },
 
     vendedoranimais: {
       aliases: ["vanimais", "vendoranimais"],
-      async executar({ sock, msg, db, prefixoAtivo }) {
+      async executar({ sock, msg, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const v = getVendedores()
-        if (!v.animais.ativo || Date.now() > v.animais.expiraEm) {
-          await reagir(sock, msg, "💧")
-          return sock.sendMessage(jid, { text: msgAviso("𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑", "O vendedor de animais foi embora.", "Aguarde o próximo (3h)", null, nomeBot) }, { quoted: msg })
-        }
+        if (!v.animais.ativo || Date.now() > v.animais.expiraEm) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "O vendedor de animais foi embora.", "Aguarde o próximo (3h).") }, { quoted: msg }) }
         const restante = Math.max(0, v.animais.expiraEm - Date.now())
         const min = Math.floor(restante / 60000), seg = Math.floor((restante % 60000) / 1000)
-        let txt = `${boxTop("𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑 𝐃𝐄 𝐀𝐍𝐈𝐌𝐀𝐈𝐒")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐉𝐀𝐍𝐄𝐋𝐀 𓆪
-↳ ${min}min ${seg}s restantes
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-`
+        let txt = `🛒 *𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹 𝑫𝑬 𝑨𝑵𝑰𝑴𝑨𝑰𝑺*\n\n⏰ Janela: ${min}min ${seg}s\n\n`
         v.animais.itens.forEach((it, i) => {
           const desc = Math.round((1 - it.preco / it.precoOriginal) * 100)
-          txt += `╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 #${i + 1} ${it.emoji} ${it.nome} 𓆪\n↳ ${it.preco} GoldFZ (-${desc}%)\n↳ Rende: +${it.producaoHora}/h\n↳ ${it.raridade}\n╰┈┈┈┈୨୧┈┈┈┈╯\n`
+          txt += `${i + 1}. ${it.emoji} *${it.nome}*\n💰 ${it.preco} GoldFZ (-${desc}%)\n📈 Rende: +${it.producaoHora}/h | ${it.raridade}\n\n`
         })
-        txt += `\n╭┈┈┈┈୨୧┈┈┈┈╮\n𓆩 𝐂𝐎𝐌𝐏𝐑𝐀𝐑 𓆪\n↳ \`${p}comprarvendedoranimal <nome>\`\n╰┈┈┈┈୨୧┈┈┈┈╯\n\n${boxFim(nomeBot)}`
-        await reagir(sock, msg, "🌸")
+        txt += `📌 Use ${p}comprarvendedoranimal <nome>`
+        await reagir(sock, msg, "🛒")
         await sock.sendMessage(jid, { text: txt }, { quoted: msg })
       }
     },
 
     comprarvendedoranimal: {
       aliases: ["buyvendedoranimal", "compraranimalvendedor"],
-      async executar({ sock, msg, args, db, utils, sender, prefixoAtivo }) {
+      async executar({ sock, msg, args, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
         const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { f, u } = getFazenda(num)
-        if (u.cercados === 0) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑", "Compre cercado primeiro.", `Use \`${p}comprarcercado\``, null, nomeBot) }, { quoted: msg }) }
-        if (u.animais.length >= u.limiteAnimais) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑", "Cercado cheio.", `Ocupado: ${u.animais.length}/${u.limiteAnimais}`, null, nomeBot) }, { quoted: msg }) }
-
+        if (u.cercados === 0) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "Compre cercado primeiro.", `Use ${p}comprarcercado`) }, { quoted: msg }) }
+        if (u.animais.length >= u.limiteAnimais) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "Cercado cheio.", `Ocupado: ${u.animais.length}/${u.limiteAnimais}`) }, { quoted: msg }) }
         const v = getVendedores()
-        if (!v.animais.ativo || Date.now() > v.animais.expiraEm) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑", "Vendedor foi embora.", "Aguarde o próximo (3h)", null, nomeBot) }, { quoted: msg }) }
-
+        if (!v.animais.ativo || Date.now() > v.animais.expiraEm) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "Vendedor foi embora.", "Aguarde o próximo (3h).") }, { quoted: msg }) }
         const busca = normalizar(args.join(" "))
         const oferta = v.animais.itens.find(x => normalizar(x.nome) === busca || x.id === busca || normalizar(x.nome).includes(busca))
-        if (!oferta) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑", "Oferta não encontrada.", `Veja \`${p}vendedoranimais\``, null, nomeBot) }, { quoted: msg }) }
-
+        if (!oferta) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "Oferta não encontrada.", `Veja ${p}vendedoranimais`) }, { quoted: msg }) }
         const { saldo } = getGoldFZ(num)
-        if (saldo < oferta.preco) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐕𝐄𝐍𝐃𝐄𝐃𝐎𝐑", "GoldFZ insuficiente.", `Faltam ${oferta.preco - saldo} GoldFZ`, null, nomeBot) }, { quoted: msg }) }
-
+        if (saldo < oferta.preco) { await reagir(sock, msg, "💸"); return sock.sendMessage(jid, { text: msgErro("𝑽𝑬𝑵𝑫𝑬𝑫𝑶𝑹", "GoldFZ insuficiente.", `Faltam ${oferta.preco - saldo} GoldFZ`) }, { quoted: msg }) }
         removeGoldFZ(num, oferta.preco)
         u.animais.push({ id: oferta.id, nome: oferta.nome, emoji: oferta.emoji, fome: 0, sujo: 0, compradoEm: Date.now() })
         dbSalvar("fazenda.json", f)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐎𝐅𝐄𝐑𝐓𝐀", "Animal do vendedor!", `${oferta.emoji} ${oferta.nome}\nRende: +${oferta.producaoHora}/h\nPago: -${oferta.preco} GoldFZ`, null, nomeBot), mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🐾")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑶𝑭𝑬𝑹𝑻𝑨", "Animal do vendedor!", `${oferta.emoji} ${oferta.nome}\nRende: +${oferta.producaoHora}/h\nPago: -${oferta.preco} GoldFZ`) }, { quoted: msg })
       }
     },
 
     eventoagua: {
-      aliases: ["promocaoagua", "aguaPromo"],
-      async executar({ sock, msg, db, utils, sender, prefixoAtivo }) {
+      aliases: ["promocaoagua", "aguapromo"],
+      async executar({ sock, msg, sender, prefixoAtivo }) {
         const jid = msg.key.remoteJid
-        const cfg = dbLer("fazendacfg.json", { grupos: {} })
-        if (!cfg.grupos[jid]?.ativo) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐅𝐀𝐙𝐄𝐍𝐃𝐀 𝐎𝐅𝐅", "O modo fazenda está desativado.", `Peça a um admin para ativar.`, null, nomeBotDb(db)) }, { quoted: msg }) }
-
-        const nomeBot = nomeBotDb(db)
+        const p = prefixoAtivo || "+"
+        if (!sistemaFazendaAtivo(jid)) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑭𝑨𝒁𝑬𝑵𝑫𝑨 𝑶𝑭𝑭", "O modo fazenda está desativado.", `Peça a um admin: ${p}fazenda on`) }, { quoted: msg }) }
         const num = soNumero(sender)
         const { f, u } = getFazenda(num)
         const v = getVendedores()
         const expiraEm = (v.ultimoEventoAgua || 0) + DURACAO_VENDEDOR
-        if (Date.now() > expiraEm) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝐄𝐕𝐄𝐍𝐓𝐎", "O evento de água terminou.", "Aguarde o próximo (2h)", null, nomeBot) }, { quoted: msg }) }
-
+        if (Date.now() > expiraEm) { await reagir(sock, msg, "💧"); return sock.sendMessage(jid, { text: msgAviso("𝑬𝑽𝑬𝑵𝑻𝑶", "O evento de água terminou.", "Aguarde o próximo (2h).") }, { quoted: msg }) }
         const PRECO_PROMO = 60
         const { saldo } = getGoldFZ(num)
-        if (saldo < PRECO_PROMO) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐄𝐕𝐄𝐍𝐓𝐎", "GoldFZ insuficiente.", `Precisa ${PRECO_PROMO} GoldFZ`, null, nomeBot) }, { quoted: msg }) }
-
+        if (saldo < PRECO_PROMO) { await reagir(sock, msg, "💸"); return sock.sendMessage(jid, { text: msgErro("𝑬𝑽𝑬𝑵𝑻𝑶", "GoldFZ insuficiente.", `Precisa ${PRECO_PROMO} GoldFZ`) }, { quoted: msg }) }
         removeGoldFZ(num, PRECO_PROMO)
         u.agua += 3 * GALAO_AGUA
         dbSalvar("fazenda.json", f)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐄𝐕𝐄𝐍𝐓𝐎 𝐀́𝐆𝐔𝐀", "3 galões por 60 GoldFZ!", `Total: ${u.agua}L\nPago: -${PRECO_PROMO} GoldFZ`, "Use nas plantações!", nomeBot), mentions: [sender] }, { quoted: msg })
+        await reagir(sock, msg, "🚰")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑬𝑽𝑬𝑵𝑻𝑶 𝑨𝑮𝑼𝑨", "3 galões por 60 GoldFZ!", `Total: ${u.agua}L\nPago: -${PRECO_PROMO} GoldFZ`) }, { quoted: msg })
       }
     },
 
     gerarkeyfz: {
       aliases: ["gerarkeyfazenda", "criarkeyfz"],
       donoOnly: true,
-      async executar({ sock, msg, args, db, isDono, isSubDono }) {
-        if (!isDono && !isSubDono) { await reagir(sock, msg, "💨"); return }
+      async executar({ sock, msg, args, isDono, isSubDono }) {
+        if (!isDono && !isSubDono) { await reagir(sock, msg, "🚫"); return }
         const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
         const qtd = parseInt(args[0])
-        if (!qtd || qtd <= 0) {
-          await reagir(sock, msg, "💨")
-          return sock.sendMessage(jid, { text: msgErro("𝐊𝐄𝐘 𝐅𝐙", "Quantidade inválida.", "Use `+gerarkeyfz <qtd>`\nEx: `+gerarkeyfz 1000`", null, nomeBot) }, { quoted: msg })
-        }
-
+        if (!qtd || qtd <= 0) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgErro("𝑲𝑬𝒀 𝑭𝒁", "Quantidade inválida.", "Use +gerarkeyfz <qtd>\nEx: +gerarkeyfz 1000") }, { quoted: msg }) }
         const dbKeys = dbLer("keysfz.json", { keys: {} })
         const novaKey = gerarKeyAleatoria()
         dbKeys.keys[novaKey] = { goldfz: qtd, usado: false, criadoPor: msg.key.participant || msg.key.remoteJid, criadoEm: Date.now() }
         dbSalvar("keysfz.json", dbKeys)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: msgSucesso("𝐊𝐄𝐘 𝐅𝐙", "Nova key de GoldFZ criada!", `Key: \`${novaKey}\`\nValor: *${qtd} GoldFZ*\n\nEssa key é de uso único.`, `Entregue com \`+keygoldfz ${novaKey}\``, nomeBot) }, { quoted: msg })
+        await reagir(sock, msg, "🔑")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑲𝑬𝒀 𝑭𝒁", "Nova key de GoldFZ criada!", `Key: \`${novaKey}\`\nValor: *${qtd} GoldFZ*\n\nEssa key é de uso único.`) }, { quoted: msg })
       }
     },
 
     keygoldfz: {
       aliases: ["resgatargoldfz", "usarkeyfz"],
-      async executar({ sock, msg, args, db, sender }) {
+      async executar({ sock, msg, args, sender }) {
         const jid = msg.key.remoteJid
-        const nomeBot = nomeBotDb(db)
         const keyInserida = (args[0] || "").toUpperCase().trim()
-        if (!keyInserida) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐊𝐄𝐘 𝐅𝐙", "Key em falta.", "Use `+keygoldfz <key>`", null, nomeBot) }, { quoted: msg }) }
-
+        if (!keyInserida) { await reagir(sock, msg, "⚠️"); return sock.sendMessage(jid, { text: msgErro("𝑲𝑬𝒀 𝑭𝒁", "Key em falta.", "Use +keygoldfz <key>") }, { quoted: msg }) }
         const dbKeys = dbLer("keysfz.json", { keys: {} })
         let keyReal = null
         for (const k in dbKeys.keys) { if (k.toUpperCase() === keyInserida) { keyReal = k; break } }
-        if (!keyReal || !dbKeys.keys[keyReal]) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐊𝐄𝐘 𝐅𝐙", "Key inválida.", "A key digitada não existe ou está errada.", null, nomeBot) }, { quoted: msg }) }
-
+        if (!keyReal || !dbKeys.keys[keyReal]) { await reagir(sock, msg, "❌"); return sock.sendMessage(jid, { text: msgErro("𝑲𝑬𝒀 𝑭𝒁", "Key inválida.", "A key digitada não existe ou está errada.") }, { quoted: msg }) }
         const dataKey = dbKeys.keys[keyReal]
-        if (dataKey.usado) { await reagir(sock, msg, "💨"); return sock.sendMessage(jid, { text: msgErro("𝐊𝐄𝐘 𝐅𝐙", "Key já resgatada.", "Essa key já foi utilizada.", null, nomeBot) }, { quoted: msg }) }
-
+        if (dataKey.usado) { await reagir(sock, msg, "🚫"); return sock.sendMessage(jid, { text: msgErro("𝑲𝑬𝒀 𝑭𝒁", "Key já resgatada.", "Essa key já foi utilizada.") }, { quoted: msg }) }
         const num = soNumero(sender)
         addGoldFZ(num, dataKey.goldfz)
         const { saldo } = getGoldFZ(num)
-
         dataKey.usado = true
         dataKey.usadoPor = num
         dataKey.usadoEm = Date.now()
         dbSalvar("keysfz.json", dbKeys)
-
-        await reagir(sock, msg, "🌸")
-        await sock.sendMessage(jid, { text: `${boxTop("𝐊𝐄𝐘 𝐅𝐙")}
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐑𝐄𝐒𝐆𝐀𝐓𝐀𝐃𝐀 𓆪
-↳ +${dataKey.goldfz} GoldFZ
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-╭┈┈┈┈୨୧┈┈┈┈╮
-𓆩 𝐒𝐀𝐋𝐃𝐎 𓆪
-↳ ${saldo} GoldFZ
-╰┈┈┈┈୨୧┈┈┈┈╯
-
-${boxFim(nomeBot)}` }, { quoted: msg })
+        await reagir(sock, msg, "🔑")
+        await sock.sendMessage(jid, { text: msgSucesso("𝑲𝑬𝒀 𝑭𝒁", "Key resgatada!", `+${dataKey.goldfz} GoldFZ\nSaldo: ${saldo}`) }, { quoted: msg })
       }
     }
 
